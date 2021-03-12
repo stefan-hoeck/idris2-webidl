@@ -17,3 +17,5 @@ depends    = base        >= 0.3.0
            , hedgehog    >= 0.0.2
            , pretty-show >= 0.1.1
            , sop         >= 0.1.1
+
+modules    = Test.Lexer

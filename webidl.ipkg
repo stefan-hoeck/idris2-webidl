@@ -8,3 +8,6 @@ depends    = base        >= 0.3.0
            , elab-util   >= 0.1.1
            , pretty-show >= 0.1.1
            , sop         >= 0.1.1
+
+modules = Text.WebIDL.Identifier
+        , Text.WebIDL.Lexer

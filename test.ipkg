@@ -1,0 +1,19 @@
+package webidl-test
+
+authors    = "stefan-hoeck"
+version    = 0.0.1
+readme     = "README.md"
+license    = "BSD-2 Clause"
+
+main       = Test.Main
+executable = runTest
+
+sourcedir  = "src"
+
+depends    = base        >= 0.3.0
+           , comonad     >= 0.1.0
+           , contrib     >= 0.3.0
+           , elab-util   >= 0.1.1
+           , hedgehog    >= 0.0.2
+           , pretty-show >= 0.1.1
+           , sop         >= 0.1.1

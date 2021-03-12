@@ -4,7 +4,7 @@
   float      = /-?(([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([Ee][+-]?[0-9]+)?|[0-9]+[Ee][+-]?[0-9]+)/
   [done] identifier = /[_-]?[A-Za-z][0-9A-Z_a-z-]*/
   string     = /"[^"]*"/
-  whitespace = /[\t\n\r ]+/
+  [done] whitespace = /[\t\n\r ]+/
   comment    = /\/\/.*|\/\*(.|\n)*?\*\//
   other      = /[^\t\n\r 0-9A-Za-z]/
 

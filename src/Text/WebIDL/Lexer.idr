@@ -10,6 +10,7 @@ import Generics.Derive
 
 public export
 data IdlToken : Type where
+  Space : IdlToken
   Ident : Identifier -> IdlToken
 
 %runElab derive "Text.WebIDL.Lexer.IdlToken" [Generic,Meta,Eq,Show]
@@ -44,11 +45,13 @@ ident = Ident . MkIdent
 --------------------------------------------------------------------------------
 
 export tokenMap : TokenMap IdlToken
-tokenMap = [ (identifier, ident)
+tokenMap = [ (spaces,     const Space)
+           , (identifier, ident)
            ]
 
 public export
 isNoise : IdlToken -> Bool
+isNoise Space       = True
 isNoise _           = False
 
 ||| Generates a list of IdlTokens (wrapped in TokenData, so

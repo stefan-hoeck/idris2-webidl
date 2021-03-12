@@ -19,3 +19,7 @@ identifier = [| concIdent (maybe line) alpha rest |]
                          $  maybe "" singleton mc
                          ++ singleton c
                          ++ r
+
+export
+space : Gen String
+space = string (linear 1 5) (element [' ','\t','\n','\r'])

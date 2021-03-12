@@ -1,0 +1,514 @@
+[TODO] Tokens
+
+  integer    = /-?([1-9][0-9]*|0[Xx][0-9A-Fa-f]+|0[0-7]*)/
+  float      = /-?(([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([Ee][+-]?[0-9]+)?|[0-9]+[Ee][+-]?[0-9]+)/
+  identifier = /[_-]?[A-Za-z][0-9A-Z_a-z-]*/
+  string     = /"[^"]*"/
+  whitespace = /[\t\n\r ]+/
+  comment    = /\/\/.*|\/\*(.|\n)*?\*\//
+  other      = /[^\t\n\r 0-9A-Za-z]/
+
+Grammar
+[TODO] [TODO] Definitions ::
+    ExtendedAttributeList Definition Definitions
+    ε
+
+[TODO] [TODO] Definition ::
+    CallbackOrInterfaceOrMixin
+    Namespace
+    Partial
+    Dictionary
+    Enum
+    Typedef
+    IncludesStatement
+
+[TODO] ArgumentNameKeyword ::
+    async
+    attribute
+    callback
+    const
+    constructor
+    deleter
+    dictionary
+    enum
+    getter
+    includes
+    inherit
+    interface
+    iterable
+    maplike
+    mixin
+    namespace
+    partial
+    readonly
+    required
+    setlike
+    setter
+    static
+    stringifier
+    typedef
+    unrestricted
+
+[TODO] CallbackOrInterfaceOrMixin ::
+    callback CallbackRestOrInterface
+    interface InterfaceOrMixin
+
+[TODO] InterfaceOrMixin ::
+    InterfaceRest
+    MixinRest
+
+[TODO] InterfaceRest ::
+    identifier Inheritance { InterfaceMembers } ;
+
+[TODO] Partial ::
+    partial PartialDefinition
+
+[TODO] [TODO (part of Partial)] PartialDefinition ::
+    interface PartialInterfaceOrPartialMixin
+    PartialDictionary
+    Namespace
+
+[TODO] PartialInterfaceOrPartialMixin ::
+    PartialInterfaceRest
+    MixinRest
+
+[TODO] PartialInterfaceRest ::
+    identifier { PartialInterfaceMembers } ;
+
+[TODO] InterfaceMembers ::
+    ExtendedAttributeList InterfaceMember InterfaceMembers
+    ε
+
+[TODO] InterfaceMember ::
+    PartialInterfaceMember
+    Constructor
+
+[TODO] PartialInterfaceMembers ::
+    ExtendedAttributeList PartialInterfaceMember PartialInterfaceMembers
+    ε
+
+[TODO] PartialInterfaceMember ::
+    Const
+    Operation
+    Stringifier
+    StaticMember
+    Iterable
+    AsyncIterable
+    ReadOnlyMember
+    ReadWriteAttribute
+    ReadWriteMaplike
+    ReadWriteSetlike
+    InheritAttribute
+
+[TODO] Inheritance ::
+    : identifier
+    ε
+
+[TODO] MixinRest ::
+    mixin identifier { MixinMembers } ;
+
+[TODO] MixinMembers ::
+    ExtendedAttributeList MixinMember MixinMembers
+    ε
+
+[TODO] MixinMember ::
+    Const
+    RegularOperation
+    Stringifier
+    OptionalReadOnly AttributeRest
+
+[TODO] IncludesStatement ::
+    identifier includes identifier ;
+
+[TODO] CallbackRestOrInterface ::
+    CallbackRest
+    interface identifier { CallbackInterfaceMembers } ;
+
+[TODO] CallbackInterfaceMembers ::
+    ExtendedAttributeList CallbackInterfaceMember CallbackInterfaceMembers
+    ε
+
+[TODO] CallbackInterfaceMember ::
+    Const
+    RegularOperation
+
+[TODO] Const ::
+    const ConstType identifier = ConstValue ;
+
+[TODO] ConstValue ::
+    BooleanLiteral
+    FloatLiteral
+    integer
+
+[TODO] BooleanLiteral ::
+    true
+    false
+
+[TODO] FloatLiteral ::
+    decimal
+    -Infinity
+    Infinity
+    NaN
+
+[TODO] ConstType ::
+    PrimitiveType
+    identifier
+
+[TODO] ReadOnlyMember ::
+    readonly ReadOnlyMemberRest
+
+[TODO] ReadOnlyMemberRest ::
+    AttributeRest
+    MaplikeRest
+    SetlikeRest
+
+[TODO] ReadWriteAttribute ::
+    AttributeRest
+
+[TODO] InheritAttribute ::
+    inherit AttributeRest
+
+[TODO] AttributeRest ::
+    attribute TypeWithExtendedAttributes AttributeName ;
+
+[TODO] AttributeName ::
+    AttributeNameKeyword
+    identifier
+
+[TODO] AttributeNameKeyword ::
+    async
+    required
+
+[TODO] OptionalReadOnly ::
+    readonly
+    ε
+
+[TODO (part of Default)] DefaultValue ::
+    ConstValue
+    string
+    [ ]
+    { }
+    null
+
+[TODO] Operation ::
+    RegularOperation
+    SpecialOperation
+
+[TODO] RegularOperation ::
+    Type OperationRest
+
+[TODO] SpecialOperation ::
+    Special RegularOperation
+
+[TODO] Special ::
+    getter
+    setter
+    deleter
+
+[TODO] OperationRest ::
+    OptionalOperationName ( ArgumentList ) ;
+
+[TODO] OptionalOperationName ::
+    OperationName
+    ε
+
+[TODO] OperationName ::
+    OperationNameKeyword
+    identifier
+
+[TODO] OperationNameKeyword ::
+    includes
+
+[TODO] ArgumentList ::
+    Argument Arguments
+    ε
+
+[TODO (part of ArgumentList)] Arguments ::
+    , Argument Arguments
+    ε
+
+[TODO (part of ArgumentList)] Argument ::
+    ExtendedAttributeList ArgumentRest
+
+[TODO] ArgumentRest ::
+    optional TypeWithExtendedAttributes ArgumentName Default
+    Type Ellipsis ArgumentName
+
+[TODO] ArgumentName ::
+    ArgumentNameKeyword
+    identifier
+
+[TODO] Ellipsis ::
+    ...
+    ε
+
+[TODO] Constructor ::
+    constructor ( ArgumentList ) ;
+
+[TODO] Stringifier ::
+    stringifier StringifierRest
+
+[TODO] StringifierRest ::
+    OptionalReadOnly AttributeRest
+    RegularOperation
+    ;
+
+[TODO] StaticMember ::
+    static StaticMemberRest
+
+[TODO] StaticMemberRest ::
+    OptionalReadOnly AttributeRest
+    RegularOperation
+
+[TODO] Iterable ::
+    iterable < TypeWithExtendedAttributes OptionalType > ;
+
+[TODO] OptionalType ::
+    , TypeWithExtendedAttributes
+    ε
+
+[TODO] AsyncIterable ::
+    async iterable < TypeWithExtendedAttributes OptionalType > OptionalArgumentList ;
+
+[TODO] OptionalArgumentList ::
+    ( ArgumentList )
+    ε
+
+[TODO] ReadWriteMaplike ::
+    MaplikeRest
+
+[TODO] MaplikeRest ::
+    maplike < TypeWithExtendedAttributes , TypeWithExtendedAttributes > ;
+
+[TODO] ReadWriteSetlike ::
+    SetlikeRest
+
+[TODO] SetlikeRest ::
+    setlike < TypeWithExtendedAttributes > ;
+
+[TODO] Namespace ::
+    namespace identifier { NamespaceMembers } ;
+
+[TODO] NamespaceMembers ::
+    ExtendedAttributeList NamespaceMember NamespaceMembers
+    ε
+
+[TODO] NamespaceMember ::
+    RegularOperation
+    readonly AttributeRest
+
+[TODO] Dictionary ::
+    dictionary identifier Inheritance { DictionaryMembers } ;
+
+[TODO] DictionaryMembers ::
+    DictionaryMember DictionaryMembers
+    ε
+
+[TODO] DictionaryMember ::
+    ExtendedAttributeList DictionaryMemberRest
+
+[TODO] DictionaryMemberRest ::
+    required TypeWithExtendedAttributes identifier ;
+    Type identifier Default ;
+
+[TODO (part of PartialDefinition)] PartialDictionary ::
+    dictionary identifier { DictionaryMembers } ;
+
+[TODO] Default ::
+    = DefaultValue
+    ε
+
+[TODO] Enum ::
+    enum identifier { EnumValueList } ;
+
+[TODO (part of Enum)] EnumValueList ::
+    string EnumValueListComma
+
+[TODO (part of Enum)] EnumValueListComma ::
+    , EnumValueListString
+    ε
+
+[TODO (part of Enum)] EnumValueListString ::
+    string EnumValueListComma
+    ε
+
+[TODO] CallbackRest ::
+    identifier = Type ( ArgumentList ) ;
+
+[TODO] Typedef ::
+    typedef TypeWithExtendedAttributes identifier ;
+
+[TODO] Type ::
+    SingleType
+    UnionType Null
+
+[TODO] TypeWithExtendedAttributes ::
+    ExtendedAttributeList Type
+
+[TODO (part of Type)] SingleType ::
+    DistinguishableType
+    any
+    PromiseType
+
+[TODO] UnionType ::
+    ( UnionMemberType or UnionMemberType UnionMemberTypes )
+
+[TODO] UnionMemberType ::
+    ExtendedAttributeList DistinguishableType
+    UnionType Null
+
+[TODO (part of UnionType)] UnionMemberTypes ::
+    or UnionMemberType UnionMemberTypes
+    ε
+
+[TODO] DistinguishableType ::
+    PrimitiveType Null
+    StringType Null
+    identifier Null
+    sequence < TypeWithExtendedAttributes > Null
+    object Null
+    symbol Null
+    BufferRelatedType Null
+    FrozenArray < TypeWithExtendedAttributes > Null
+    ObservableArray < TypeWithExtendedAttributes > Null
+    RecordType Null
+
+[TODO] PrimitiveType ::
+    UnsignedIntegerType
+    UnrestrictedFloatType
+    undefined
+    boolean
+    byte
+    octet
+    bigint
+
+[constructors] UnrestrictedFloatType ::
+    unrestricted FloatType
+    FloatType
+
+[constructors] FloatType ::
+    float
+    double
+
+[constructors] UnsignedIntegerType ::
+    unsigned IntegerType
+    IntegerType
+
+[constructors] IntegerType ::
+    short
+    long OptionalLong
+
+[constructors] OptionalLong ::
+    long
+    ε
+
+[TODO] StringType ::
+    ByteString
+    DOMString
+    USVString
+
+[TODO] PromiseType ::
+    Promise < Type >
+
+[TODO] RecordType ::
+    record < StringType , TypeWithExtendedAttributes >
+
+[TODO] Null ::
+    ?
+    ε
+
+[TODO] BufferRelatedType ::
+    ArrayBuffer
+    DataView
+    Int8Array
+    Int16Array
+    Int32Array
+    Uint8Array
+    Uint16Array
+    Uint32Array
+    Uint8ClampedArray
+    Float32Array
+    Float64Array
+
+[TODO] ExtendedAttributeList ::
+    [ ExtendedAttribute ExtendedAttributes ]
+    ε
+
+[TODO] ExtendedAttributes ::
+    , ExtendedAttribute ExtendedAttributes
+    ε
+
+[TODO] ExtendedAttribute ::
+    ( ExtendedAttributeInner ) ExtendedAttributeRest
+    [ ExtendedAttributeInner ] ExtendedAttributeRest
+    { ExtendedAttributeInner } ExtendedAttributeRest
+    Other ExtendedAttributeRest
+
+[TODO] ExtendedAttributeRest ::
+    ExtendedAttribute
+    ε
+
+[TODO] ExtendedAttributeInner ::
+    ( ExtendedAttributeInner ) ExtendedAttributeInner
+    [ ExtendedAttributeInner ] ExtendedAttributeInner
+    { ExtendedAttributeInner } ExtendedAttributeInner
+    OtherOrComma ExtendedAttributeInner
+    ε
+
+[TODO] Other ::
+    integer
+    decimal
+    identifier
+    string
+    other
+    -
+    -Infinity
+    .
+    ...
+    :
+    ;
+    <
+    =
+    >
+    ?
+    ByteString
+    DOMString
+    FrozenArray
+    Infinity
+    NaN
+    ObservableArray
+    Promise
+    USVString
+    any
+    bigint
+    boolean
+    byte
+    double
+    false
+    float
+    long
+    null
+    object
+    octet
+    or
+    optional
+    record
+    sequence
+    short
+    symbol
+    true
+    unsigned
+    undefined
+    ArgumentNameKeyword
+    BufferRelatedType
+
+[TODO] OtherOrComma ::
+    Other
+    ,
+
+[TODO] IdentifierList ::
+    identifier Identifiers
+
+[TODO] Identifiers ::
+    , identifier Identifiers
+    ε

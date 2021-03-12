@@ -2,6 +2,7 @@ module Text.WebIDL.Lexer
 
 import Data.List
 import Text.WebIDL.Identifier
+import Text.WebIDL.StringLit
 import Text.Lexer
 
 import Generics.Derive
@@ -10,8 +11,9 @@ import Generics.Derive
 
 public export
 data IdlToken : Type where
-  Space : IdlToken
-  Ident : Identifier -> IdlToken
+  Space  : IdlToken
+  StrLit : StringLit -> IdlToken
+  Ident  : Identifier -> IdlToken
 
 %runElab derive "Text.WebIDL.Lexer.IdlToken" [Generic,Meta,Eq,Show]
 
@@ -46,6 +48,7 @@ ident = Ident . MkIdent
 
 export tokenMap : TokenMap IdlToken
 tokenMap = [ (spaces,     const Space)
+           , (stringLit,  StrLit . MkStringLit)
            , (identifier, ident)
            ]
 

@@ -2,6 +2,7 @@ module Text.WebIDL.Lexer
 
 import Data.List
 import Text.WebIDL.Identifier
+import Text.WebIDL.Numbers
 import Text.WebIDL.StringLit
 import Text.Lexer
 
@@ -11,9 +12,11 @@ import Generics.Derive
 
 public export
 data IdlToken : Type where
-  Space  : IdlToken
-  StrLit : StringLit -> IdlToken
-  Ident  : Identifier -> IdlToken
+  Space   : IdlToken
+  StrLit  : StringLit -> IdlToken
+  IntLit  : Integer -> IdlToken
+  Ident   : Identifier -> IdlToken
+  Invalid : String -> IdlToken
 
 %runElab derive "Text.WebIDL.Lexer.IdlToken" [Generic,Meta,Eq,Show]
 
@@ -28,6 +31,34 @@ plus = some
 -- alias for `some`
 private star : Lexer -> Recognise False
 star = many
+
+-- /[1-9]/
+private nonZeroDigit : Lexer
+nonZeroDigit = pred \c => '1' <= c && c <= '9'
+
+--------------------------------------------------------------------------------
+--          Numbers
+--------------------------------------------------------------------------------
+
+parseInt : String -> IdlToken
+parseInt s = maybe (Invalid s) IntLit . impl $ unpack s
+  where impl : List Char -> Maybe Integer
+        impl ('0'::'x'::t) = charsToPosInt 16 t -- hexadecimal number
+        impl ('0'::'X'::t) = charsToPosInt 16 t -- hexadecimal number
+        impl ('0'::t)      = charsToPosInt 8  t -- ocatal number
+        impl ('-'::t)      = negate <$> charsToPosDec t
+        impl t             = charsToPosDec t    -- decimal number
+
+-- /0[Xx][0-9A-Fa-f]+/
+private hex : Lexer
+hex = (exact "0x" <|> exact "0X") <+> plus hexDigit
+
+-- /0[0-7]*/
+private oct : Lexer
+oct = is '0' <+> star octDigit
+
+private int : Lexer
+int = hex <|> oct <|> (opt (is '-') <+> plus digit)
 
 --------------------------------------------------------------------------------
 --          Others
@@ -50,6 +81,7 @@ export tokenMap : TokenMap IdlToken
 tokenMap = [ (spaces,     const Space)
            , (stringLit,  StrLit . MkStringLit)
            , (identifier, ident)
+           , (int,        parseInt)
            ]
 
 public export

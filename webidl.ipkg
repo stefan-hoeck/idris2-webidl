@@ -11,4 +11,5 @@ depends    = base        >= 0.3.0
 
 modules = Text.WebIDL.Identifier
         , Text.WebIDL.Lexer
+        , Text.WebIDL.Numbers
         , Text.WebIDL.StringLit

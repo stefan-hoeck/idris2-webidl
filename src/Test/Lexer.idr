@@ -19,8 +19,13 @@ prop_space = property $ do
 
 prop_stringLit : Property
 prop_stringLit = property $ do
-                 (MkStringLit s) <- forAll stringLit
-                 lex s === Right [StrLit $ MkStringLit s]
+                   (MkStringLit s) <- forAll stringLit
+                   lex s === Right [StrLit $ MkStringLit s]
+
+prop_intLit : Property
+prop_intLit = property $ do
+                (s,n) <- forAll intLit
+                lex s === Right [IntLit n]
 
 export
 props : Group
@@ -28,4 +33,5 @@ props = MkGroup "Lexer Properties" [
           ("prop_identifier", prop_identifier)
         , ("prop_space", prop_space)
         , ("prop_stringLit", prop_stringLit)
+        , ("prop_intLit", prop_intLit)
         ]

@@ -12,11 +12,12 @@ import Generics.Derive
 
 public export
 data IdlToken : Type where
-  Space   : IdlToken
-  StrLit  : StringLit -> IdlToken
-  IntLit  : Integer -> IdlToken
-  Ident   : Identifier -> IdlToken
-  Invalid : String -> IdlToken
+  Space     : IdlToken
+  StrLit    : StringLit -> IdlToken
+  IntLit    : Integer -> IdlToken
+  FltLit    : FloatLit -> IdlToken
+  Ident     : Identifier -> IdlToken
+  Invalid   : String -> IdlToken
 
 %runElab derive "Text.WebIDL.Lexer.IdlToken" [Generic,Meta,Eq,Show]
 
@@ -43,6 +44,9 @@ nonZeroDigit = pred \c => '1' <= c && c <= '9'
 parseInt : String -> IdlToken
 parseInt s = maybe (Invalid s) IntLit $ readInt s
 
+parseFloat : String -> IdlToken
+parseFloat s = maybe (Invalid s) FltLit $ readFloat s
+
 -- /0[Xx][0-9A-Fa-f]+/
 hex : Lexer
 hex = (exact "0x" <|> exact "0X") <+> plus hexDigit
@@ -53,6 +57,23 @@ oct = is '0' <+> star octDigit
 
 int : Lexer
 int = hex <|> oct <|> (opt (is '-') <+> plus digit)
+
+-- /[Ee][+-]?[0-9]+/
+exp : Lexer
+exp = oneOf "Ee" <+> opt (oneOf "+-") <+> plus digit
+
+-- /([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([Ee][+-]?[0-9]+)?/
+expOpt : Lexer
+expOpt = let pre =   (plus digit <+> is '.' <+> star digit)
+                 <|> (star digit <+> is '.' <+> plus digit)
+          in pre <+> opt exp
+
+-- [0-9]+[Ee][+-]?[0-9]+
+expNonOpt : Lexer
+expNonOpt = plus digit <+> exp
+
+float : Lexer
+float = (opt (is '-') <+> (expOpt <|> expNonOpt))
 
 --------------------------------------------------------------------------------
 --          Others
@@ -65,7 +86,10 @@ identifier =   opt (oneOf "_-")
            <+> star (pred \c => isAlphaNum c || c == '_' || c == '-')
 
 ident : String -> IdlToken
-ident = Ident . MkIdent
+ident "Infinity"        = FltLit Infinity
+ident "-Infinity"       = FltLit NegativeInfinity
+ident "NaN"             = FltLit NaN
+ident s                 = Ident $ MkIdent s
 
 --------------------------------------------------------------------------------
 --          Lexing
@@ -75,6 +99,7 @@ export tokenMap : TokenMap IdlToken
 tokenMap = [ (spaces,     const Space)
            , (stringLit,  StrLit . MkStringLit)
            , (identifier, ident)
+           , (float,      parseFloat)
            , (int,        parseInt)
            ]
 

@@ -41,6 +41,12 @@ stringLit = toStringLit <$> list (linear 0 15) unicode
 maxInt : Integer
 maxInt = 18446744073709551616
 
+posInt : Gen Integer
+posInt = integer $ exponential 0 maxInt
+
+nat : Gen Nat
+nat = map fromInteger . integer $ exponential 0 maxInt
+
 export
 intLit : Gen (String,Integer)
 intLit = choice [decimal,hex,oct]
@@ -49,7 +55,24 @@ intLit = choice [decimal,hex,oct]
                 $ exponentialFrom 0 (-maxInt) maxInt
 
         hex : Gen (String,Integer)
-        hex = map (\n => (toHex n, n)) . integer $ exponential 0 maxInt
+        hex = map (\n => (toHex n, natToInteger n)) nat
 
         oct : Gen (String,Integer)
-        oct = map (\n => (toOct n, n)) . integer $ exponential 0 maxInt
+        oct = map (\n => (toOct n, natToInteger n)) nat
+
+export
+floatLit : Gen (String,FloatLit)
+floatLit = map (\fl => (toFloatLit fl, fl)) float
+  where exp : Gen Integer
+        exp = integer $ linearFrom 0 (-30) (30)
+
+        sig : Gen Signum
+        sig = element [Plus,Minus]
+
+        float : Gen FloatLit
+        float = frequency [ (5, [| Exp sig nat (maybe nat) exp |])
+                          , (5, [| NoExp sig nat nat |])
+                          , (1, pure Infinity)
+                          , (1, pure NegativeInfinity)
+                          , (1, pure NaN)
+                          ]

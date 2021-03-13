@@ -1,7 +1,7 @@
 [TODO] Tokens
 
   [done] integer    = /-?([1-9][0-9]*|0[Xx][0-9A-Fa-f]+|0[0-7]*)/
-  float      = /-?(([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([Ee][+-]?[0-9]+)?|[0-9]+[Ee][+-]?[0-9]+)/
+  [done] decimal      = /-?(([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([Ee][+-]?[0-9]+)?|[0-9]+[Ee][+-]?[0-9]+)/
   [done] identifier = /[_-]?[A-Za-z][0-9A-Z_a-z-]*/
   [done] string     = /"[^"]*"/
   [done] whitespace = /[\t\n\r ]+/
@@ -144,7 +144,7 @@ Grammar
     true
     false
 
-[TODO] FloatLiteral ::
+[done] FloatLiteral ::
     decimal
     -Infinity
     Infinity

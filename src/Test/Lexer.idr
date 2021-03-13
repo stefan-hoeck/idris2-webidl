@@ -38,6 +38,12 @@ prop_comment = property $ do
                  s <- forAll comment
                  lex s === Right [Comment s]
 
+prop_other : Property
+prop_other = withTests 1000 . property $ do
+               s <- forAll latinSymbol
+               footnote $ show . map ord $ unpack s
+               lex s === Right [Other s]
+
 export
 props : Group
 props = MkGroup "Lexer Properties" [
@@ -47,4 +53,5 @@ props = MkGroup "Lexer Properties" [
         , ("prop_intLit", prop_intLit)
         , ("prop_floatLit", prop_floatLit)
         , ("prop_comment", prop_comment)
+        , ("prop_other", prop_other)
         ]

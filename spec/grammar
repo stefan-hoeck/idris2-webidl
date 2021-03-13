@@ -6,7 +6,7 @@
   [done] string     = /"[^"]*"/
   [done] whitespace = /[\t\n\r ]+/
   [done] comment    = /\/\/.*|\/\*(.|\n)*?\*\//
-  other      = /[^\t\n\r 0-9A-Za-z]/
+  [done] other      = /[^\t\n\r 0-9A-Za-z]/
 
 Grammar
 [TODO] [TODO] Definitions ::

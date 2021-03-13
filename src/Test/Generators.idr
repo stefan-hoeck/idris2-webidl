@@ -92,3 +92,12 @@ comment = choice [line, multiline]
         multiline : Gen String
         multiline = map (\s => "/*" ++ s ++ "*/")
                   $ string (linear 0 20) noForward
+
+export
+latinSymbol : Gen String
+latinSymbol = map singleton $ choice [ charc '!' '/'
+                                     , charc ':' '@'
+                                     , charc '[' '`'
+                                     , charc '{' '~'
+                                     , charc (chr 161) (chr 255)
+                                     ]

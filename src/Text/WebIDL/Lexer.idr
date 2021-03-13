@@ -18,6 +18,7 @@ data IdlToken : Type where
   FltLit    : FloatLit   -> IdlToken
   Ident     : Identifier -> IdlToken
   Comment   : String     -> IdlToken
+  Other     : String     -> IdlToken
   Invalid   : String     -> IdlToken
 
 %runElab derive "Text.WebIDL.Lexer.IdlToken" [Generic,Meta,Eq,Show]
@@ -97,6 +98,11 @@ comment : Lexer
 comment =   lineComment (exact "//" )
         <|> surround (exact "/*" ) (exact "*/") any
 
+-- /[^\t\n\r 0-9A-Za-z]/
+other : Lexer
+other = pred \c => not $
+        isAlpha c || isDigit c || isSpace c || isControl c
+
 --------------------------------------------------------------------------------
 --          Lexing
 --------------------------------------------------------------------------------
@@ -108,6 +114,7 @@ tokenMap = [ (spaces,     const Space)
            , (identifier, ident)
            , (float,      parseFloat)
            , (int,        parseInt)
+           , (other,      Other)
            ]
 
 public export

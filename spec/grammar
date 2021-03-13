@@ -5,7 +5,7 @@
   [done] identifier = /[_-]?[A-Za-z][0-9A-Z_a-z-]*/
   [done] string     = /"[^"]*"/
   [done] whitespace = /[\t\n\r ]+/
-  comment    = /\/\/.*|\/\*(.|\n)*?\*\//
+  [done] comment    = /\/\/.*|\/\*(.|\n)*?\*\//
   other      = /[^\t\n\r 0-9A-Za-z]/
 
 Grammar

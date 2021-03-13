@@ -33,6 +33,11 @@ prop_floatLit = withTests 1000 . property $ do
                   (s,n) <- forAll floatLit
                   lex s === Right [FltLit n]
 
+prop_comment : Property
+prop_comment = property $ do
+                 s <- forAll comment
+                 lex s === Right [Comment s]
+
 export
 props : Group
 props = MkGroup "Lexer Properties" [
@@ -41,4 +46,5 @@ props = MkGroup "Lexer Properties" [
         , ("prop_stringLit", prop_stringLit)
         , ("prop_intLit", prop_intLit)
         , ("prop_floatLit", prop_floatLit)
+        , ("prop_comment", prop_comment)
         ]

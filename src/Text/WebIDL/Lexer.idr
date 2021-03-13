@@ -13,11 +13,12 @@ import Generics.Derive
 public export
 data IdlToken : Type where
   Space     : IdlToken
-  StrLit    : StringLit -> IdlToken
-  IntLit    : Integer -> IdlToken
-  FltLit    : FloatLit -> IdlToken
+  StrLit    : StringLit  -> IdlToken
+  IntLit    : Integer    -> IdlToken
+  FltLit    : FloatLit   -> IdlToken
   Ident     : Identifier -> IdlToken
-  Invalid   : String -> IdlToken
+  Comment   : String     -> IdlToken
+  Invalid   : String     -> IdlToken
 
 %runElab derive "Text.WebIDL.Lexer.IdlToken" [Generic,Meta,Eq,Show]
 
@@ -91,6 +92,11 @@ ident "-Infinity"       = FltLit NegativeInfinity
 ident "NaN"             = FltLit NaN
 ident s                 = Ident $ MkIdent s
 
+-- /\/\/.*/
+comment : Lexer
+comment =   lineComment (exact "//" )
+        <|> surround (exact "/*" ) (exact "*/") any
+
 --------------------------------------------------------------------------------
 --          Lexing
 --------------------------------------------------------------------------------
@@ -98,6 +104,7 @@ ident s                 = Ident $ MkIdent s
 export tokenMap : TokenMap IdlToken
 tokenMap = [ (spaces,     const Space)
            , (stringLit,  StrLit . MkStringLit)
+           , (comment,    Comment)
            , (identifier, ident)
            , (float,      parseFloat)
            , (int,        parseInt)
@@ -106,6 +113,7 @@ tokenMap = [ (spaces,     const Space)
 public export
 isNoise : IdlToken -> Bool
 isNoise Space       = True
+isNoise (Comment _) = True
 isNoise _           = False
 
 ||| Generates a list of IdlTokens (wrapped in TokenData, so

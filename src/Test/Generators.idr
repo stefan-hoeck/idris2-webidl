@@ -76,3 +76,19 @@ floatLit = map (\fl => (toFloatLit fl, fl)) float
                           , (1, pure NegativeInfinity)
                           , (1, pure NaN)
                           ]
+
+export
+comment : Gen String
+comment = choice [line, multiline]
+  where noControl : Gen Char
+        noControl = map (\c => if isControl c then ' ' else c) unicode
+
+        noForward : Gen Char
+        noForward = map (\c => if c == '/' then ' ' else c) unicode
+
+        line : Gen String
+        line = map ("//" ++) $ string (linear 0 20) noControl
+
+        multiline : Gen String
+        multiline = map (\s => "/*" ++ s ++ "*/")
+                  $ string (linear 0 20) noForward

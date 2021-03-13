@@ -2,6 +2,10 @@ module Text.WebIDL.Numbers
 
 import Data.String
 
+import Generics.Derive
+
+%language ElabReflection
+
 --------------------------------------------------------------------------------
 --          Encoding Integers
 --------------------------------------------------------------------------------
@@ -71,3 +75,21 @@ readInt s = case fastUnpack s of
                  '0'::t      => charsToPosInt 8  t
                  '-'::t      => negate <$> charsToPosInt 10 t
                  t           => charsToPosInt 10 t
+
+--------------------------------------------------------------------------------
+--          Floating Point Literals
+--------------------------------------------------------------------------------
+
+public export
+data Signum = Plus | Minus
+
+%runElab derive "Text.WebIDL.Numbers.Signum" [Generic,Meta,Eq,Show]
+
+public export
+data FloatLit : Type where
+  MkFloat : Signum -> (significand : Integer) -> (exp : Integer) -> FloatLit
+  Infinity         : FloatLit
+  NegativeInfinity : FloatLit
+  NaN              : FloatLit
+
+%runElab derive "Text.WebIDL.Numbers.FloatLit" [Generic,Meta,Eq,Show]

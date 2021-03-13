@@ -41,13 +41,7 @@ nonZeroDigit = pred \c => '1' <= c && c <= '9'
 --------------------------------------------------------------------------------
 
 parseInt : String -> IdlToken
-parseInt s = maybe (Invalid s) IntLit . impl $ unpack s
-  where impl : List Char -> Maybe Integer
-        impl ('0'::'x'::t) = charsToPosInt 16 t -- hexadecimal number
-        impl ('0'::'X'::t) = charsToPosInt 16 t -- hexadecimal number
-        impl ('0'::t)      = charsToPosInt 8  t -- ocatal number
-        impl ('-'::t)      = negate <$> charsToPosDec t
-        impl t             = charsToPosDec t    -- decimal number
+parseInt s = maybe (Invalid s) IntLit $ readInt s
 
 -- /0[Xx][0-9A-Fa-f]+/
 private hex : Lexer

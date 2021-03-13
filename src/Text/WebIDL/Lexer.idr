@@ -25,15 +25,15 @@ data IdlToken : Type where
 --------------------------------------------------------------------------------
 
 -- alias for `some`
-private plus : Lexer -> Lexer
+plus : Lexer -> Lexer
 plus = some
 
 -- alias for `some`
-private star : Lexer -> Recognise False
+star : Lexer -> Recognise False
 star = many
 
 -- /[1-9]/
-private nonZeroDigit : Lexer
+nonZeroDigit : Lexer
 nonZeroDigit = pred \c => '1' <= c && c <= '9'
 
 --------------------------------------------------------------------------------
@@ -44,14 +44,14 @@ parseInt : String -> IdlToken
 parseInt s = maybe (Invalid s) IntLit $ readInt s
 
 -- /0[Xx][0-9A-Fa-f]+/
-private hex : Lexer
+hex : Lexer
 hex = (exact "0x" <|> exact "0X") <+> plus hexDigit
 
 -- /0[0-7]*/
-private oct : Lexer
+oct : Lexer
 oct = is '0' <+> star octDigit
 
-private int : Lexer
+int : Lexer
 int = hex <|> oct <|> (opt (is '-') <+> plus digit)
 
 --------------------------------------------------------------------------------
@@ -59,12 +59,12 @@ int = hex <|> oct <|> (opt (is '-') <+> plus digit)
 --------------------------------------------------------------------------------
 
 -- [_-]?[A-Za-z][0-9A-Z_a-z-]*
-private identifier : Lexer
+identifier : Lexer
 identifier =   opt (oneOf "_-")
            <+> alpha
            <+> star (pred \c => isAlphaNum c || c == '_' || c == '-')
 
-private ident : String -> IdlToken
+ident : String -> IdlToken
 ident = Ident . MkIdent
 
 --------------------------------------------------------------------------------

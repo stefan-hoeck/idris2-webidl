@@ -28,14 +28,10 @@ prop_intLit = property $ do
                 (s,n) <- forAll intLit
                 lex s === Right [IntLit n]
 
-isValid : IdlToken -> Bool
-isValid (Invalid _) = False
-isValid _           = True
-
 prop_floatLit : Property
 prop_floatLit = withTests 1000 . property $ do
                   (s,n) <- forAll floatLit
-                  assert (isRight $ lex s)
+                  lex s === Right [FltLit n]
 
 export
 props : Group

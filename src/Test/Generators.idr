@@ -1,12 +1,21 @@
 module Test.Generators
 
 import Data.List
+import Data.List1
+import Data.SOP
 import Data.String
 import Data.Vect
 import public Hedgehog
 import public Text.WebIDL.Identifier
 import public Text.WebIDL.Numbers
 import public Text.WebIDL.StringLit
+
+--------------------------------------------------------------------------------
+--          Utilities
+--------------------------------------------------------------------------------
+
+linList : Nat -> Gen a -> Gen (List a)
+linList n = list (linear 0 n)
 
 --------------------------------------------------------------------------------
 --          Tokens
@@ -33,7 +42,7 @@ space = string (linear 1 5) (element [' ','\t','\n','\r'])
 
 export
 stringLit : Gen StringLit
-stringLit = toStringLit <$> list (linear 0 15) unicode
+stringLit = toStringLit <$> linList 15 unicode
   where toStringLit : List Char -> StringLit
         toStringLit cs = MkStringLit . (++ "\"") . fastPack 
                        $ '"' :: filter (not . (== '"')) cs
@@ -101,3 +110,25 @@ latinSymbol = map singleton $ choice [ charc '!' '/'
                                      , charc '{' '~'
                                      , charc (chr 161) (chr 255)
                                      ]
+
+--------------------------------------------------------------------------------
+--          Parser
+--------------------------------------------------------------------------------
+
+-- separator, possibly but not necessarily surrounded by spaces
+sep : String -> Gen String
+sep s = [| conc (maybe space) (maybe space) |]
+  where conc : Maybe String -> Maybe String -> String
+        conc a b = fromMaybe "" a ++ s ++ fromMaybe "" b
+
+||| Comma-separated list of identifiers
+export
+identifiers : Gen (String,List1 Identifier)
+identifiers = [| enc identifier (linList 10 $ np [sep ",", identifier]) |]
+  where enc :  Identifier
+            -> List (NP I [String,Identifier])
+            -> (String, List1 Identifier)
+        enc i ps =
+          let is  = i ::: map (\[_,v] => v) ps
+              idl = fastConcat $ i.value :: map (\[s,v] => s ++ v.value) ps
+           in (idl,is)

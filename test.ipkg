@@ -20,3 +20,4 @@ depends    = base        >= 0.3.0
 
 modules    = Test.Generators
            , Test.Lexer
+           , Test.Parser

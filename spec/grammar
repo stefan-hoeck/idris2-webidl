@@ -506,9 +506,9 @@ Grammar
     Other
     ,
 
-[TODO] IdentifierList ::
+[done] IdentifierList ::
     identifier Identifiers
 
-[TODO] Identifiers ::
+[done, part of IdentifierList] Identifiers ::
     , identifier Identifiers
     ε

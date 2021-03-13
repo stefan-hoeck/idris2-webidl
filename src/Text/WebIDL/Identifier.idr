@@ -7,7 +7,9 @@ import Generics.Derive
 
 ||| Identifier
 public export
-data Identifier = MkIdent String
+record Identifier where 
+  constructor MkIdent
+  value : String
 
 %runElab derive "Identifier" [Generic,Meta,Eq,Show]
 

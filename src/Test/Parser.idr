@@ -1,6 +1,5 @@
 module Test.Parser
 
-import Data.List1
 import Text.WebIDL.Parser
 import Test.Generators
 

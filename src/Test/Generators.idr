@@ -1,14 +1,11 @@
 module Test.Generators
 
 import Data.List
-import Data.List1
 import Data.SOP
 import Data.String
 import Data.Vect
 import public Hedgehog
-import public Text.WebIDL.Identifier
-import public Text.WebIDL.Numbers
-import public Text.WebIDL.StringLit
+import public Text.WebIDL.Types
 
 --------------------------------------------------------------------------------
 --          Utilities

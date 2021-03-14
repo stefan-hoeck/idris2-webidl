@@ -1,4 +1,4 @@
-module Text.WebIDL.StringLit
+module Text.WebIDL.Types.StringLit
 
 import Generics.Derive
 

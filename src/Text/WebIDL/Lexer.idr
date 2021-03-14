@@ -1,31 +1,8 @@
 module Text.WebIDL.Lexer
 
 import Data.List
-import Text.WebIDL.Identifier
-import Text.WebIDL.Numbers
-import Text.WebIDL.StringLit
+import Text.WebIDL.Types
 import Text.Lexer
-
-import Generics.Derive
-
-%language ElabReflection
-
-public export
-data IdlToken : Type where
-  Space     : IdlToken
-  StrLit    : StringLit  -> IdlToken
-  IntLit    : Integer    -> IdlToken
-  FltLit    : FloatLit   -> IdlToken
-  Ident     : Identifier -> IdlToken
-  Comment   : String     -> IdlToken
-  Other     : String     -> IdlToken
-  Invalid   : String     -> IdlToken
-
-%runElab derive "Text.WebIDL.Lexer.IdlToken" [Generic,Meta,Eq,Show]
-
---------------------------------------------------------------------------------
---          Utilities
---------------------------------------------------------------------------------
 
 -- alias for `some`
 plus : Lexer -> Lexer

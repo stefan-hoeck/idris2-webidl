@@ -1,4 +1,4 @@
-module Text.WebIDL.Numbers
+module Text.WebIDL.Types.Numbers
 
 import Data.String
 import Data.List1
@@ -91,7 +91,7 @@ readInt s = case fastUnpack s of
 public export
 data Signum = Plus | Minus
 
-%runElab derive "Text.WebIDL.Numbers.Signum" [Generic,Meta,Eq,Show]
+%runElab derive "Signum" [Generic,Meta,Eq,Show]
 
 public export
 data FloatLit : Type where
@@ -112,7 +112,7 @@ data FloatLit : Type where
 
   NaN              : FloatLit
 
-%runElab derive "Text.WebIDL.Numbers.FloatLit" [Generic,Meta,Show]
+%runElab derive "FloatLit" [Generic,Meta,Show]
 
 export
 Eq FloatLit using FastNatEq where

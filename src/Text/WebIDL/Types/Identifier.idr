@@ -1,4 +1,4 @@
-module Text.WebIDL.Identifier
+module Text.WebIDL.Types.Identifier
 
 import Data.List1
 import Generics.Derive
@@ -14,11 +14,7 @@ record Identifier where
 %runElab derive "Identifier" [Generic,Meta,Eq,Show]
 
 ||| IdentifierList :: identifier Identifiers
+||| Identifiers :: "," identifier Identifiers | ε
 public export
 IdentifierList : Type
 IdentifierList = List1 Identifier
-
-||| Identifiers :: "," identifier Identifiers | ε
-public export
-Identifiers : Type
-Identifiers = List Identifier

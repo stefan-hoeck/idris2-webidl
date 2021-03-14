@@ -9,8 +9,10 @@ depends    = base        >= 0.3.0
            , pretty-show >= 0.1.1
            , sop         >= 0.1.1
 
-modules = Text.WebIDL.Identifier
-        , Text.WebIDL.Lexer
-        , Text.WebIDL.Numbers
+modules = Text.WebIDL.Lexer
         , Text.WebIDL.Parser
-        , Text.WebIDL.StringLit
+        , Text.WebIDL.Types
+        , Text.WebIDL.Types.Identifier
+        , Text.WebIDL.Types.Numbers
+        , Text.WebIDL.Types.StringLit
+        , Text.WebIDL.Types.Token

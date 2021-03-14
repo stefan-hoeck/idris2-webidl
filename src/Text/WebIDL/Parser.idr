@@ -2,7 +2,7 @@ module Text.WebIDL.Parser
 
 import Text.Lexer
 import Text.Parser
-import Text.WebIDL.Identifier
+import Text.WebIDL.Types
 import Text.WebIDL.Lexer
 
 import Generics.Derive

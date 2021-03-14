@@ -135,6 +135,23 @@ sep s = [| conc (maybe space) (maybe space) |]
   where conc : Maybe String -> Maybe String -> String
         conc a b = fromMaybe "" a ++ s ++ fromMaybe "" b
 
+between : String -> String -> Gen (String,a) -> Gen (String,a)
+between l r g = [| comb (sep l) (sep r) g |]
+  where comb : String -> String -> (String,a) -> (String,a)
+        comb sl sr (s,a) = (sl ++ s ++ sr, a)
+
+inParens : Gen (String,a) -> Gen (String,a)
+inParens = between "(" ")"
+
+inBrackets : Gen (String,a) -> Gen (String,a)
+inBrackets = between "[" "]"
+
+inBraces : Gen (String,a) -> Gen (String,a)
+inBraces = between "{" "}"
+
+inAnyParens : Gen (String,a) -> Gen (String,a)
+inAnyParens g = choice [ inParens g, inBrackets g, inBraces g ]
+
 -- non-empty list of encoded values, separated by the given
 -- separator. The separator can be pre- or postfixed by arbitrary
 -- whitespace.
@@ -170,3 +187,32 @@ otherOrComma = otherUnless isParen
 export
 other : Gen (String,Other)
 other = otherUnless isCommaOrParen
+
+export
+eaInner : Nat -> Gen (String, EAInner)
+eaInner 0 = pure ("", EAIEmpty)
+eaInner (S k) =
+   frequency [ (1, eaInner 0)
+             , (2, [| combOther otherOrComma space (eaInner k) |])
+             , (2, [| combParens (inAnyParens $ eaInner k) (eaInner k) |])
+             ]
+  where combOther : (String,Other) -> String -> (String,EAInner) -> (String,EAInner)
+        combOther (so,o) p (sa,a) = (so ++ p ++ sa, EAIOther o a)
+
+        combParens : (String,EAInner) -> (String,EAInner) -> (String,EAInner)
+        combParens (sa,a) (sb,b) = (sa ++ sb, EAIParens a b)
+
+-- export
+-- extAttribute : Nat -> Gen (String, ExtAttribute)
+-- extAttribute 0 =
+--   choice [ map (\(s,i) => (s, EAParens i Nothing)) $ inAnyParens eaInner)
+--          , map (\(s,i) => (s, EAOther o Nothing)) other ]
+-- extAttribute (S k) =
+--   choice [ [| combParens 
+--          , map (\(s,i) => (s, EAOther o Nothing)) other ]
+-- 
+--   where combOther : (String,Other) -> String -> (String,EAInner) -> (String,EAInner)
+--         combOther (so,o) p (sa,a) = (so ++ p ++ sa, EAIOther o a)
+-- 
+--         combParens : (String,EAInner) -> (String,Maybe ExtAttribute) -> (String,ExtAttribute)
+--         combParens (sa,a) (sb,b) = (sa ++ sb, EAIParens a b)

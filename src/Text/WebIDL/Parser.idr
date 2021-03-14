@@ -51,6 +51,18 @@ ellipsis : IdlGrammar ()
 ellipsis = tok "Ellipsis" \case Other Ellipsis => Just ()
                                 _              => Nothing
 
+inParens : {b : _} -> Inf (IdlGrammarAny b a) -> IdlGrammar a
+inParens g = symbol '(' *> g <* symbol ')'
+
+inBrackets : {b : _} -> Inf (IdlGrammarAny b a) -> IdlGrammar a
+inBrackets g = symbol '[' *> g <* symbol ']'
+
+inBraces : {b : _} -> Inf (IdlGrammarAny b a) -> IdlGrammar a
+inBraces g = symbol '{' *> g <* symbol '}'
+
+inAnyParens : {b : _} -> Inf (IdlGrammarAny b a) -> IdlGrammar a
+inAnyParens g = inParens g <|> inBrackets g <|> inBraces g
+
 --------------------------------------------------------------------------------
 --          Identifiers
 --------------------------------------------------------------------------------
@@ -93,6 +105,17 @@ other = otherSym $ symbolUnless "other" isCommaOrParen
 export
 otherOrComma : IdlGrammar Other
 otherOrComma = otherSym $ symbolUnless "otherOrComma" isParen
+
+export
+eaInner : IdlGrammar' EAInner
+eaInner =   [| EAIParens (inAnyParens eaInner) eaInner |]
+        <|> [| EAIOther otherOrComma eaInner |]
+        <|> pure EAIEmpty
+
+export
+extAttribute : IdlGrammar ExtAttribute
+extAttribute =   [| EAParens (inAnyParens eaInner) (optional extAttribute) |]
+             <|> [| EAOther other (optional extAttribute) |]
 
 --------------------------------------------------------------------------------
 --          Parsing WebIDL

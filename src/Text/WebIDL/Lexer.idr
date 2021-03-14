@@ -107,7 +107,7 @@ other = pred \c => not $
 --          Lexing
 --------------------------------------------------------------------------------
 
-export tokenMap : TokenMap IdlToken
+tokenMap : TokenMap IdlToken
 tokenMap = [ (spaces,     const Space)
            , (stringLit,  StrLit . MkStringLit)
            , (comment,    Comment)
@@ -117,7 +117,6 @@ tokenMap = [ (spaces,     const Space)
            , (other,      Other)
            ]
 
-public export
 isNoise : IdlToken -> Bool
 isNoise Space       = True
 isNoise (Comment _) = True
@@ -126,7 +125,8 @@ isNoise _           = False
 ||| Generates a list of IdlTokens (wrapped in TokenData, so
 ||| they come with line and position numbers) from an input
 ||| string.
-export lexIdl : String -> Either String $ List (TokenData IdlToken)
+export
+lexIdl : String -> Either String $ List (TokenData IdlToken)
 lexIdl s = case lex tokenMap s of
                 (ts, (_,_,"")) => Right ts
                 (_,  t)        => Left $ "Lexer aborted at " ++ show t
@@ -134,5 +134,6 @@ lexIdl s = case lex tokenMap s of
 ||| Generates a list of IdlTokens
 ||| from an input string, removing unnecessary tokens by
 ||| means of `removeNoise`.
-export lexIdlNoNoise : String -> Either String $ List (TokenData IdlToken)
+export
+lexIdlNoNoise : String -> Either String $ List (TokenData IdlToken)
 lexIdlNoNoise = map (filter (not . isNoise . tok)) . lexIdl

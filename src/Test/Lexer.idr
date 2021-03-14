@@ -1,6 +1,5 @@
 module Test.Lexer
 
-import Data.Either
 import Test.Generators
 import Text.Lexer
 import Text.WebIDL.Lexer

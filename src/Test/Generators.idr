@@ -1,7 +1,6 @@
 module Test.Generators
 
 import Data.List
-import Data.SOP
 import Data.String
 import Data.Vect
 import public Hedgehog

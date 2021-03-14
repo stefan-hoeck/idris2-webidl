@@ -1,0 +1,35 @@
+module Text.WebIDL.Types.Attribute
+
+import Data.SOP
+import Text.WebIDL.Types.Numbers
+import Text.WebIDL.Types.StringLit
+import Text.WebIDL.Types.Identifier
+
+public export
+0 Other : Type
+Other = NS I [Integer,FloatLit,StringLit,Identifier]
+
+-- [TODO] ExtendedAttributeList ::
+--     [ ExtendedAttribute ExtendedAttributes ]
+--     ε
+-- 
+-- [TODO] ExtendedAttributes ::
+--     , ExtendedAttribute ExtendedAttributes
+--     ε
+-- 
+-- [TODO] ExtendedAttribute ::
+--     ( ExtendedAttributeInner ) ExtendedAttributeRest
+--     [ ExtendedAttributeInner ] ExtendedAttributeRest
+--     { ExtendedAttributeInner } ExtendedAttributeRest
+--     Other ExtendedAttributeRest
+-- 
+-- [TODO] ExtendedAttributeRest ::
+--     ExtendedAttribute
+--     ε
+-- 
+-- [TODO] ExtendedAttributeInner ::
+--     ( ExtendedAttributeInner ) ExtendedAttributeInner
+--     [ ExtendedAttributeInner ] ExtendedAttributeInner
+--     { ExtendedAttributeInner } ExtendedAttributeInner
+--     OtherOrComma ExtendedAttributeInner
+--     ε

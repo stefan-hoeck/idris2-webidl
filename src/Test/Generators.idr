@@ -1,6 +1,7 @@
 module Test.Generators
 
 import Data.List
+import Data.List.Elem
 import Data.String
 import Data.Vect
 import public Hedgehog
@@ -13,35 +14,11 @@ import public Text.WebIDL.Types
 linList : Nat -> Gen a -> Gen (List a)
 linList n = list (linear 0 n)
 
---------------------------------------------------------------------------------
---          Tokens
---------------------------------------------------------------------------------
+linString : Nat -> Gen Char -> Gen String
+linString n = string (linear 0 n)
 
-export
-identifier : Gen Identifier
-identifier = [| concIdent (maybe line) alpha rest |]
-  where line : Gen Char
-        line = element ['-','_']
-
-        rest : Gen String
-        rest = string (linear 0 15) (frequency [(20, alphaNum),(1,line)])
-
-        concIdent : Maybe Char -> Char -> String -> Identifier
-        concIdent mc c r =  MkIdent 
-                         $  maybe "" singleton mc
-                         ++ singleton c
-                         ++ r
-
-export
-space : Gen String
-space = string (linear 1 5) (element [' ','\t','\n','\r'])
-
-export
-stringLit : Gen StringLit
-stringLit = toStringLit <$> linList 15 unicode
-  where toStringLit : List Char -> StringLit
-        toStringLit cs = MkStringLit . (++ "\"") . fastPack 
-                       $ '"' :: filter (not . (== '"')) cs
+linString1 : Nat -> Gen Char -> Gen String
+linString1 n = string (linear 1 n)
 
 maxInt : Integer
 maxInt = 18446744073709551616
@@ -51,6 +28,37 @@ posInt = integer $ exponential 0 maxInt
 
 nat : Gen Nat
 nat = map fromInteger . integer $ exponential 0 maxInt
+
+--------------------------------------------------------------------------------
+--          Tokens
+--------------------------------------------------------------------------------
+
+export
+identifier : Gen (String,Identifier)
+identifier = [| concIdent (maybe line) alpha rest |]
+  where line : Gen Char
+        line = element ['-','_']
+
+        rest : Gen String
+        rest = linString 15 (frequency [(20, alphaNum),(1,line)])
+
+        concIdent : Maybe Char -> Char -> String -> (String,Identifier)
+        concIdent mc c r = 
+          let s = maybe "" singleton mc ++ singleton c ++ r
+           in (s, MkIdent s)
+
+export
+space : Gen String
+space = linString1 5 (element [' ','\t','\n','\r'])
+
+export
+stringLit : Gen (String,StringLit)
+stringLit = toStringLit <$> linList 15 unicode
+  where toStringLit : List Char -> (String,StringLit)
+        toStringLit cs =
+          let s = (++ "\"") . fastPack 
+                $ '"' :: filter (not . (== '"')) cs
+           in (s, MkStringLit s)
 
 export
 intLit : Gen (String,Integer)
@@ -99,13 +107,17 @@ comment = choice [line, multiline]
                   $ string (linear 0 20) noForward
 
 export
-latinSymbol : Gen Char
-latinSymbol = choice [ charc '!' '/'
-                     , charc ':' '@'
-                     , charc '[' '`'
-                     , charc '{' '~'
-                     , charc (chr 161) (chr 255)
-                     ]
+symbol : Gen (String,Symbol)
+symbol = frequency [ (10, map (\c => (singleton c, Symb c)) latinSymbol)
+                   , (1, pure ("...", Ellipsis))
+                   ]
+  where latinSymbol : Gen Char
+        latinSymbol = choice [ charc '!' '/'
+                             , charc ':' '@'
+                             , charc '[' '`'
+                             , charc '{' '~'
+                             , charc (chr 161) (chr 255)
+                             ]
 
 --------------------------------------------------------------------------------
 --          Parser
@@ -117,14 +129,33 @@ sep s = [| conc (maybe space) (maybe space) |]
   where conc : Maybe String -> Maybe String -> String
         conc a b = fromMaybe "" a ++ s ++ fromMaybe "" b
 
+-- non-empty list of encoded values, separated by the given
+-- separator. The separator can be pre- or postfixed by arbitrary
+-- whitespace.
+sepList1 : Nat -> String -> Gen (String,a) -> Gen (String,List1 a)
+sepList1 n s g = [| enc g (linList n gsep) |]
+  where enc : (String,a) -> List (String,a) -> (String, List1 a)
+        enc (s1,a1) ps = let (ss,as) = unzip ps
+                          in (fastConcat $ s1 :: ss, a1 ::: as)
+
+        prependSep : String -> (String,a) -> (String,a)
+        prependSep s = mapFst (s ++)
+
+        gsep : Gen (String,a)
+        gsep = [| prependSep (sep s) g |] 
+
 ||| Comma-separated list of identifiers
 export
-identifiers : Gen (String,List1 Identifier)
-identifiers = [| enc identifier (linList 10 $ np [sep ",", identifier]) |]
-  where enc :  Identifier
-            -> List (NP I [String,Identifier])
-            -> (String, List1 Identifier)
-        enc i ps =
-          let is  = i ::: map (\[_,v] => v) ps
-              idl = fastConcat $ i.value :: map (\[s,v] => s ++ v.value) ps
-           in (idl,is)
+identifiers : Gen (String, IdentifierList)
+identifiers = sepList1 10 "," identifier
+
+export
+other : Gen (String,Other)
+other = choice [ map (mapSnd \v => inject v) identifier
+               , map (mapSnd \v => inject v) intLit
+               , map (mapSnd \v => inject v) stringLit
+               , map (mapSnd \v => inject v) floatLit
+               , map (mapSnd \v => inject v) (map nonComma symbol)
+               ]
+  where nonComma : (String,Symbol) -> (String,Symbol)
+        nonComma (s,v) = if s == "," then ("?",Symb '?') else (s,v)

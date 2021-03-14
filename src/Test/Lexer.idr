@@ -10,8 +10,8 @@ lex s = map (map tok) $ lexIdl s
 
 prop_identifier : Property
 prop_identifier = property $ do
-                    (MkIdent i) <- forAll identifier
-                    lex i === Right [Ident $ MkIdent i]
+                    (s,i) <- forAll identifier
+                    lex s === Right [Ident i]
 
 prop_space : Property
 prop_space = property $ do
@@ -20,8 +20,8 @@ prop_space = property $ do
 
 prop_stringLit : Property
 prop_stringLit = property $ do
-                   (MkStringLit s) <- forAll stringLit
-                   lex s === Right [StrLit $ MkStringLit s]
+                   (s,v) <- forAll stringLit
+                   lex s === Right [StrLit v]
 
 prop_intLit : Property
 prop_intLit = property $ do
@@ -40,9 +40,8 @@ prop_comment = property $ do
 
 prop_other : Property
 prop_other = withTests 1000 . property $ do
-               c <- forAll latinSymbol
-               footnote $ show (ord c)
-               lex (singleton c) === Right [Other $ Symb c]
+               (s,v) <- forAll symbol
+               lex s === Right [Other v]
 
 export
 props : Group

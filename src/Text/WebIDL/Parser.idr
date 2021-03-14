@@ -24,6 +24,18 @@ IdlGrammar' = IdlGrammarAny False
 tok : String -> (IdlToken -> Maybe a) -> IdlGrammar a
 tok s f = terminal s (f . tok)
 
+intLit : IdlGrammar Integer
+intLit = tok "Int Lit" \case IntLit n => Just n
+                             _        => Nothing
+
+stringLit : IdlGrammar StringLit
+stringLit = tok "String Lit" \case StrLit s => Just s
+                                   _        => Nothing
+
+floatLit : IdlGrammar FloatLit
+floatLit = tok "Float Lit" \case FltLit v => Just v
+                                 _        => Nothing
+
 --------------------------------------------------------------------------------
 --          Symbols
 --------------------------------------------------------------------------------
@@ -53,6 +65,25 @@ ident = tok "identifier" \case Ident i => Just i
 export
 identifierList : IdlGrammar IdentifierList
 identifierList = [| ident ::: many (comma *> ident) |]
+
+--------------------------------------------------------------------------------
+--          Extended Attributes
+--------------------------------------------------------------------------------
+
+nonComma : IdlGrammar Symbol
+nonComma = tok "not comma" \case Other s => if s == Symb ','
+                                               then Nothing
+                                               else Just s
+                                 _       => Nothing
+
+export
+other : IdlGrammar Other
+other = choice {t = List} [ map (\v => inject v) intLit
+                          , map (\v => inject v) stringLit
+                          , map (\v => inject v) floatLit
+                          , map (\v => inject v) ident
+                          , map (\v => inject v) nonComma
+                          ]
 
 --------------------------------------------------------------------------------
 --          Parsing WebIDL

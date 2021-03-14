@@ -456,26 +456,26 @@ Grammar
     ε
 
 [TODO] Other ::
-    integer
-    decimal
-    identifier
-    string
-    other
-    -
-    -Infinity
-    .
-    ...
-    :
-    ;
-    <
-    =
-    >
-    ?
+    [done] integer
+    [done] decimal
+    [done] identifier
+    [done] string
+    [done] other
+    [done] -
+    [done] -Infinity
+    [done] .
+    [done] ...
+    [done] :
+    [done] ;
+    [done] <
+    [done] =
+    [done] >
+    [done] ?
     ByteString
     DOMString
     FrozenArray
-    Infinity
-    NaN
+    [done] Infinity
+    [done] NaN
     ObservableArray
     Promise
     USVString

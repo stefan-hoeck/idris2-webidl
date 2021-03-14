@@ -1,5 +1,6 @@
 module Test.Lexer
 
+import Data.String
 import Test.Generators
 import Text.Lexer
 import Text.WebIDL.Lexer
@@ -39,9 +40,9 @@ prop_comment = property $ do
 
 prop_other : Property
 prop_other = withTests 1000 . property $ do
-               s <- forAll latinSymbol
-               footnote $ show . map ord $ unpack s
-               lex s === Right [Other s]
+               c <- forAll latinSymbol
+               footnote $ show (ord c)
+               lex (singleton c) === Right [Other $ Symb c]
 
 export
 props : Group

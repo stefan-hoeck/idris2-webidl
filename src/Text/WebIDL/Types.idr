@@ -8,3 +8,4 @@ import public Text.WebIDL.Types.Identifier
 import public Text.WebIDL.Types.Numbers
 import public Text.WebIDL.Types.StringLit
 import public Text.WebIDL.Types.Token
+import public Text.WebIDL.Types.Symbol

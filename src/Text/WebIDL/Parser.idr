@@ -28,12 +28,16 @@ tok s f = terminal s (f . tok)
 --          Symbols
 --------------------------------------------------------------------------------
 
-symbol : String -> IdlGrammar ()
-symbol s = tok ("Symbol " ++ s) \case Other v => guard (s == v)
-                                      _       => Nothing
+symbol : Char -> IdlGrammar ()
+symbol c = tok ("Symbol " ++ show c) \case Other (Symb v) => guard (c == v)
+                                           _              => Nothing
 
 comma : IdlGrammar ()
-comma = symbol ","
+comma = symbol ','
+
+ellipsis : IdlGrammar ()
+ellipsis = tok "Ellipsis" \case Other Ellipsis => Just ()
+                                _              => Nothing
 
 --------------------------------------------------------------------------------
 --          Identifiers

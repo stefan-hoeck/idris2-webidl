@@ -99,13 +99,13 @@ comment = choice [line, multiline]
                   $ string (linear 0 20) noForward
 
 export
-latinSymbol : Gen String
-latinSymbol = map singleton $ choice [ charc '!' '/'
-                                     , charc ':' '@'
-                                     , charc '[' '`'
-                                     , charc '{' '~'
-                                     , charc (chr 161) (chr 255)
-                                     ]
+latinSymbol : Gen Char
+latinSymbol = choice [ charc '!' '/'
+                     , charc ':' '@'
+                     , charc '[' '`'
+                     , charc '{' '~'
+                     , charc (chr 161) (chr 255)
+                     ]
 
 --------------------------------------------------------------------------------
 --          Parser

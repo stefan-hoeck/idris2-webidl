@@ -1,8 +1,9 @@
 module Text.WebIDL.Lexer
 
 import Data.List
-import Text.WebIDL.Types
+import Data.String
 import Text.Lexer
+import Text.WebIDL.Types
 
 -- alias for `some`
 plus : Lexer -> Lexer
@@ -80,18 +81,24 @@ other : Lexer
 other = pred \c => not $
         isAlpha c || isDigit c || isSpace c || isControl c
 
+symbol : String -> IdlToken
+symbol "..." = Other Ellipsis
+symbol s     = case fastUnpack s of
+                    [c] => Other (Symb c)
+                    _   => Invalid s
+
 --------------------------------------------------------------------------------
 --          Lexing
 --------------------------------------------------------------------------------
 
 tokenMap : TokenMap IdlToken
-tokenMap = [ (spaces,     const Space)
-           , (stringLit,  StrLit . MkStringLit)
-           , (comment,    Comment)
-           , (identifier, ident)
-           , (float,      parseFloat)
-           , (int,        parseInt)
-           , (other,      Other)
+tokenMap = [ (spaces,                const Space)
+           , (stringLit,             StrLit . MkStringLit)
+           , (comment,               Comment)
+           , (identifier,            ident)
+           , (float,                 parseFloat)
+           , (int,                   parseInt)
+           , (exact "..." <|> other, symbol)
            ]
 
 isNoise : IdlToken -> Bool

@@ -24,6 +24,10 @@ IdlGrammar' = IdlGrammarAny False
 tok : String -> (IdlToken -> Maybe a) -> IdlGrammar a
 tok s f = terminal s (f . tok)
 
+--------------------------------------------------------------------------------
+--          Symbols
+--------------------------------------------------------------------------------
+
 symbol : String -> IdlGrammar ()
 symbol s = tok ("Symbol " ++ s) \case Other v => guard (s == v)
                                       _       => Nothing
@@ -43,25 +47,12 @@ ident = tok "identifier" \case Ident i => Just i
 ||| IdentifierList :: identifier Identifiers
 ||| Identifiers :: , identifier Identifiers ε
 export
-identifierList : IdlGrammar (List1 Identifier)
+identifierList : IdlGrammar IdentifierList
 identifierList = [| ident ::: many (comma *> ident) |]
 
 --------------------------------------------------------------------------------
 --          Parsing WebIDL
 --------------------------------------------------------------------------------
-
-public export
-data Err : Type where 
-  LexErr     : (msg : String) -> Err
-  NoEOI      : (line : Int) -> (col : Int) -> (tok : IdlToken) -> Err
-  ParseErr   :  (msg : String) -> Err
-  ParseErrAt :  (msg : String)
-             -> (line : Int)
-             -> (col : Int)
-             -> (tok : IdlToken)
-             -> Err
-
-%runElab derive "Text.WebIDL.Parser.Err" [Generic,Meta,Eq,Show]
 
 toParseErr : ParseError (TokenData IdlToken) -> Err
 toParseErr (Error x []) = ParseErr x

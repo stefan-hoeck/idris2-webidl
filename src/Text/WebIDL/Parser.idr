@@ -70,20 +70,29 @@ identifierList = [| ident ::: many (comma *> ident) |]
 --          Extended Attributes
 --------------------------------------------------------------------------------
 
-nonComma : IdlGrammar Symbol
-nonComma = tok "not comma" \case Other s => if s == Symb ','
-                                               then Nothing
-                                               else Just s
-                                 _       => Nothing
+symbolUnless : String -> (Char -> Bool) -> IdlGrammar Symbol
+symbolUnless s f = tok s \case Other s => fromSym s
+                               _       => Nothing
+  where fromSym : Symbol -> Maybe Symbol
+        fromSym Ellipsis = Just Ellipsis
+        fromSym (Symb c) = if f c then Nothing else Just (Symb c)
+        
+
+otherSym : IdlGrammar Symbol -> IdlGrammar Other
+otherSym sym = choice {t = List} [ map (\v => inject v) intLit
+                                 , map (\v => inject v) stringLit
+                                 , map (\v => inject v) floatLit
+                                 , map (\v => inject v) ident
+                                 , map (\v => inject v) sym
+                                 ]
 
 export
 other : IdlGrammar Other
-other = choice {t = List} [ map (\v => inject v) intLit
-                          , map (\v => inject v) stringLit
-                          , map (\v => inject v) floatLit
-                          , map (\v => inject v) ident
-                          , map (\v => inject v) nonComma
-                          ]
+other = otherSym $ symbolUnless "other" isCommaOrParen
+
+export
+otherOrComma : IdlGrammar Other
+otherOrComma = otherSym $ symbolUnless "otherOrComma" isParen
 
 --------------------------------------------------------------------------------
 --          Parsing WebIDL

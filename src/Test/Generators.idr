@@ -119,6 +119,12 @@ symbol = frequency [ (10, map (\c => (singleton c, Symb c)) latinSymbol)
                              , charc (chr 161) (chr 255)
                              ]
 
+symbolUnless : (Char -> Bool) -> Gen (String,Symbol)
+symbolUnless f = map replace symbol
+  where replace : (String,Symbol) -> (String,Symbol)
+        replace (s,Symb c) = if f c then ("@",Symb '@') else (s,Symb c)
+        replace p          = p
+
 --------------------------------------------------------------------------------
 --          Parser
 --------------------------------------------------------------------------------
@@ -149,13 +155,18 @@ export
 identifiers : Gen (String, IdentifierList)
 identifiers = sepList1 10 "," identifier
 
+otherUnless : (Char -> Bool) -> Gen (String,Other)
+otherUnless f = choice [ map (mapSnd \v => inject v) identifier
+                       , map (mapSnd \v => inject v) intLit
+                       , map (mapSnd \v => inject v) stringLit
+                       , map (mapSnd \v => inject v) floatLit
+                       , map (mapSnd \v => inject v) (symbolUnless f)
+                       ]
+
+export
+otherOrComma : Gen (String,Other)
+otherOrComma = otherUnless isParen
+
 export
 other : Gen (String,Other)
-other = choice [ map (mapSnd \v => inject v) identifier
-               , map (mapSnd \v => inject v) intLit
-               , map (mapSnd \v => inject v) stringLit
-               , map (mapSnd \v => inject v) floatLit
-               , map (mapSnd \v => inject v) (map nonComma symbol)
-               ]
-  where nonComma : (String,Symbol) -> (String,Symbol)
-        nonComma (s,v) = if s == "," then ("?",Symb '?') else (s,v)
+other = otherUnless isCommaOrParen

@@ -502,7 +502,7 @@ Grammar
     ArgumentNameKeyword
     BufferRelatedType
 
-[TODO] OtherOrComma ::
+[done] OtherOrComma ::
     Other
     ,
 

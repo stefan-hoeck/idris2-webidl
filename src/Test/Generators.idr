@@ -370,3 +370,27 @@ mutual
   unionMember (S k) = choice [ map (mapSnd UD) (attributed $ distinguishable k)
                              , map (mapSnd UU) (nullable $ union k)
                              ]
+
+--------------------------------------------------------------------------------
+--          Arguments
+--------------------------------------------------------------------------------
+
+||| ConstValue ::
+|||     BooleanLiteral
+|||     FloatLiteral
+|||     integer
+constValue : Gen (String, ConstValue)
+constValue = choice [ map (mapSnd F) floatLit
+                    , map (mapSnd I) intLit
+                    , element [("false", B False), ("true", B True)]
+                    ]
+
+defaultVal : Gen (String, Default)
+defaultVal = choice [ map (mapSnd C) constValue
+                    , map (mapSnd S) stringLit
+                    , element [ ("",None)
+                              , ("[]",EmptyList)
+                              , ("{}",EmptySet)
+                              , ("null",Null)
+                              ]
+                    ]

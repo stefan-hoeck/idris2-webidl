@@ -68,10 +68,11 @@ prop_idlType = property $ do
 
 export
 props : Group
-props = MkGroup "Parser Properties" [
-          ("prop_identifierList", prop_identifierList)
-        , ("prop_other", prop_other)
-        , ("prop_extAttributes", prop_extAttributes)
-        , ("prop_primitiveType", prop_primitiveType)
-        , ("prop_idlType", prop_idlType)
-        ]
+props = withTests 100 $
+          MkGroup "Parser Properties" [
+              ("prop_identifierList", prop_identifierList)
+            , ("prop_other", prop_other)
+            , ("prop_extAttributes", prop_extAttributes)
+            , ("prop_primitiveType", prop_primitiveType)
+            , ("prop_idlType", prop_idlType)
+            ]

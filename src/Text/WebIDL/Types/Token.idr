@@ -16,6 +16,7 @@ data IdlToken : Type where
   IntLit    : Integer    -> IdlToken
   FltLit    : FloatLit   -> IdlToken
   Ident     : Identifier -> IdlToken
+  Key       : Keyword    -> IdlToken
   Comment   : String     -> IdlToken
   Other     : Symbol     -> IdlToken
   Invalid   : String     -> IdlToken

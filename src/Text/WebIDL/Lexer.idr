@@ -69,7 +69,7 @@ ident : String -> IdlToken
 ident "Infinity"        = FltLit Infinity
 ident "-Infinity"       = FltLit NegativeInfinity
 ident "NaN"             = FltLit NaN
-ident s                 = Ident $ MkIdent s
+ident s                 = maybe (Ident $ MkIdent s) Key (refine s)
 
 -- /\/\/.*/
 comment : Lexer

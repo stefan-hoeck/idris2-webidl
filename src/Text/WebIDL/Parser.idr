@@ -28,9 +28,9 @@ IdlGrammar' = IdlGrammarAny False
 tok : String -> (IdlToken -> Maybe a) -> IdlGrammar a
 tok s f = terminal s (f . tok)
 
-withIdent : String -> (String -> Maybe a) -> IdlGrammar a
-withIdent s f = tok s \case (Ident $ MkIdent s) => f s
-                            _                   => Nothing
+withKey : String -> (String -> Maybe a) -> IdlGrammar a
+withKey s f = tok s \case (Key $ MkKeyword s _) => f s
+                          _                     => Nothing
 
 intLit : IdlGrammar Integer
 intLit = tok "Int Lit" \case IntLit n => Just n
@@ -79,14 +79,19 @@ inAnyParens g = inParens g <|> inBrackets g <|> inBraces g
 --------------------------------------------------------------------------------
 
 export
-ident_ : String -> IdlGrammar ()
-ident_ s = tok s \case Ident (MkIdent i) => guard (i == s)
-                       _                 => Nothing
+key : String -> IdlGrammar ()
+key s = tok s \case Key (MkKeyword i _) => guard (i == s)
+                    _                   => Nothing
 
 export
 ident : IdlGrammar Identifier
 ident = tok "identifier" \case Ident i => Just i
                                _       => Nothing
+
+export
+keyword : IdlGrammar Keyword
+keyword = tok "keyword" \case Key i => Just i
+                              _     => Nothing
 
 ||| IdentifierList :: identifier Identifiers
 ||| Identifiers :: , identifier Identifiers ε
@@ -112,6 +117,7 @@ otherSym sym = choice {t = List} [ map (\v => inject v) intLit
                                  , map (\v => inject v) floatLit
                                  , map (\v => inject v) ident
                                  , map (\v => inject v) sym
+                                 , map (\v => inject v) keyword
                                  ]
 
 export
@@ -146,7 +152,7 @@ attributed g = [| (,) extAttributes g |] <|> map (Nil,) g
 --------------------------------------------------------------------------------
 
 bufferRelated : IdlGrammar BufferRelatedType
-bufferRelated = withIdent "BufferRelated"
+bufferRelated = withKey "BufferRelated"
                   \case "ArrayBuffer"       => Just ArrayBuffer
                         "DataView"          => Just DataView
                         "Int8Array"         => Just Int8Array
@@ -161,7 +167,7 @@ bufferRelated = withIdent "BufferRelated"
                         _                   => Nothing
 
 stringType : IdlGrammar StringType
-stringType = withIdent "stringType"
+stringType = withKey "stringType"
                \case "ByteString" => Just ByteString
                      "DOMString"  => Just DOMString
                      "USVString"  => Just USVString
@@ -169,26 +175,26 @@ stringType = withIdent "stringType"
 
 export
 primitive : IdlGrammar PrimitiveType
-primitive =   ident_ "unsigned"     *> map Unsigned int
-          <|> ident_ "unrestricted" *> map Unrestricted float
+primitive =   key "unsigned"     *> map Unsigned int
+          <|> key "unrestricted" *> map Unrestricted float
           <|> map Signed int
           <|> map Restricted float
-          <|> withIdent "Primitive" \case "boolean"   => Just Boolean 
-                                          "byte"      => Just Byte
-                                          "octet"     => Just Octet
-                                          "bigint"    => Just BigInt
-                                          "undefined" => Just Undefined
-                                          _           => Nothing
+          <|> withKey "Primitive" \case "boolean"   => Just Boolean 
+                                        "byte"      => Just Byte
+                                        "octet"     => Just Octet
+                                        "bigint"    => Just BigInt
+                                        "undefined" => Just Undefined
+                                        _           => Nothing
 
   where int : IdlGrammar IntType
-        int =   (ident_ "long"  *> ident_ "long" $> LongLong)
-            <|> (ident_ "long"  $> Long)
-            <|> (ident_ "short" $> Short)
+        int =   (key "long"  *> key "long" $> LongLong)
+            <|> (key "long"  $> Long)
+            <|> (key "short" $> Short)
 
         float : IdlGrammar FloatType
-        float = withIdent "FloatType" \case "double" => Just Dbl
-                                            "float"  => Just Float
-                                            _        => Nothing
+        float = withKey "FloatType" \case "double" => Just Dbl
+                                          "float"  => Just Float
+                                          _        => Nothing
 
 constType : IdlGrammar ConstType
 constType = map CP primitive <|> map CI ident
@@ -210,8 +216,8 @@ mutual
   --     Promise < Type >
   export
   idlType : IdlGrammar IdlType
-  idlType =   (ident_ "any" $> Any)
-          <|> map Promise (ident_ "Promise" *> inAngles idlType)
+  idlType =   (key "any" $> Any)
+          <|> map Promise (key "Promise" *> inAngles idlType)
           <|> map D distinguishableType
           <|> map U (nullable union)
 
@@ -223,7 +229,7 @@ mutual
   -- RecordType ::
   --     record < StringType , TypeWithExtendedAttributes >
   recrd : IdlGrammar Distinguishable
-  recrd = Record <$> (ident_ "record" *> symbol '<' *> stringType)
+  recrd = Record <$> (key "record" *> symbol '<' *> stringType)
                  <*> (comma *> attrTpe <* symbol '>')
 
   -- DistinguishableType ::
@@ -242,11 +248,11 @@ mutual
         map P primitive
     <|> map S stringType
     <|> map B bufferRelated
-    <|> (ident_ "object" $> Object)
-    <|> (ident_ "symbol" $> Symbol)
-    <|> map Sequence (ident_ "sequence" *> inAngles attrTpe)
-    <|> map FrozenArray (ident_ "FrozenArray" *> inAngles attrTpe)
-    <|> map ObservableArray (ident_ "ObservableArray" *> inAngles attrTpe)
+    <|> (key "object" $> Object)
+    <|> (key "symbol" $> Symbol)
+    <|> map Sequence (key "sequence" *> inAngles attrTpe)
+    <|> map FrozenArray (key "FrozenArray" *> inAngles attrTpe)
+    <|> map ObservableArray (key "ObservableArray" *> inAngles attrTpe)
     <|> recrd
     <|> map I ident
 
@@ -260,7 +266,7 @@ mutual
   --     or UnionMemberType UnionMemberTypes
   --     ε
   union : IdlGrammar UnionType
-  union = inParens $ do (a :: b :: t) <- sepBy (ident_ "or") unionMember
+  union = inParens $ do (a :: b :: t) <- sepBy (key "or") unionMember
                           | _ => fail "Non enough Union members"
                         pure (UT a b t)
 

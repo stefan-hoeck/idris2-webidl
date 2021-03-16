@@ -28,7 +28,7 @@ isCommaOrParenOrQuote c   = isParenOrQuote c
 
 public export
 0 Other : Type
-Other = NS I [Integer,FloatLit,StringLit,Identifier,Symbol]
+Other = NS I [Integer,FloatLit,StringLit,Identifier,Keyword,Symbol]
 
 ||| ExtendedAttributeInner ::
 public export

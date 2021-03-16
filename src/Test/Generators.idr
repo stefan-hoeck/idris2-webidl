@@ -1,3 +1,7 @@
+-- We refrain from doing anything fancy with type aliases and composed
+-- applicatives here. This may make generators slightly more verbose,
+-- but it should be clear from their definitions, how WebIDL strings and
+-- the corresponding data types are being built up.
 module Test.Generators
 
 import Data.List
@@ -11,23 +15,35 @@ import public Text.WebIDL.Types
 --          Utilities
 --------------------------------------------------------------------------------
 
+-- list whose length scales linearily and shrinks towards 0
 linList : Nat -> Gen a -> Gen (List a)
 linList n = list (linear 0 n)
 
+-- string whose length scales linearily and shrinks towards 0
 linString : Nat -> Gen Char -> Gen String
 linString n = string (linear 0 n)
 
+-- non-empty string whose length scales linearily and shrinks towards 1
 linString1 : Nat -> Gen Char -> Gen String
 linString1 n = string (linear 1 n)
 
 maxInt : Integer
 maxInt = 18446744073709551616
 
+anyInt : Gen Integer
+anyInt = integer $ exponentialFrom 0 (- maxInt) maxInt
+
 posInt : Gen Integer
 posInt = integer $ exponential 0 maxInt
 
 nat : Gen Nat
-nat = map fromInteger . integer $ exponential 0 maxInt
+nat = map fromInteger posInt
+
+pairFst : Functor f => (a -> b) -> f a -> f (a,b)
+pairFst g = map (\a => (a, g a))
+
+pairSnd : Functor f => (a -> b) -> f a -> f (b,a)
+pairSnd g = map (\a => (g a, a))
 
 --------------------------------------------------------------------------------
 --          Tokens
@@ -35,47 +51,41 @@ nat = map fromInteger . integer $ exponential 0 maxInt
 
 export
 identifier : Gen (String,Identifier)
-identifier = [| concIdent (maybe line) alpha rest |]
+identifier = pairFst MkIdent [| concIdent (maybe line) alpha rest |]
   where line : Gen Char
         line = element ['-','_']
 
         rest : Gen String
         rest = linString 15 (frequency [(20, alphaNum),(1,line)])
 
-        concIdent : Maybe Char -> Char -> String -> (String,Identifier)
-        concIdent mc c r = 
-          let s = maybe "" singleton mc ++ singleton c ++ r
-           in (s, MkIdent s)
+        concIdent : Maybe Char -> Char -> String -> String
+        concIdent mc c r = maybe "" singleton mc ++ singleton c ++ r
 
 export
 space : Gen String
 space = linString1 5 (element [' ','\t','\n','\r'])
 
 export
+maybeSpace : Gen String
+maybeSpace = frequency [(1, pure ""), (4, space)]
+
+export
 stringLit : Gen (String,StringLit)
-stringLit = toStringLit <$> linList 15 unicode
-  where toStringLit : List Char -> (String,StringLit)
-        toStringLit cs =
-          let s = (++ "\"") . fastPack 
-                $ '"' :: filter (not . (== '"')) cs
-           in (s, MkStringLit s)
+stringLit = pairFst MkStringLit $ toStringLit <$> linList 15 unicode
+  where toStringLit : List Char -> String
+        toStringLit cs = (++ "\"") . fastPack 
+                       $ '"' :: filter (not . (== '"')) cs
 
 export
 intLit : Gen (String,Integer)
-intLit = choice [decimal,hex,oct]
-  where decimal : Gen (String,Integer)
-        decimal = map (\n => (show n, n)) . integer
-                $ exponentialFrom 0 (-maxInt) maxInt
-
-        hex : Gen (String,Integer)
-        hex = map (\n => (toHex n, natToInteger n)) nat
-
-        oct : Gen (String,Integer)
-        oct = map (\n => (toOct n, natToInteger n)) nat
+intLit = choice [ pairSnd show anyInt
+                , pairSnd (toHex . fromInteger) posInt
+                , pairSnd (toOct . fromInteger) posInt
+                ]
 
 export
 floatLit : Gen (String,FloatLit)
-floatLit = map (\fl => (toFloatLit fl, fl)) float
+floatLit = pairSnd toFloatLit float
   where exp : Gen Integer
         exp = integer $ linearFrom 0 (-30) (30)
 
@@ -131,9 +141,7 @@ symbolUnless f = map replace symbol
 
 -- separator, possibly but not necessarily surrounded by spaces
 sep : String -> Gen String
-sep s = [| conc (maybe space) (maybe space) |]
-  where conc : Maybe String -> Maybe String -> String
-        conc a b = fromMaybe "" a ++ s ++ fromMaybe "" b
+sep s = [| (\a,b => a ++ s ++ b) maybeSpace maybeSpace |]
 
 between : String -> String -> Gen (String,a) -> Gen (String,a)
 between l r g = [| comb (sep l) (sep r) g |]
@@ -167,6 +175,12 @@ sepList1 n s g = [| enc g (linList n gsep) |]
         gsep : Gen (String,a)
         gsep = [| prependSep (sep s) g |] 
 
+sepListNonEmpty : Nat -> String -> Gen (String,a) -> Gen (String,List a)
+sepListNonEmpty n s = map (mapSnd forget) . sepList1 n s
+
+sepList : Nat -> String -> Gen (String,a) -> Gen (String,List a)
+sepList n s g =   fromMaybe ("",[]) <$> maybe (sepListNonEmpty n s g)
+
 ||| Comma-separated list of identifiers
 export
 identifiers : Gen (String, IdentifierList)
@@ -182,13 +196,12 @@ otherUnless f = choice [ map (mapSnd \v => inject v) identifier
 
 export
 otherOrComma : Gen (String,Other)
-otherOrComma = otherUnless isParen
+otherOrComma = otherUnless isParenOrQuote
 
 export
 other : Gen (String,Other)
-other = otherUnless isCommaOrParen
+other = otherUnless isCommaOrParenOrQuote
 
-export
 eaInner : Nat -> Gen (String, EAInner)
 eaInner 0 = pure ("", EAIEmpty)
 eaInner (S k) =
@@ -202,17 +215,26 @@ eaInner (S k) =
         combParens : (String,EAInner) -> (String,EAInner) -> (String,EAInner)
         combParens (sa,a) (sb,b) = (sa ++ sb, EAIParens a b)
 
--- export
--- extAttribute : Nat -> Gen (String, ExtAttribute)
--- extAttribute 0 =
---   choice [ map (\(s,i) => (s, EAParens i Nothing)) $ inAnyParens eaInner)
---          , map (\(s,i) => (s, EAOther o Nothing)) other ]
--- extAttribute (S k) =
---   choice [ [| combParens 
---          , map (\(s,i) => (s, EAOther o Nothing)) other ]
--- 
---   where combOther : (String,Other) -> String -> (String,EAInner) -> (String,EAInner)
---         combOther (so,o) p (sa,a) = (so ++ p ++ sa, EAIOther o a)
--- 
---         combParens : (String,EAInner) -> (String,Maybe ExtAttribute) -> (String,ExtAttribute)
---         combParens (sa,a) (sb,b) = (sa ++ sb, EAIParens a b)
+extAttribute : Nat -> Gen (String, ExtAttribute)
+extAttribute 0 =
+  choice [ map (\(s,i) => (s, EAParens i Nothing)) $ inAnyParens (eaInner 0)
+         , map (\(s,o) => (s, EAOther o Nothing)) other ]
+
+extAttribute (S k) =
+  choice [ [| combParens (inAnyParens $ eaInner k) rest |]
+         , [| combOther other space rest |]
+         ]
+
+  where rest : Gen (String,Maybe ExtAttribute)
+        rest = map (\case Just (s,a) => (s, Just a)
+                          Nothing    => ("", Nothing)) (maybe $ extAttribute k)
+
+        combOther : (String,Other) -> String -> (String,Maybe ExtAttribute) -> (String,ExtAttribute)
+        combOther (so,o) p (sa,a) = (so ++ p ++ sa, EAOther o a)
+
+        combParens : (String,EAInner) -> (String,Maybe ExtAttribute) -> (String,ExtAttribute)
+        combParens (sa,a) (sb,b) = (sa ++ sb, EAParens a b)
+
+export
+extAttributes : Gen (String, ExtAttributeList)
+extAttributes = inBrackets . sepList 6 "," $ extAttribute 3

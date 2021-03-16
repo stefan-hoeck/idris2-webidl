@@ -11,19 +11,20 @@ import Generics.Derive
 %language ElabReflection
 
 public export
-isParen : Char -> Bool
-isParen '(' = True
-isParen ')' = True
-isParen '[' = True
-isParen ']' = True
-isParen '{' = True
-isParen '}' = True
-isParen _   = False
+isParenOrQuote : Char -> Bool
+isParenOrQuote '(' = True
+isParenOrQuote ')' = True
+isParenOrQuote '[' = True
+isParenOrQuote ']' = True
+isParenOrQuote '{' = True
+isParenOrQuote '}' = True
+isParenOrQuote '"' = True
+isParenOrQuote _   = False
 
 public export
-isCommaOrParen : Char -> Bool
-isCommaOrParen ',' = True
-isCommaOrParen c   = isParen c
+isCommaOrParenOrQuote : Char -> Bool
+isCommaOrParenOrQuote ',' = True
+isCommaOrParenOrQuote c   = isParenOrQuote c
 
 public export
 0 Other : Type
@@ -45,6 +46,29 @@ data EAInner : Type where
 
 %runElab derive "EAInner" [Generic,Meta,Eq,Show]
 
+namespace EAInner
+
+  ||| Number of `Other`s.
+  public export
+  size : EAInner -> Nat
+  size (EAIParens inParens eai)    = size inParens + size eai
+  size (EAIOther otherOrComma eai) = 1 + size eai
+  size EAIEmpty                    = 0
+
+  ||| Number of `Other`s.
+  public export
+  leaves : EAInner -> Nat
+  leaves (EAIParens inParens eai)    = leaves inParens + leaves eai
+  leaves (EAIOther otherOrComma eai) = 1 + leaves eai
+  leaves EAIEmpty                    = 1
+
+  ||| Number of `Other`s.
+  public export
+  depth : EAInner -> Nat
+  depth (EAIParens inParens eai)    = 1 + (depth inParens `max` depth eai)
+  depth (EAIOther otherOrComma eai) = 1 + depth eai
+  depth EAIEmpty                    = 0
+
 ||| ExtendedAttributeRest ::
 |||   ExtendedAttribute
 |||   ε
@@ -61,6 +85,26 @@ data ExtAttribute : Type where
   EAOther : (other : Other) -> (rest : Maybe ExtAttribute) -> ExtAttribute
 
 %runElab derive "ExtAttribute" [Generic,Meta,Eq,Show]
+
+namespace ExtAttribute
+
+  ||| Number of `Other`s.
+  public export
+  size : ExtAttribute -> Nat
+  size (EAParens inner rest) = size inner + maybe 0 size rest
+  size (EAOther other rest)  = 1 + maybe 0 size rest
+
+  ||| Number of leaves (unlike `size`, this includes empty leaves)
+  public export
+  leaves : ExtAttribute -> Nat
+  leaves (EAParens inner rest) = leaves inner + maybe 1 leaves rest
+  leaves (EAOther other rest)  = 1 + maybe 1 leaves rest
+
+  ||| Number of `Other`s.
+  public export
+  depth : ExtAttribute -> Nat
+  depth (EAParens inner rest) = 1 + (depth inner `max` maybe 0 depth rest)
+  depth (EAOther other rest)  = 1 + maybe 0 depth rest
 
 
 ||| ExtendedAttributeList ::
@@ -79,14 +123,14 @@ ExtAttributeList = List ExtAttribute
 --          Tests and Proofs
 --------------------------------------------------------------------------------
 
-isParenTrue : all Attribute.isParen (unpack "(){}[]") = True
+isParenTrue : all Attribute.isParenOrQuote (unpack "(){}[]\"") = True
 isParenTrue = Refl
 
-isParenFalse : any Attribute.isParen (unpack "=!?><:;,.-_") = False
+isParenFalse : any Attribute.isParenOrQuote (unpack "=!?><:;,.-_") = False
 isParenFalse = Refl
 
-isCommaOrParenTrue : all Attribute.isCommaOrParen (unpack ",(){}[]") = True
+isCommaOrParenTrue : all Attribute.isCommaOrParenOrQuote (unpack ",(){}[]\"") = True
 isCommaOrParenTrue = Refl
 
-isCommaOrParenFalse : any Attribute.isCommaOrParen (unpack "=!?><:;.-_") = False
+isCommaOrParenFalse : any Attribute.isCommaOrParenOrQuote (unpack "=!?><:;.-_") = False
 isCommaOrParenFalse = Refl

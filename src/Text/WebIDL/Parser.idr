@@ -100,11 +100,11 @@ otherSym sym = choice {t = List} [ map (\v => inject v) intLit
 
 export
 other : IdlGrammar Other
-other = otherSym $ symbolUnless "other" isCommaOrParen
+other = otherSym $ symbolUnless "other" isCommaOrParenOrQuote
 
 export
 otherOrComma : IdlGrammar Other
-otherOrComma = otherSym $ symbolUnless "otherOrComma" isParen
+otherOrComma = otherSym $ symbolUnless "otherOrComma" isParenOrQuote
 
 export
 eaInner : IdlGrammar' EAInner
@@ -116,6 +116,10 @@ export
 extAttribute : IdlGrammar ExtAttribute
 extAttribute =   [| EAParens (inAnyParens eaInner) (optional extAttribute) |]
              <|> [| EAOther other (optional extAttribute) |]
+
+export
+extAttributes : IdlGrammar ExtAttributeList
+extAttributes = inBrackets (sepBy comma extAttribute)
 
 --------------------------------------------------------------------------------
 --          Parsing WebIDL

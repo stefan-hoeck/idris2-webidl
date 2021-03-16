@@ -430,25 +430,25 @@ Grammar
     Float32Array
     Float64Array
 
-[TODO] ExtendedAttributeList ::
+[done] ExtendedAttributeList ::
     [ ExtendedAttribute ExtendedAttributes ]
     ε
 
-[TODO] ExtendedAttributes ::
+[done] ExtendedAttributes ::
     , ExtendedAttribute ExtendedAttributes
     ε
 
-[TODO] ExtendedAttribute ::
+[done] ExtendedAttribute ::
     ( ExtendedAttributeInner ) ExtendedAttributeRest
     [ ExtendedAttributeInner ] ExtendedAttributeRest
     { ExtendedAttributeInner } ExtendedAttributeRest
     Other ExtendedAttributeRest
 
-[TODO] ExtendedAttributeRest ::
+[done] ExtendedAttributeRest ::
     ExtendedAttribute
     ε
 
-[TODO] ExtendedAttributeInner ::
+[done] ExtendedAttributeInner ::
     ( ExtendedAttributeInner ) ExtendedAttributeInner
     [ ExtendedAttributeInner ] ExtendedAttributeInner
     { ExtendedAttributeInner } ExtendedAttributeInner

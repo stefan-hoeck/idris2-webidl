@@ -12,6 +12,7 @@ depends    = base        >= 0.3.0
 modules = Text.WebIDL.Lexer
         , Text.WebIDL.Parser
         , Text.WebIDL.Types
+        , Text.WebIDL.Types.Argument
         , Text.WebIDL.Types.Attribute
         , Text.WebIDL.Types.Err
         , Text.WebIDL.Types.Identifier

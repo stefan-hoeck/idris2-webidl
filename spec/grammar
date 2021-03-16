@@ -22,7 +22,7 @@ Grammar
     Typedef
     IncludesStatement
 
-[TODO] ArgumentNameKeyword ::
+[done] ArgumentNameKeyword ::
     async
     attribute
     callback
@@ -219,26 +219,26 @@ Grammar
 [TODO] OperationNameKeyword ::
     includes
 
-[TODO] ArgumentList ::
+[done] ArgumentList ::
     Argument Arguments
     ε
 
-[TODO (part of ArgumentList)] Arguments ::
+[done (part of ArgumentList)] Arguments ::
     , Argument Arguments
     ε
 
-[TODO (part of ArgumentList)] Argument ::
+[done (part of ArgumentList)] Argument ::
     ExtendedAttributeList ArgumentRest
 
-[TODO] ArgumentRest ::
+[done] ArgumentRest ::
     optional TypeWithExtendedAttributes ArgumentName Default
     Type Ellipsis ArgumentName
 
-[TODO] ArgumentName ::
+[done] ArgumentName ::
     ArgumentNameKeyword
     identifier
 
-[TODO] Ellipsis ::
+[done] Ellipsis ::
     ...
     ε
 
@@ -314,7 +314,7 @@ Grammar
 [TODO (part of PartialDefinition)] PartialDictionary ::
     dictionary identifier { DictionaryMembers } ;
 
-[TODO] Default ::
+[done] Default ::
     = DefaultValue
     ε
 

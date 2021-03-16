@@ -66,13 +66,19 @@ prop_idlType = property $ do
 
                  parseIdl idlType s === Right v
 
+prop_argumentRest : Property
+prop_argumentRest = property $ do
+                      (s,v) <- forAll argumentRest
+                      parseIdl argumentRest s === Right v
+
 export
 props : Group
-props = withTests 100 $
+props = withTests 500 $
           MkGroup "Parser Properties" [
               ("prop_identifierList", prop_identifierList)
             , ("prop_other", prop_other)
             , ("prop_extAttributes", prop_extAttributes)
             , ("prop_primitiveType", prop_primitiveType)
             , ("prop_idlType", prop_idlType)
+            , ("prop_argumentRest", prop_argumentRest)
             ]

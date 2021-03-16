@@ -278,6 +278,38 @@ mutual
               <|> map UU (nullable union)
 
 --------------------------------------------------------------------------------
+--          Arguments
+--------------------------------------------------------------------------------
+
+boolLit : IdlGrammar Bool
+boolLit = (key "false" $> False) <|> (key "true" $> True)
+
+constValue : IdlGrammar ConstValue
+constValue = map B boolLit <|> map F floatLit <|> map I intLit
+
+defaultV : IdlGrammar' Default
+defaultV =   (symbol '[' *> symbol ']' $> EmptyList)
+         <|> (symbol '{' *> symbol '}' $> EmptySet)
+         <|> (key "null" $> Null)
+         <|> map S stringLit
+         <|> map C constValue
+         <|> pure None
+
+argName : IdlGrammar ArgumentName
+argName =   withKey "ArgumentNameKeyword"
+              (map (MkArgName . value) . ArgumentNameKeyword.refine)
+        <|> map (MkArgName . value) ident
+
+export
+argumentRest : IdlGrammar ArgumentRest
+argumentRest =   [| Optional (key "optional" *> attrTpe) argName defaultV |]
+             <|> [| VarArg    (idlType <* ellipsis) argName |]
+             <|> [| Mandatory idlType argName |]
+
+argumentList : IdlGrammar' ArgumentList
+argumentList = sepBy comma (attributed argumentRest)
+
+--------------------------------------------------------------------------------
 --          Parsing WebIDL
 --------------------------------------------------------------------------------
 

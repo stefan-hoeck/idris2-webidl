@@ -394,3 +394,58 @@ defaultVal = choice [ map (mapSnd C) constValue
                               , ("null",Null)
                               ]
                     ]
+
+argName : Gen (String, ArgumentName)
+argName = choice [ map (\(s,_) => (s, MkArgName s)) identifier
+                 , pairFst MkArgName $ element [ "async"
+                                               , "attribute"
+                                               , "callback"
+                                               , "const"
+                                               , "constructor"
+                                               , "deleter"
+                                               , "dictionary"
+                                               , "enum"
+                                               , "getter"
+                                               , "includes"
+                                               , "inherit"
+                                               , "interface"
+                                               , "iterable"
+                                               , "maplike"
+                                               , "mixin"
+                                               , "namespace"
+                                               , "partial"
+                                               , "readonly"
+                                               , "required"
+                                               , "setlike"
+                                               , "setter"
+                                               , "static"
+                                               , "stringifier"
+                                               , "typedef"
+                                               , "unrestricted" ]
+                 ]
+
+export
+argumentRest : Gen (String,ArgumentRest)
+argumentRest = choice [ [| optional (typeWithAttr 3) argName defaultVal |]
+                      , [| mandatory (idlType 3) argName |]
+                      , [| vararg (idlType 3) argName |]
+                      ]
+  where optional :  (String,Attributed IdlType)
+                 -> (String,ArgumentName)
+                 -> (String,Default)
+                 -> (String,ArgumentRest)
+        optional (s1,t) (s2,n) (s3,d) = ("optional " ++ s1 ++ " " ++ s2 ++ " " ++ s3
+                                        , Optional t n d )
+
+        mandatory : (String,IdlType)
+                 -> (String,ArgumentName)
+                 -> (String,ArgumentRest)
+        mandatory (s1,t) (s2,n) = (s1 ++ " " ++ s2, Mandatory t n)
+
+        vararg :  (String,IdlType)
+               -> (String,ArgumentName)
+               -> (String,ArgumentRest)
+        vararg (s1,t) (s2,n) = (s1 ++ "... " ++ s2, VarArg t n)
+
+argumentList : Gen (String,ArgumentList)
+argumentList = sepList 10 "," (attributed argumentRest)

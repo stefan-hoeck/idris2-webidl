@@ -237,4 +237,136 @@ extAttribute (S k) =
 
 export
 extAttributes : Gen (String, ExtAttributeList)
-extAttributes = inBrackets . sepList 6 "," $ extAttribute 3
+extAttributes = inBrackets . sepListNonEmpty 5 "," $ extAttribute 3
+
+export
+attributed : Gen (String, a) -> Gen (String, Attributed a)
+attributed g = frequency [ (3, map (mapSnd ([],)) g)
+                         , (1, [| comb extAttributes maybeSpace g|])
+                         ]
+  where comb :  (String, ExtAttributeList)
+             -> String
+             -> (String,a)
+             -> (String,Attributed a)
+        comb (s1,as) s2 (s3,v) = (s1 ++ s2 ++ s3, (as,v))
+
+--------------------------------------------------------------------------------
+--          Types
+--------------------------------------------------------------------------------
+
+bufferRelated : Gen (String, BufferRelatedType)
+bufferRelated = pairSnd show $
+                  element [ ArrayBuffer
+                          , DataView
+                          , Int8Array
+                          , Int16Array
+                          , Int32Array
+                          , Uint8Array
+                          , Uint16Array
+                          , Uint32Array
+                          , Uint8ClampedArray
+                          , Float32Array
+                          , Float64Array
+                          ]
+
+stringType : Gen (String, StringType)
+stringType = pairSnd show $ element [ByteString, DOMString, USVString]
+
+export
+primitive : Gen (String, PrimitiveType)
+primitive = element [ ("undefined", Undefined)
+                    , ("boolean", Boolean)
+                    , ("octet", Octet)
+                    , ("byte", Byte)
+                    , ("bigint", BigInt)
+                    , ("double", Restricted Dbl)
+                    , ("float", Restricted Float)
+                    , ("short", Signed Short)
+                    , ("long", Signed Long)
+                    , ("long long", Signed LongLong)
+                    , ("unsigned short", Unsigned Short)
+                    , ("unsigned long", Unsigned Long)
+                    , ("unsigned long long", Unsigned LongLong)
+                    , ("unrestricted double", Unrestricted Dbl)
+                    , ("unrestricted float", Unrestricted Float)
+                    ]
+
+
+nullable : Gen (String,a) -> Gen (String, Nullable a)
+nullable g = choice [ map (mapSnd NotNull) g
+                    , map (\(s,a) => (s ++ "?", MaybeNull a)) g
+                    ]
+
+-- PrimitiveType
+-- StringType
+-- identifier
+-- object
+-- symbol
+-- BufferRelatedType
+mutual
+  export
+  idlType : Nat -> Gen (String, IdlType)
+  idlType 0 = frequency [ (1, pure ("any", Any))
+                        , (10, map (mapSnd D) (distinguishable 0))
+                        ]
+  idlType (S k) = frequency [ (2, idlType 0)
+                            , (1, promise k)
+                            , (2, map (mapSnd D) (distinguishable k))
+                            ]
+
+  dist : Nat -> Gen (String, Distinguishable)
+  dist 0     = choice [ (map (mapSnd P) primitive)
+                      , (map (mapSnd S) stringType)
+                      , (map (mapSnd I) identifier)
+                      , (map (mapSnd B) bufferRelated)
+                      , element [ ("object", Object), ("symbol", Symbol) ]
+                      ]
+  dist (S k) = choice [sequence k, frozen k, observable k, recrd k]
+
+  distinguishable : Nat -> Gen (String, Nullable Distinguishable)
+  distinguishable n = nullable (dist n)
+
+  promise : Nat -> Gen (String, IdlType)
+  promise k = map (\(s,t) => ("Promise<" ++ s ++ ">",Promise t))
+                  (idlType k)
+
+  typeWithAttr : Nat -> Gen (String, Attributed IdlType)
+  typeWithAttr k = attributed (idlType k)
+
+  sequence : Nat -> Gen (String,Distinguishable)
+  sequence k = map (\(s,t) => ("sequence<" ++ s ++ ">", Sequence t))
+                   (typeWithAttr k)
+
+  frozen : Nat -> Gen (String,Distinguishable)
+  frozen k = map (\(s,t) => ("FrozenArray<" ++ s ++ ">", FrozenArray t))
+                 (typeWithAttr k)
+
+  observable : Nat -> Gen (String,Distinguishable)
+  observable k = map (\(s,t) => ("ObservableArray<" ++ s ++ ">", ObservableArray t))
+                     (typeWithAttr k)
+
+  recrd : Nat -> Gen (String,Distinguishable)
+  recrd n = [| comb stringType (typeWithAttr n) |]
+    where comb :  (String,StringType)
+               -> (String,Attributed IdlType)
+               -> (String,Distinguishable)
+          comb (s1,st) (s2,at) = ( "record<" ++ s1 ++ "," ++ s2 ++ ">"
+                                 , Record st at)
+
+  union : Nat -> Gen (String,UnionType)
+  union n = inParens [| comb (unionMember n)
+                             (unionMember n)
+                             (sepList 2 " or " (unionMember n)) |]
+    where comb :  (String,UnionMemberType)
+               -> (String,UnionMemberType)
+               -> (String,List UnionMemberType)
+               -> (String,UnionType)
+          comb (s1,u1) (s2,u2) (_,Nil) = (s1 ++ " or " ++ s2, UT u1 u2 Nil)
+          comb (s1,u1) (s2,u2) (s3,ts) =
+            (s1 ++ " or " ++ s2 ++ " or " ++ s3, UT u1 u2 ts)
+
+  unionMember : Nat -> Gen (String,UnionMemberType)
+  unionMember 0     = map (mapSnd UD) (attributed $ distinguishable 0)
+  unionMember (S k) = choice [ map (mapSnd UD) (attributed $ distinguishable k)
+                             , map (mapSnd UU) (nullable $ union k)
+                             ]

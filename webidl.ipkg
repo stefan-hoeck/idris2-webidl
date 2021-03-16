@@ -18,4 +18,5 @@ modules = Text.WebIDL.Lexer
         , Text.WebIDL.Types.Numbers
         , Text.WebIDL.Types.StringLit
         , Text.WebIDL.Types.Token
+        , Text.WebIDL.Types.Type
         , Text.WebIDL.Types.Symbol

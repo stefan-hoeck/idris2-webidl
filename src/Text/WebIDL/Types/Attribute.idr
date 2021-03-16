@@ -118,6 +118,11 @@ public export
 0 ExtAttributeList : Type
 ExtAttributeList = List ExtAttribute
 
+||| TypeWithExtendedAttributes ::
+|||     ExtendedAttributeList Type
+public export
+0 Attributed : Type -> Type
+Attributed a = (ExtAttributeList, a)
 
 --------------------------------------------------------------------------------
 --          Tests and Proofs

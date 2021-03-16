@@ -9,11 +9,11 @@
   [done] other      = /[^\t\n\r 0-9A-Za-z]/
 
 Grammar
-[TODO] [TODO] Definitions ::
+[TODO] Definitions ::
     ExtendedAttributeList Definition Definitions
     ε
 
-[TODO] [TODO] Definition ::
+[TODO] Definition ::
     CallbackOrInterfaceOrMixin
     Namespace
     Partial
@@ -150,7 +150,7 @@ Grammar
     Infinity
     NaN
 
-[TODO] ConstType ::
+[done] ConstType ::
     PrimitiveType
     identifier
 
@@ -338,30 +338,30 @@ Grammar
 [TODO] Typedef ::
     typedef TypeWithExtendedAttributes identifier ;
 
-[TODO] Type ::
+[done] Type ::
     SingleType
     UnionType Null
 
-[TODO] TypeWithExtendedAttributes ::
+[done] TypeWithExtendedAttributes ::
     ExtendedAttributeList Type
 
-[TODO (part of Type)] SingleType ::
+[done (part of Type)] SingleType ::
     DistinguishableType
     any
     PromiseType
 
-[TODO] UnionType ::
+[done] UnionType ::
     ( UnionMemberType or UnionMemberType UnionMemberTypes )
 
-[TODO] UnionMemberType ::
+[done] UnionMemberType ::
     ExtendedAttributeList DistinguishableType
     UnionType Null
 
-[TODO (part of UnionType)] UnionMemberTypes ::
+[done (part of UnionType)] UnionMemberTypes ::
     or UnionMemberType UnionMemberTypes
     ε
 
-[TODO] DistinguishableType ::
+[done] DistinguishableType ::
     PrimitiveType Null
     StringType Null
     identifier Null
@@ -373,7 +373,7 @@ Grammar
     ObservableArray < TypeWithExtendedAttributes > Null
     RecordType Null
 
-[TODO] PrimitiveType ::
+[done] PrimitiveType ::
     UnsignedIntegerType
     UnrestrictedFloatType
     undefined
@@ -382,42 +382,42 @@ Grammar
     octet
     bigint
 
-[constructors] UnrestrictedFloatType ::
+[done] UnrestrictedFloatType ::
     unrestricted FloatType
     FloatType
 
-[constructors] FloatType ::
+[done] FloatType ::
     float
     double
 
-[constructors] UnsignedIntegerType ::
+[done] UnsignedIntegerType ::
     unsigned IntegerType
     IntegerType
 
-[constructors] IntegerType ::
+[done] IntegerType ::
     short
     long OptionalLong
 
-[constructors] OptionalLong ::
+[done] OptionalLong ::
     long
     ε
 
-[TODO] StringType ::
+[done] StringType ::
     ByteString
     DOMString
     USVString
 
-[TODO] PromiseType ::
+[done] PromiseType ::
     Promise < Type >
 
-[TODO] RecordType ::
+[done] RecordType ::
     record < StringType , TypeWithExtendedAttributes >
 
-[TODO] Null ::
+[done] Null ::
     ?
     ε
 
-[TODO] BufferRelatedType ::
+[done] BufferRelatedType ::
     ArrayBuffer
     DataView
     Int8Array
@@ -455,7 +455,7 @@ Grammar
     OtherOrComma ExtendedAttributeInner
     ε
 
-[TODO] Other ::
+[done] Other ::
     [done] integer
     [done] decimal
     [done] identifier

@@ -9,6 +9,10 @@ import Generics.Derive
 
 %language ElabReflection
 
+--------------------------------------------------------------------------------
+--          Utilities
+--------------------------------------------------------------------------------
+
 public export
 IdlGrammarAny : (b : Bool) -> Type -> Type
 IdlGrammarAny b t = Grammar (TokenData IdlToken) b t
@@ -23,6 +27,10 @@ IdlGrammar' = IdlGrammarAny False
 
 tok : String -> (IdlToken -> Maybe a) -> IdlGrammar a
 tok s f = terminal s (f . tok)
+
+withIdent : String -> (String -> Maybe a) -> IdlGrammar a
+withIdent s f = tok s \case (Ident $ MkIdent s) => f s
+                            _                   => Nothing
 
 intLit : IdlGrammar Integer
 intLit = tok "Int Lit" \case IntLit n => Just n
@@ -60,12 +68,20 @@ inBrackets g = symbol '[' *> g <* symbol ']'
 inBraces : {b : _} -> Inf (IdlGrammarAny b a) -> IdlGrammar a
 inBraces g = symbol '{' *> g <* symbol '}'
 
+inAngles : {b : _} -> Inf (IdlGrammarAny b a) -> IdlGrammar a
+inAngles g = symbol '<' *> g <* symbol '>'
+
 inAnyParens : {b : _} -> Inf (IdlGrammarAny b a) -> IdlGrammar a
 inAnyParens g = inParens g <|> inBrackets g <|> inBraces g
 
 --------------------------------------------------------------------------------
 --          Identifiers
 --------------------------------------------------------------------------------
+
+export
+ident_ : String -> IdlGrammar ()
+ident_ s = tok s \case Ident (MkIdent i) => guard (i == s)
+                       _                 => Nothing
 
 export
 ident : IdlGrammar Identifier
@@ -119,7 +135,141 @@ extAttribute =   [| EAParens (inAnyParens eaInner) (optional extAttribute) |]
 
 export
 extAttributes : IdlGrammar ExtAttributeList
-extAttributes = inBrackets (sepBy comma extAttribute)
+extAttributes = inBrackets (sepBy1 comma extAttribute)
+
+export
+attributed : IdlGrammar a -> IdlGrammar (Attributed a)
+attributed g = [| (,) extAttributes g |] <|> map (Nil,) g
+
+--------------------------------------------------------------------------------
+--          Types
+--------------------------------------------------------------------------------
+
+bufferRelated : IdlGrammar BufferRelatedType
+bufferRelated = withIdent "BufferRelated"
+                  \case "ArrayBuffer"       => Just ArrayBuffer
+                        "DataView"          => Just DataView
+                        "Int8Array"         => Just Int8Array
+                        "Int16Array"        => Just Int16Array
+                        "Int32Array"        => Just Int32Array
+                        "Uint8Array"        => Just Uint8Array
+                        "Uint16Array"       => Just Uint16Array
+                        "Uint32Array"       => Just Uint32Array
+                        "Uint8ClampedArray" => Just Uint8ClampedArray
+                        "Float32Array"      => Just Float32Array
+                        "Float64Array"      => Just Float64Array
+                        _                   => Nothing
+
+stringType : IdlGrammar StringType
+stringType = withIdent "stringType"
+               \case "ByteString" => Just ByteString
+                     "DOMString"  => Just DOMString
+                     "USVString"  => Just USVString
+                     _            => Nothing
+
+export
+primitive : IdlGrammar PrimitiveType
+primitive =   ident_ "unsigned"     *> map Unsigned int
+          <|> ident_ "unrestricted" *> map Unrestricted float
+          <|> map Signed int
+          <|> map Restricted float
+          <|> withIdent "Primitive" \case "boolean"   => Just Boolean 
+                                          "byte"      => Just Byte
+                                          "octet"     => Just Octet
+                                          "bigint"    => Just BigInt
+                                          "undefined" => Just Undefined
+                                          _           => Nothing
+
+  where int : IdlGrammar IntType
+        int =   (ident_ "long"  *> ident_ "long" $> LongLong)
+            <|> (ident_ "long"  $> Long)
+            <|> (ident_ "short" $> Short)
+
+        float : IdlGrammar FloatType
+        float = withIdent "FloatType" \case "double" => Just Dbl
+                                            "float"  => Just Float
+                                            _        => Nothing
+
+constType : IdlGrammar ConstType
+constType = map CP primitive <|> map CI ident
+
+nullable : IdlGrammar a -> IdlGrammar (Nullable a)
+nullable g = map MaybeNull (g <* symbol '?') <|> map NotNull g
+
+
+mutual
+  -- Type ::
+  --     SingleType
+  --     UnionType Null
+  -- 
+  -- SingleType ::
+  --     DistinguishableType
+  --     any
+  --     PromiseType
+  -- PromiseType ::
+  --     Promise < Type >
+  export
+  idlType : IdlGrammar IdlType
+  idlType =   (ident_ "any" $> Any)
+          <|> map Promise (ident_ "Promise" *> inAngles idlType)
+          <|> map D distinguishableType
+          <|> map U (nullable union)
+
+  -- TypeWithExtendedAttributes ::
+  --     ExtendedAttributeList Type
+  attrTpe : IdlGrammar (Attributed IdlType)
+  attrTpe = attributed idlType
+
+  -- RecordType ::
+  --     record < StringType , TypeWithExtendedAttributes >
+  recrd : IdlGrammar Distinguishable
+  recrd = Record <$> (ident_ "record" *> symbol '<' *> stringType)
+                 <*> (comma *> attrTpe <* symbol '>')
+
+  -- DistinguishableType ::
+  --     PrimitiveType Null
+  --     StringType Null
+  --     identifier Null
+  --     sequence < TypeWithExtendedAttributes > Null
+  --     object Null
+  --     symbol Null
+  --     BufferRelatedType Null
+  --     FrozenArray < TypeWithExtendedAttributes > Null
+  --     ObservableArray < TypeWithExtendedAttributes > Null
+  --     RecordType Null
+  distinguishable : IdlGrammar Distinguishable
+  distinguishable =
+        map P primitive
+    <|> map S stringType
+    <|> map B bufferRelated
+    <|> (ident_ "object" $> Object)
+    <|> (ident_ "symbol" $> Symbol)
+    <|> map Sequence (ident_ "sequence" *> inAngles attrTpe)
+    <|> map FrozenArray (ident_ "FrozenArray" *> inAngles attrTpe)
+    <|> map ObservableArray (ident_ "ObservableArray" *> inAngles attrTpe)
+    <|> recrd
+    <|> map I ident
+
+  distinguishableType : IdlGrammar (Nullable Distinguishable)
+  distinguishableType = nullable distinguishable
+
+  -- UnionType ::
+  --     ( UnionMemberType or UnionMemberType UnionMemberTypes )
+  --
+  -- UnionMemberTypes ::
+  --     or UnionMemberType UnionMemberTypes
+  --     ε
+  union : IdlGrammar UnionType
+  union = inParens $ do (a :: b :: t) <- sepBy (ident_ "or") unionMember
+                          | _ => fail "Non enough Union members"
+                        pure (UT a b t)
+
+  -- UnionMemberType ::
+  --     ExtendedAttributeList DistinguishableType
+  --     UnionType Null
+  unionMember : IdlGrammar UnionMemberType
+  unionMember =   map UD (attributed distinguishableType)
+              <|> map UU (nullable union)
 
 --------------------------------------------------------------------------------
 --          Parsing WebIDL

@@ -316,11 +316,19 @@ argumentList : IdlGrammar' ArgumentList
 argumentList = sepBy comma (attributed argumentRest)
 
 --------------------------------------------------------------------------------
---          Definition
+--          Member
 --------------------------------------------------------------------------------
 
 def : String -> IdlGrammar a -> IdlGrammar a
 def kw g = key kw *> g <* symbol ';'
+
+export
+const : IdlGrammar Const
+const = def "const" [| MkConst constType ident (symbol '=' *> constValue) |]
+
+--------------------------------------------------------------------------------
+--          Definition
+--------------------------------------------------------------------------------
 
 export
 definition : IdlGrammar Definition

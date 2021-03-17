@@ -69,6 +69,11 @@ prop_argumentRest = property $ do
                       (s,v) <- forAll argumentRest
                       parseIdl argumentRest s === Right v
 
+prop_const : Property
+prop_const = property $ do
+               (s,v) <- forAll const
+               parseIdl const s === Right v
+
 prop_definition : Property
 prop_definition = property $ do
                   (s,v) <- forAll definition
@@ -89,5 +94,6 @@ props = withTests 1000 $
             , ("prop_primitiveType", prop_primitiveType)
             , ("prop_idlType", prop_idlType)
             , ("prop_argumentRest", prop_argumentRest)
+            , ("prop_const", prop_const)
             , ("prop_definition", prop_definition)
             ]

@@ -18,8 +18,8 @@ Grammar
     Namespace
     Partial
     Dictionary
-    Enum
-    Typedef
+    [done] Enum
+    [done] Typedef
     IncludesStatement
 
 [done] ArgumentNameKeyword ::
@@ -132,15 +132,15 @@ Grammar
     Const
     RegularOperation
 
-[TODO] Const ::
+[done] Const ::
     const ConstType identifier = ConstValue ;
 
-[TODO] ConstValue ::
+[done] ConstValue ::
     BooleanLiteral
     FloatLiteral
     integer
 
-[TODO] BooleanLiteral ::
+[done] BooleanLiteral ::
     true
     false
 

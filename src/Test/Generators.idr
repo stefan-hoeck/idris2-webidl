@@ -455,6 +455,23 @@ argumentRest = choice [ [| optional (typeWithAttr 3) argName defaultVal |]
 argumentList : Gen (String,ArgumentList)
 argumentList = sepList 10 "," (attributed argumentRest)
 
+constType : Gen (String,ConstType)
+constType = choice [map (mapSnd CP) primitive, map (mapSnd CI) identifier]
+
+--------------------------------------------------------------------------------
+--          Member
+--------------------------------------------------------------------------------
+
+export
+const : Gen (String,Const)
+const = [| comb constType identifier constValue |]
+  where comb :  (String,ConstType)
+             -> (String,Identifier)
+             -> (String,ConstValue)
+             -> (String,Const)
+        comb (s1,t) (s2,i) (s3,v) =
+          ("const " ++ s1 ++ " " ++ s2 ++ " = " ++ s3 ++ ";", MkConst t i v)
+
 --------------------------------------------------------------------------------
 --          Definition
 --------------------------------------------------------------------------------

@@ -8,8 +8,6 @@ import Text.WebIDL.Types.Type
 
 %language ElabReflection
 
-
-
 ||| Enum ::
 |||     enum identifier { EnumValueList } ;
 ||| 

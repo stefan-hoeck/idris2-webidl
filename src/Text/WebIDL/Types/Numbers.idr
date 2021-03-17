@@ -1,9 +1,5 @@
 module Text.WebIDL.Types.Numbers
 
-import Data.String
-import Data.List1
-import Data.Nat
-
 import Generics.Derive
 
 %language ElabReflection
@@ -45,13 +41,13 @@ charsToPosInt base t = calc <$> traverse readDigit t
         calc = foldl (\a,e => a * base + e) 0
 
 export
-readInt : String -> Maybe Integer
+readInt : String -> Maybe IntLit
 readInt s = case fastUnpack s of
-                 '0'::'x'::t => charsToPosInt 16 t
-                 '0'::'X'::t => charsToPosInt 16 t
-                 '0'::t      => charsToPosInt 8  t
-                 '-'::t      => negate <$> charsToPosInt 10 t
-                 t           => charsToPosInt 10 t
+                 '0'::'x'::t => map (Hex . fromInteger) $ charsToPosInt 16 t
+                 '0'::'X'::t => map (Hex . fromInteger) $ charsToPosInt 16 t
+                 '0'::t      => map (Oct . fromInteger) $ charsToPosInt 8  t
+                 '-'::t      => I . negate <$> charsToPosInt 10 t
+                 t           => map I $ charsToPosInt 10 t
 
 --------------------------------------------------------------------------------
 --          Floating Point Literals
@@ -84,26 +80,7 @@ data FloatLit : Type where
 %runElab derive "FloatLit" [Generic,Meta,Show]
 
 export
-Eq FloatLit using FastNatEq where
-  (==) = genEq
-
---------------------------------------------------------------------------------
---          Encoding Floats
---------------------------------------------------------------------------------
-
-sig : Signum -> String
-sig Plus  = ""
-sig Minus = "-"
-
-export
-toFloatLit : FloatLit -> String
-toFloatLit Infinity         = "Infinity"
-toFloatLit NegativeInfinity = "-Infinity"
-toFloatLit NaN              = "NaN"
-toFloatLit (Exp s bd ad exp) =
-  fastConcat [sig s,show bd,maybe "" (("." ++) . show) ad,"e",show exp]
-toFloatLit (NoExp s bd ad) =
-  fastConcat [sig s,show bd,".",show ad]
+Eq FloatLit using FastNatEq where (==) = genEq
 
 --------------------------------------------------------------------------------
 --          Parsing Floats

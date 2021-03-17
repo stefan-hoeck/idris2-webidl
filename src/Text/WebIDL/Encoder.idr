@@ -1,5 +1,8 @@
 module Text.WebIDL.Encoder
 
+import Data.SOP
+import Data.List
+import Data.String
 import Text.WebIDL.Types
 
 --------------------------------------------------------------------------------
@@ -9,12 +12,36 @@ import Text.WebIDL.Types
 0 Encoder : Type -> Type
 Encoder a = a -> String
 
+runEnc : forall a . Encoder a -> a -> String
+runEnc = apply
+
 export
 ident : Encoder Identifier
 ident = value
 
+inParens : Encoder a -> Encoder a
+inParens f a = "(" ++ f a ++ ")"
+
+inBrackets : Encoder a -> Encoder a
+inBrackets f a = "[" ++ f a ++ "]"
+
+inBraces : Encoder a -> Encoder a
+inBraces f a = "{" ++ f a ++ "}"
+
+inAngles : Encoder a -> Encoder a
+inAngles f a = "<" ++ f a ++ ">"
+
+emaybe : Encoder a -> Encoder (Maybe a)
+emaybe f = maybe "" f
+
+sepList : (sep : String) -> Encoder a -> Encoder (List a)
+sepList sep f = fastConcat . intersperse sep . map f
+
+emptyIfNull : Foldable f =>  Encoder (f a) -> Encoder (f a)
+emptyIfNull f as = if null as then "" else f as
+
 --------------------------------------------------------------------------------
---          Numbers
+--          Literals
 --------------------------------------------------------------------------------
 
 toHexDigit : Integer -> Char
@@ -48,3 +75,133 @@ intLit : Encoder IntLit
 intLit (Hex k) = toDigits "0x" 16 k
 intLit (Oct k) = toDigits "0" 8 k
 intLit (I x)   = show x
+
+sig : Encoder Signum
+sig Plus  = ""
+sig Minus = "-"
+
+export
+floatLit : Encoder FloatLit
+floatLit Infinity          = "Infinity"
+floatLit NegativeInfinity  = "-Infinity"
+floatLit NaN               = "NaN"
+floatLit (NoExp s bd ad)   = fastConcat [sig s,show bd,".",show ad]
+floatLit (Exp s bd ad exp) =
+  fastConcat [sig s,show bd,maybe "" (("." ++) . show) ad,"e",show exp]
+
+export
+stringLit : Encoder StringLit
+stringLit = value
+
+export
+keyword : Encoder Keyword
+keyword = value
+
+export
+symbol : Encoder Symbol
+symbol Ellipsis = "..."
+symbol (Symb c) = singleton c
+
+--------------------------------------------------------------------------------
+--          Attribute
+--------------------------------------------------------------------------------
+
+export
+other : Encoder Other
+other = collapseNS 
+      . hliftA2 runEnc [intLit,floatLit,stringLit,ident,keyword,symbol]
+
+export
+eaInner : Encoder EAInner
+eaInner (EAIParens ip eai) = inParens eaInner ip ++ " " ++ eaInner eai
+eaInner (EAIOther o eai)   = other o ++ " " ++ eaInner eai
+eaInner EAIEmpty           = ""
+
+export
+extAttribute : Encoder ExtAttribute
+extAttribute (EAParens i r) = inParens eaInner i ++ emaybe extAttribute r
+extAttribute (EAOther o r)  = other o ++ " " ++ emaybe extAttribute r
+
+export
+extAttributeList : Encoder ExtAttributeList
+extAttributeList = emptyIfNull . inBrackets $ sepList "," extAttribute
+
+export
+attributed : Encoder a -> Encoder (Attributed a)
+attributed f (as,a) = extAttributeList as ++ " " ++ f a
+
+--------------------------------------------------------------------------------
+--          Type
+--------------------------------------------------------------------------------
+
+export
+bufferRelated : Encoder BufferRelatedType
+bufferRelated = show
+
+export
+stringType : Encoder StringType
+stringType = show
+
+export
+intType : Encoder IntType
+intType Short    = "short"
+intType Long     = "long"
+intType LongLong = "long long"
+
+export
+floatType : Encoder FloatType
+floatType Float = "float"
+floatType Dbl   = "double"
+
+export
+primitive : Encoder PrimitiveType
+primitive (Unsigned x)     = "unsigned " ++ intType x
+primitive (Signed x)       = intType x
+primitive (Unrestricted x) = "unrestricted " ++ floatType x
+primitive (Restricted x)   = floatType x
+primitive Undefined        = "undefined"
+primitive Boolean          = "boolean"
+primitive Byte             = "byte"
+primitive Octet            = "octet"
+primitive BigInt           = "bigint"
+
+export
+constType : Encoder ConstType
+constType (CP x) = primitive x
+constType (CI x) = ident x
+
+export
+nullable : Encoder a -> Encoder (Nullable a)
+nullable f (MaybeNull x) = f x ++ "?"
+nullable f (NotNull x)   = f x
+
+mutual
+  export
+  idlType : Encoder IdlType
+  idlType Any         = "any"
+  idlType (D x)       = nullable distinguishable x
+  idlType (U x)       = nullable union x
+  idlType (Promise x) = "Promise" ++ inAngles idlType x
+
+  export
+  union : Encoder UnionType
+
+  export
+  union : Encoder UnionType
+
+  export
+  distinguishable : Encoder Distinguishable
+  distinguishable (P x) = primitive x
+  distinguishable (S x) = stringType x
+  distinguishable (I x) = ident x
+  distinguishable (B x) = bufferRelated x
+  distinguishable (Sequence x) =
+    "sequence" ++ inAngles (attributed idlType) x
+  distinguishable (FrozenArray x) =
+    "FrozenArray" ++ inAngles (attributed idlType) x
+  distinguishable (ObservableArray x) =
+    "ObservableArray" ++ inAngles (attributed idlType) x
+  distinguishable (Record x y) = ?distinguishable_rhs_8
+    "record<" ++ stringType x ++ "," ++ attributed idlType y ++ ">"
+  distinguishable Object = "object"
+  distinguishable Symbol = "symbol"

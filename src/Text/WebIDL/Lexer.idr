@@ -22,10 +22,10 @@ nonZeroDigit = pred \c => '1' <= c && c <= '9'
 --------------------------------------------------------------------------------
 
 parseInt : String -> IdlToken
-parseInt s = maybe (Invalid s) IntLit $ readInt s
+parseInt s = maybe (Invalid s) ILit $ readInt s
 
 parseFloat : String -> IdlToken
-parseFloat s = maybe (Invalid s) FltLit $ readFloat s
+parseFloat s = maybe (Invalid s) FLit $ readFloat s
 
 -- /0[Xx][0-9A-Fa-f]+/
 hex : Lexer
@@ -66,9 +66,9 @@ identifier =   opt (oneOf "_-")
            <+> star (pred \c => isAlphaNum c || c == '_' || c == '-')
 
 ident : String -> IdlToken
-ident "Infinity"        = FltLit Infinity
-ident "-Infinity"       = FltLit NegativeInfinity
-ident "NaN"             = FltLit NaN
+ident "Infinity"        = FLit Infinity
+ident "-Infinity"       = FLit NegativeInfinity
+ident "NaN"             = FLit NaN
 ident s                 = maybe (Ident $ MkIdent s) Key (refine s)
 
 -- /\/\/.*/
@@ -93,7 +93,7 @@ symbol s     = case fastUnpack s of
 
 tokenMap : TokenMap IdlToken
 tokenMap = [ (spaces,                const Space)
-           , (stringLit,             StrLit . MkStringLit)
+           , (stringLit,             SLit . MkStrLit)
            , (comment,               Comment)
            , (identifier,            ident)
            , (float,                 parseFloat)

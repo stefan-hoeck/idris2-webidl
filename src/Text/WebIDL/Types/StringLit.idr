@@ -6,6 +6,8 @@ import Generics.Derive
 
 ||| A quoted string literal
 public export
-data StringLit = MkStringLit String
+record StringLit where
+  constructor MkStrLit
+  value : String
 
 %runElab derive "StringLit" [Generic,Meta,Eq,Show]

@@ -17,7 +17,7 @@ import Generics.Derive
 |||     true
 |||     false
 public export
-data ConstValue = B Bool | F FloatLit | I Integer
+data ConstValue = B Bool | F FloatLit | I IntLit
 
 %runElab derive "ConstValue" [Generic,Meta,Eq,Show]
 

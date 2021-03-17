@@ -12,9 +12,9 @@ import Generics.Derive
 public export
 data IdlToken : Type where
   Space     : IdlToken
-  StrLit    : StringLit  -> IdlToken
-  IntLit    : Integer    -> IdlToken
-  FltLit    : FloatLit   -> IdlToken
+  SLit      : StringLit  -> IdlToken
+  ILit      : IntLit     -> IdlToken
+  FLit      : FloatLit   -> IdlToken
   Ident     : Identifier -> IdlToken
   Key       : Keyword    -> IdlToken
   Comment   : String     -> IdlToken

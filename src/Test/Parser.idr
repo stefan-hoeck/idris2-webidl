@@ -13,6 +13,7 @@ prop_other = property $ do
                (s,v) <- forAll other
                parseIdl other s === Right v
 
+export
 prop_extAttributes : Property
 prop_extAttributes = property $ do
                        (s,v) <- forAll extAttributes
@@ -73,7 +74,7 @@ prop_argumentRest = property $ do
 
 export
 props : Group
-props = withTests 500 $
+props = withTests 10000 $
           MkGroup "Parser Properties" [
               ("prop_identifierList", prop_identifierList)
             , ("prop_other", prop_other)

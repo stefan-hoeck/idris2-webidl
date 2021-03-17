@@ -72,9 +72,13 @@ maybeSpace = frequency [(1, pure ""), (4, space)]
 export
 stringLit : Gen (String,StringLit)
 stringLit = pairFst MkStringLit $ toStringLit <$> linList 15 unicode
-  where toStringLit : List Char -> String
-        toStringLit cs = (++ "\"") . fastPack 
-                       $ '"' :: filter (not . (== '"')) cs
+  where escape : Char -> List Char
+        escape '"'  = ['\\','"']
+        escape '\\' = ['\\','\\']
+        escape c    = [c]
+
+        toStringLit : List Char -> String
+        toStringLit cs = fastPack $ '"' :: (cs >>= escape) ++ ['"']
 
 export
 intLit : Gen (String,Integer)

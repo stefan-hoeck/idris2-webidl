@@ -72,6 +72,11 @@ prop_argumentRest = property $ do
 prop_definition : Property
 prop_definition = property $ do
                   (s,v) <- forAll definition
+
+                  case v of
+                       (Enum _ _)      => label "Enum"
+                       (Typedef _ _ _) => label "Typedef"
+
                   parseIdl definition s === Right v
 
 export

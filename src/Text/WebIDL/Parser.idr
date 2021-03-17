@@ -72,6 +72,10 @@ inAngles g = symbol '<' *> g <* symbol '>'
 inAnyParens : {b : _} -> Inf (IdlGrammarAny b a) -> IdlGrammar a
 inAnyParens g = inParens g <|> inBrackets g <|> inBraces g
 
+sepList1 : Char -> IdlGrammar a -> IdlGrammar (List1 a)
+sepList1 c g =   [| (g <* symbol c) ::: sepBy (symbol c) g |]
+             <|> map (\x => x ::: Nil) g
+
 --------------------------------------------------------------------------------
 --          Identifiers
 --------------------------------------------------------------------------------
@@ -315,10 +319,15 @@ argumentList = sepBy comma (attributed argumentRest)
 --          Definition
 --------------------------------------------------------------------------------
 
+def : String -> IdlGrammar a -> IdlGrammar a
+def kw g = key kw *> g <* symbol ';'
+
 export
 definition : IdlGrammar Definition
 definition =
-  [| Typedef (key "typedef" *> extAttributes') idlType (ident <* symbol ';') |]
+      def "typedef" [| Typedef extAttributes' idlType ident |]
+  <|> def "enum" [| Enum ident (inBraces $ sepList1 ',' stringLit) |]
+
 
 --------------------------------------------------------------------------------
 --          Parsing WebIDL

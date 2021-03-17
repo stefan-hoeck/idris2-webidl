@@ -461,9 +461,19 @@ argumentList = sepList 10 "," (attributed argumentRest)
 
 export
 definition : Gen (String, Definition)
-definition = choice [ [| typeDef (typeWithAttr 3) identifier |]]
+definition =
+  choice
+    [ [| typeDef (typeWithAttr 3) identifier |]
+    , [| enum identifier (inBraces $ sepList1 5 "," stringLit) |]
+    ]
+
   where typeDef :  (String,Attributed IdlType)
                 -> (String,Identifier)
                 -> (String,Definition)
         typeDef (s1,(a,t)) (s2,i) = ("typedef " ++ s1 ++ " " ++ s2 ++ ";",
                                     Typedef a t i)
+
+        enum :  (String,Identifier)
+             -> (String,List1 StringLit)
+             -> (String,Definition)
+        enum (s1,i) (s2,vs) = ("enum " ++ s1 ++ s2 ++ ";", Enum i vs)

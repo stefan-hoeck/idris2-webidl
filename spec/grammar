@@ -318,17 +318,17 @@ Grammar
     = DefaultValue
     ε
 
-[TODO] Enum ::
+[done] Enum ::
     enum identifier { EnumValueList } ;
 
-[TODO (part of Enum)] EnumValueList ::
+[done (part of Enum)] EnumValueList ::
     string EnumValueListComma
 
-[TODO (part of Enum)] EnumValueListComma ::
+[done (part of Enum)] EnumValueListComma ::
     , EnumValueListString
     ε
 
-[TODO (part of Enum)] EnumValueListString ::
+[done (part of Enum)] EnumValueListString ::
     string EnumValueListComma
     ε
 

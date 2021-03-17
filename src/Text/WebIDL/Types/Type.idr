@@ -6,18 +6,18 @@ import Generics.Derive
 
 %language ElabReflection
 
--- BufferRelatedType ::
---     ArrayBuffer
---     DataView
---     Int8Array
---     Int16Array
---     Int32Array
---     Uint8Array
---     Uint16Array
---     Uint32Array
---     Uint8ClampedArray
---     Float32Array
---     Float64Array
+||| BufferRelatedType ::
+|||     ArrayBuffer
+|||     DataView
+|||     Int8Array
+|||     Int16Array
+|||     Int32Array
+|||     Uint8Array
+|||     Uint16Array
+|||     Uint32Array
+|||     Uint8ClampedArray
+|||     Float32Array
+|||     Float64Array
 public export
 data BufferRelatedType = ArrayBuffer
                        | DataView

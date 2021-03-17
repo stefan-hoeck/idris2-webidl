@@ -335,7 +335,7 @@ Grammar
 [TODO] CallbackRest ::
     identifier = Type ( ArgumentList ) ;
 
-[TODO] Typedef ::
+[done] Typedef ::
     typedef TypeWithExtendedAttributes identifier ;
 
 [done] Type ::

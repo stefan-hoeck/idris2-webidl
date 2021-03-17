@@ -454,3 +454,16 @@ argumentRest = choice [ [| optional (typeWithAttr 3) argName defaultVal |]
 
 argumentList : Gen (String,ArgumentList)
 argumentList = sepList 10 "," (attributed argumentRest)
+
+--------------------------------------------------------------------------------
+--          Definition
+--------------------------------------------------------------------------------
+
+export
+definition : Gen (String, Definition)
+definition = choice [ [| typeDef (typeWithAttr 3) identifier |]]
+  where typeDef :  (String,Attributed IdlType)
+                -> (String,Identifier)
+                -> (String,Definition)
+        typeDef (s1,(a,t)) (s2,i) = ("typedef " ++ s1 ++ " " ++ s2 ++ ";",
+                                    Typedef a t i)

@@ -69,6 +69,11 @@ prop_argumentRest = property $ do
                       (s,v) <- forAll argumentRest
                       parseIdl argumentRest s === Right v
 
+prop_definition : Property
+prop_definition = property $ do
+                  (s,v) <- forAll definition
+                  parseIdl definition s === Right v
+
 export
 props : Group
 props = withTests 1000 $
@@ -79,4 +84,5 @@ props = withTests 1000 $
             , ("prop_primitiveType", prop_primitiveType)
             , ("prop_idlType", prop_idlType)
             , ("prop_argumentRest", prop_argumentRest)
+            , ("prop_definition", prop_definition)
             ]

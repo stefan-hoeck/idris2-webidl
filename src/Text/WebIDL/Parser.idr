@@ -142,6 +142,10 @@ extAttributes : IdlGrammar ExtAttributeList
 extAttributes = inBrackets (sepBy1 comma extAttribute)
 
 export
+extAttributes' : IdlGrammar' ExtAttributeList
+extAttributes' = extAttributes <|> pure Nil
+
+export
 attributed : IdlGrammar a -> IdlGrammar (Attributed a)
 attributed g = [| (,) extAttributes g |] <|> map (Nil,) g
 
@@ -306,6 +310,15 @@ argumentRest =   [| Optional (key "optional" *> attrTpe) argName defaultV |]
 
 argumentList : IdlGrammar' ArgumentList
 argumentList = sepBy comma (attributed argumentRest)
+
+--------------------------------------------------------------------------------
+--          Definition
+--------------------------------------------------------------------------------
+
+export
+definition : IdlGrammar Definition
+definition =
+  [| Typedef (key "typedef" *> extAttributes') idlType (ident <* symbol ';') |]
 
 --------------------------------------------------------------------------------
 --          Parsing WebIDL

@@ -183,40 +183,40 @@ Grammar
     readonly
     ε
 
-[TODO (part of Default)] DefaultValue ::
+[done (part of Default)] DefaultValue ::
     ConstValue
     string
     [ ]
     { }
     null
 
-[TODO] Operation ::
+[done] Operation ::
     RegularOperation
     SpecialOperation
 
-[TODO] RegularOperation ::
+[done] RegularOperation ::
     Type OperationRest
 
-[TODO] SpecialOperation ::
+[done] SpecialOperation ::
     Special RegularOperation
 
-[TODO] Special ::
+[done] Special ::
     getter
     setter
     deleter
 
-[TODO] OperationRest ::
+[done] OperationRest ::
     OptionalOperationName ( ArgumentList ) ;
 
-[TODO] OptionalOperationName ::
+[done] OptionalOperationName ::
     OperationName
     ε
 
-[TODO] OperationName ::
+[done] OperationName ::
     OperationNameKeyword
     identifier
 
-[TODO] OperationNameKeyword ::
+[done] OperationNameKeyword ::
     includes
 
 [done] ArgumentList ::

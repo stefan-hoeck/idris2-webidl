@@ -45,6 +45,12 @@ pairFst g = map (\a => (a, g a))
 pairSnd : Functor f => (a -> b) -> f a -> f (b,a)
 pairSnd g = map (\a => (g a, a))
 
+maybePair : Gen (String,a) -> Gen (String,Maybe a)
+maybePair = map get . maybe
+  where get : Maybe (String,a) -> (String,Maybe a)
+        get Nothing      = ("",Nothing)
+        get (Just (s,a)) = (s,Just a)
+
 --------------------------------------------------------------------------------
 --          Tokens
 --------------------------------------------------------------------------------
@@ -453,7 +459,7 @@ argumentRest = choice [ [| optional (typeWithAttr 3) argName defaultVal |]
         vararg (s1,t) (s2,n) = (s1 ++ "... " ++ s2, VarArg t n)
 
 argumentList : Gen (String,ArgumentList)
-argumentList = sepList 10 "," (attributed argumentRest)
+argumentList = sepList 5 "," (attributed argumentRest)
 
 constType : Gen (String,ConstType)
 constType = choice [map (mapSnd CP) primitive, map (mapSnd CI) identifier]
@@ -471,6 +477,36 @@ const = [| comb constType identifier constValue |]
              -> (String,Const)
         comb (s1,t) (s2,i) (s3,v) =
           ("const " ++ s1 ++ " " ++ s2 ++ " = " ++ s3 ++ ";", MkConst t i v)
+
+special : Gen (String,Special)
+special = element [("getter",Getter),("setter",Setter),("deleter",Deleter)]
+
+opName : Gen (String,OperationName)
+opName = frequency [ (1, pairFst MkOpName $ pure ("includes"))
+                   , (10, map (\(s,_) => (s,MkOpName s)) identifier)
+                   ]
+
+op : Gen (String,a) -> Gen (String,Op a)
+op g = [| mkOp g (idlType 3) (maybePair opName) (inParens argumentList) |]
+  where mkOp :  (String,a)
+             -> (String,IdlType)
+             -> (String,Maybe OperationName)
+             -> (String,ArgumentList)
+             -> (String,Op a)
+        mkOp (s1,a) (s2,t) (s3,n) (s4,as) =
+          (s1 ++ " " ++ s2 ++ " " ++ s3 ++ s4 ++ ";" , MkOp a t n as)
+
+regularOperation : Gen (String,RegularOperation)
+regularOperation = op $ pure ("",())
+
+specialOperation : Gen (String,SpecialOperation)
+specialOperation = op special
+
+export
+operation : Gen (String,Operation)
+operation = choice [ map (mapSnd regToOp)  regularOperation
+                   , map (mapSnd specToOp) specialOperation
+                   ]
 
 --------------------------------------------------------------------------------
 --          Definition

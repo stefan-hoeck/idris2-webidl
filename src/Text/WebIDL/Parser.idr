@@ -320,11 +320,33 @@ argumentList = sepBy comma (attributed argumentRest)
 --------------------------------------------------------------------------------
 
 def : String -> IdlGrammar a -> IdlGrammar a
+def "" g = g <* symbol ';'
 def kw g = key kw *> g <* symbol ';'
 
 export
 const : IdlGrammar Const
 const = def "const" [| MkConst constType ident (symbol '=' *> constValue) |]
+
+special : IdlGrammar Special
+special =   (key "getter"  $> Getter)
+        <|> (key "setter"  $> Setter)
+        <|> (key "deleter" $> Deleter)
+
+opName : IdlGrammar OperationName
+opName =   (key "includes" $> MkOpName "includes")
+       <|> map (\(MkIdent s) => MkOpName s) ident
+
+regularOp : IdlGrammar RegularOperation
+regularOp =
+  def "" [| MkOp (pure ()) idlType (optional opName) (inParens argumentList) |]
+
+specialOp : IdlGrammar SpecialOperation
+specialOp =
+  def "" [| MkOp special idlType (optional opName) (inParens argumentList) |]
+
+export
+operation : IdlGrammar Operation
+operation = map specToOp specialOp <|> map regToOp regularOp
 
 --------------------------------------------------------------------------------
 --          Definition

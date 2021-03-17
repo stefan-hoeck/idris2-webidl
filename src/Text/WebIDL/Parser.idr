@@ -1,13 +1,11 @@
 module Text.WebIDL.Parser
 
+import Data.SOP
+import Data.List.Elem
 import Text.Lexer
 import Text.Parser
 import Text.WebIDL.Types
 import Text.WebIDL.Lexer
-
-import Generics.Derive
-
-%language ElabReflection
 
 --------------------------------------------------------------------------------
 --          Utilities

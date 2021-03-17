@@ -15,47 +15,16 @@ export
   (==) = (==) `on` natToInteger
 
 --------------------------------------------------------------------------------
---          Encoding Integers
+--          IntLit
 --------------------------------------------------------------------------------
 
-toOctDigit : Integer -> Char
-toOctDigit 0 = '0'
-toOctDigit 1 = '1'
-toOctDigit 2 = '2'
-toOctDigit 3 = '3'
-toOctDigit 4 = '4'
-toOctDigit 5 = '5'
-toOctDigit 6 = '6'
-toOctDigit 7 = '7'
-toOctDigit _ = '_'
+public export
+data IntLit = Hex Nat | Oct Nat | I Integer
 
-toHexDigit : Integer -> Char
-toHexDigit 8 = '8'
-toHexDigit 9 = '9'
-toHexDigit 10 = 'A'
-toHexDigit 11 = 'B'
-toHexDigit 12 = 'C'
-toHexDigit 13 = 'D'
-toHexDigit 14 = 'E'
-toHexDigit 15 = 'F'
-toHexDigit n  = toOctDigit n
+%runElab derive "IntLit" [Generic,Meta,Show]
 
 export
-toHex : Nat -> String
-toHex n = "0x" ++ fastPack(run (natToInteger n) [])
-  where run : Integer -> List Char -> List Char
-        run n cs = let n'  = n `div` 16
-                       cs' = (toHexDigit $ n `mod` 16) :: cs
-                    in if n' == 0 then cs' else run n' cs'
-
-export
-toOct : Nat -> String
-toOct n = "0" ++ fastPack(run (natToInteger n) [])
-  where run : Integer -> List Char -> List Char
-        run n cs = let n'  = n `div` 8
-                       cs' = (toOctDigit $ n `mod` 8) :: cs
-                    in if n' == 0 then cs' else run n' cs'
-
+Eq IntLit using FastNatEq where (==) = genEq
 
 --------------------------------------------------------------------------------
 --          Parsing Integers

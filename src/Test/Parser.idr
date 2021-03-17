@@ -16,7 +16,7 @@ prop_other = property $ do
 export
 prop_extAttributes : Property
 prop_extAttributes = property $ do
-                       (s,v) <- forAll extAttributes
+                       (s,v) <- forAll (extAttributes 4)
                        let dv : Nat
                            dv = foldl (\n,a => max n (depth a)) 0 v
 
@@ -25,7 +25,6 @@ prop_extAttributes = property $ do
 
                            sv : Nat
                            sv = foldl (\n,a => n + (size a)) 0 v
-                       classify "depth 0" (dv == 0)
                        classify "depth 1" (dv == 1)
                        classify "depth 2" (dv == 2)
                        classify "depth 3" (dv == 3)
@@ -36,13 +35,11 @@ prop_extAttributes = property $ do
                        classify "leaves in [01,10)" (lv >= 1 && lv < 10)
                        classify "leaves in [10,20)" (lv >= 10 && lv < 20)
                        classify "leaves in [20,30)" (lv >= 20 && lv < 30)
-                       classify "leaves in [30,40)" (lv >= 30 && lv < 40)
 
                        classify "size 0" (sv == 0)
                        classify "size in [01,05)"   (sv >= 1 && sv < 5)
                        classify "size in [05,10)"  (sv >= 5 && sv < 10)
                        classify "size in [10,15)" (sv >= 10 && sv < 15)
-                       classify "size in [15,20)" (sv >= 15 && sv < 20)
                        parseIdl extAttributes s === Right v
 
 prop_primitiveType : Property
@@ -74,7 +71,7 @@ prop_argumentRest = property $ do
 
 export
 props : Group
-props = withTests 500 $
+props = withTests 1000 $
           MkGroup "Parser Properties" [
               ("prop_identifierList", prop_identifierList)
             , ("prop_other", prop_other)

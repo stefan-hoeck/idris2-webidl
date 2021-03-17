@@ -209,9 +209,9 @@ other = otherUnless isCommaOrParenOrQuote
 eaInner : Nat -> Gen (String, EAInner)
 eaInner 0 = pure ("", EAIEmpty)
 eaInner (S k) =
-   frequency [ (1, eaInner 0)
-             , (2, [| combOther otherOrComma space (eaInner k) |])
-             , (2, [| combParens (inAnyParens $ eaInner k) (eaInner k) |])
+   frequency [ (4, eaInner 0)
+             , (1, [| combOther otherOrComma space (eaInner k) |])
+             , (1, [| combParens (inAnyParens $ eaInner k) (eaInner k) |])
              ]
   where combOther : (String,Other) -> String -> (String,EAInner) -> (String,EAInner)
         combOther (so,o) p (sa,a) = (so ++ p ++ sa, EAIOther o a)
@@ -225,7 +225,8 @@ extAttribute 0 =
          , map (\(s,o) => (s, EAOther o Nothing)) other ]
 
 extAttribute (S k) =
-  choice [ [| combParens (inAnyParens $ eaInner k) rest |]
+  choice [ extAttribute 0
+         , [| combParens (inAnyParens $ eaInner k) rest |]
          , [| combOther other space rest |]
          ]
 
@@ -240,13 +241,13 @@ extAttribute (S k) =
         combParens (sa,a) (sb,b) = (sa ++ sb, EAParens a b)
 
 export
-extAttributes : Gen (String, ExtAttributeList)
-extAttributes = inBrackets . sepListNonEmpty 5 "," $ extAttribute 3
+extAttributes : (depth : Nat) -> Gen (String, ExtAttributeList)
+extAttributes = inBrackets . sepListNonEmpty 5 "," . extAttribute
 
 export
 attributed : Gen (String, a) -> Gen (String, Attributed a)
 attributed g = frequency [ (3, map (mapSnd ([],)) g)
-                         , (1, [| comb extAttributes maybeSpace g|])
+                         , (1, [| comb (extAttributes 3) maybeSpace g|])
                          ]
   where comb :  (String, ExtAttributeList)
              -> String

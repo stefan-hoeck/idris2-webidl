@@ -6,6 +6,7 @@ import public Text.WebIDL.Types.Argument
 import public Text.WebIDL.Types.Attribute
 import public Text.WebIDL.Types.Err
 import public Text.WebIDL.Types.Identifier
+import public Text.WebIDL.Types.Member
 import public Text.WebIDL.Types.Numbers
 import public Text.WebIDL.Types.StringLit
 import public Text.WebIDL.Types.Token

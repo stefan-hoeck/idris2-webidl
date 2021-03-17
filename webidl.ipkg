@@ -14,8 +14,10 @@ modules = Text.WebIDL.Lexer
         , Text.WebIDL.Types
         , Text.WebIDL.Types.Argument
         , Text.WebIDL.Types.Attribute
+        , Text.WebIDL.Types.Definition
         , Text.WebIDL.Types.Err
         , Text.WebIDL.Types.Identifier
+        , Text.WebIDL.Types.Member
         , Text.WebIDL.Types.Numbers
         , Text.WebIDL.Types.StringLit
         , Text.WebIDL.Types.Token

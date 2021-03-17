@@ -74,7 +74,7 @@ prop_argumentRest = property $ do
 
 export
 props : Group
-props = withTests 10000 $
+props = withTests 500 $
           MkGroup "Parser Properties" [
               ("prop_identifierList", prop_identifierList)
             , ("prop_other", prop_other)

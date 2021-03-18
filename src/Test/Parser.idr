@@ -45,6 +45,7 @@ prop_const = prp const const const
 prop_operation : Property
 prop_operation = prp operation operation operation
 
+export
 prop_callbackRest : Property
 prop_callbackRest = prp callbackRest callbackRest callbackRest
 

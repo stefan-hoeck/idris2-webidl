@@ -222,3 +222,61 @@ NamespaceMember = NS I [RegularOperation, Readonly Attribute]
 public export
 0 NamespaceMembers : Type
 NamespaceMembers = List (Attributed NamespaceMember)
+
+--------------------------------------------------------------------------------
+--          Interface
+--------------------------------------------------------------------------------
+
+
+||| Constructor ::
+|||     constructor ( ArgumentList ) ;
+public export
+record Constructor where
+  constructor MkConstructor
+  args : ArgumentList
+
+%runElab derive "Constructor" [Generic,Meta,Eq,Show]
+
+||| PartialInterfaceMember ::
+|||     Const
+|||     Operation
+|||     Stringifier
+|||     StaticMember
+|||     Iterable
+|||     AsyncIterable
+|||     ReadOnlyMember
+|||     ReadWriteAttribute
+|||     ReadWriteMaplike
+|||     ReadWriteSetlike
+|||     InheritAttribute
+public export
+data PartialInterfaceMember =
+    IConst   Const
+  | IOp      Operation
+  | IAttr    Attribute
+  | IAttrRO  (Readonly Attribute)
+
+%runElab derive "PartialInterfaceMember" [Generic,Meta,Eq,Show]
+
+
+||| PartialInterfaceMembers ::
+|||     ExtendedAttributeList PartialInterfaceMember PartialInterfaceMembers
+|||     ε
+public export
+0 PartialInterfaceMembers : Type
+PartialInterfaceMembers = List (Attributed PartialInterfaceMember)
+
+||| InterfaceMember ::
+|||     PartialInterfaceMember
+|||     Constructor
+public export
+0 InterfaceMember : Type
+InterfaceMember = NS I [Constructor,PartialInterfaceMember]
+
+
+||| InterfaceMembers ::
+|||     ExtendedAttributeList InterfaceMember InterfaceMembers
+|||     ε
+public export
+0 InterfaceMembers : Type
+InterfaceMembers = List (Attributed InterfaceMember)

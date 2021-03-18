@@ -389,6 +389,26 @@ namespaceMember =   map (\v => inject v) regularOperation
 namespaceMembers : IdlGrammar' NamespaceMembers
 namespaceMembers = many (attributed namespaceMember)
 
+constructor_ : IdlGrammar Constructor
+constructor_ = def "constructor" (map MkConstructor $ inParens argumentList)
+
+partialInterfaceMember : IdlGrammar PartialInterfaceMember
+partialInterfaceMember =   map IConst const
+                       <|> map IOp operation
+                       <|> map IAttr attribute
+                       <|> map IAttrRO (readonly attribute)
+
+partialInterfaceMembers : IdlGrammar' PartialInterfaceMembers
+partialInterfaceMembers = many (attributed partialInterfaceMember)
+
+export
+interfaceMember : IdlGrammar InterfaceMember
+interfaceMember =   map (\v => inject v) constructor_
+                <|> map (\v => inject v) partialInterfaceMember
+
+interfaceMembers : IdlGrammar' InterfaceMembers
+interfaceMembers = many (attributed interfaceMember)
+
 --------------------------------------------------------------------------------
 --          Definition
 --------------------------------------------------------------------------------

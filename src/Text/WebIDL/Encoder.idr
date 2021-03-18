@@ -321,6 +321,27 @@ namespaceMember = collapseNS
 namespaceMembers : Encoder NamespaceMembers
 namespaceMembers = sepList " " $ attributed namespaceMember
 
+constructor_ : Encoder Constructor
+constructor_ (MkConstructor args) =
+  defn "constructor" (inParens argumentList args)
+
+partialInterfaceMember : Encoder PartialInterfaceMember
+partialInterfaceMember (IConst x)  = const x
+partialInterfaceMember (IOp x)     = operation x
+partialInterfaceMember (IAttr x)   = attribute x
+partialInterfaceMember (IAttrRO x) = readonly attribute x
+
+partialInterfaceMembers : Encoder PartialInterfaceMembers
+partialInterfaceMembers = sepList " " $ attributed partialInterfaceMember
+
+export
+interfaceMember : Encoder InterfaceMember
+interfaceMember = collapseNS 
+                . hliftA2 runEnc [constructor_,partialInterfaceMember]
+
+interfaceMembers : Encoder InterfaceMembers
+interfaceMembers = sepList " " $ attributed interfaceMember
+
 --------------------------------------------------------------------------------
 --          Definition
 --------------------------------------------------------------------------------

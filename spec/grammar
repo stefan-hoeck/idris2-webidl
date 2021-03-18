@@ -79,7 +79,7 @@ Grammar
     ExtendedAttributeList InterfaceMember InterfaceMembers
     ε
 
-[TODO] InterfaceMember ::
+[done] InterfaceMember ::
     PartialInterfaceMember
     Constructor
 
@@ -88,14 +88,14 @@ Grammar
     ε
 
 [TODO] PartialInterfaceMember ::
-    Const
-    Operation
+    [done] Const
+    [done] Operation
     Stringifier
     StaticMember
     Iterable
     AsyncIterable
     ReadOnlyMember
-    ReadWriteAttribute
+    [done] ReadWriteAttribute
     ReadWriteMaplike
     ReadWriteSetlike
     InheritAttribute

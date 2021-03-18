@@ -394,6 +394,28 @@ namespaceMember = choice [ map (\v => inject v) regularOperation
 namespaceMembers : Gen NamespaceMembers
 namespaceMembers = linList 5 (attributed namespaceMember)
 
+constructor_ : Gen Constructor
+constructor_ = map MkConstructor argumentList
+
+partialInterfaceMember : Gen PartialInterfaceMember
+partialInterfaceMember = choice [ map IConst const
+                                , map IOp operation
+                                , map IAttr attribute
+                                , map IAttrRO (readonly attribute)
+                                ]
+
+partialInterfaceMembers : Gen PartialInterfaceMembers
+partialInterfaceMembers = linList 5 (attributed partialInterfaceMember)
+
+export
+interfaceMember : Gen InterfaceMember
+interfaceMember = frequency [ (1, map (\v => inject v) constructor_)
+                            , (10, map (\v => inject v) partialInterfaceMember)
+                            ]
+
+interfaceMembers : Gen InterfaceMembers
+interfaceMembers = linList 5 (attributed interfaceMember)
+
 --------------------------------------------------------------------------------
 --          Definition
 --------------------------------------------------------------------------------

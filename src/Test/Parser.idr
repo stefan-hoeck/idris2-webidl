@@ -83,6 +83,11 @@ prop_callbackRest = property $ do
                       v <- forAll callbackRest
                       parseIdl callbackRest (callbackRest v) === Right v
 
+prop_interfaceMember : Property
+prop_interfaceMember = property $ do
+                         v <- forAll interfaceMember
+                         parseIdl interfaceMember (interfaceMember v) === Right v
+
 prop_definition : Property
 prop_definition = property $ do
                   v <- forAll definition
@@ -110,4 +115,5 @@ props = MkGroup "Parser Properties"
           , ("prop_operation", prop_operation)
           , ("prop_definition", prop_definition)
           , ("prop_callbackRest", prop_callbackRest)
+          , ("prop_interfaceMember", prop_interfaceMember)
           ]

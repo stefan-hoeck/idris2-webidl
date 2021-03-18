@@ -336,21 +336,21 @@ opName : IdlGrammar OperationName
 opName =   (key "includes" $> MkOpName "includes")
        <|> map (\(MkIdent s) => MkOpName s) ident
 
-regularOp : IdlGrammar RegularOperation
-regularOp =
+regularOperation : IdlGrammar RegularOperation
+regularOperation =
   def "" [| MkOp (pure ()) idlType (optional opName) (inParens argumentList) |]
 
-specialOp : IdlGrammar SpecialOperation
-specialOp =
+specialOperation : IdlGrammar SpecialOperation
+specialOperation =
   def "" [| MkOp special idlType (optional opName) (inParens argumentList) |]
 
 export
 operation : IdlGrammar Operation
-operation = map specToOp specialOp <|> map regToOp regularOp
+operation = map specToOp specialOperation <|> map regToOp regularOperation
 
 callbackInterfaceMember : IdlGrammar CallbackInterfaceMember
 callbackInterfaceMember =   map (\v => inject v) const
-                        <|> map (\v => inject v) regularOp
+                        <|> map (\v => inject v) regularOperation
 
 callbackInterfaceMembers : IdlGrammar' CallbackInterfaceMembers
 callbackInterfaceMembers = many (attributed callbackInterfaceMember)
@@ -370,6 +370,23 @@ dictMembers = many (attributed dictMemberRest)
 inheritance : IdlGrammar' Inheritance
 inheritance = optional (symbol ':' *> ident)
 
+attributeName : IdlGrammar AttributeName
+attributeName =  withKey "AttributeNameKeyword"
+                   (map (MkAttributeName . value) . AttributeNameKeyword.refine)
+             <|> map (MkAttributeName . value) ident
+
+readonlyAttribute : IdlGrammar ReadonlyAttribute
+readonlyAttribute = key "readonly" *>
+                    def "attribute" [| MkReadonlyAttribute
+                                       extAttributes idlType attributeName |]
+
+namespaceMember : IdlGrammar NamespaceMember
+namespaceMember =   map (\v => inject v) regularOperation
+                <|> map (\v => inject v) readonlyAttribute
+
+namespaceMembers : IdlGrammar' NamespaceMembers
+namespaceMembers = many (attributed namespaceMember)
+
 --------------------------------------------------------------------------------
 --          Definition
 --------------------------------------------------------------------------------
@@ -380,6 +397,7 @@ definition =
       def "typedef" [| Typedef extAttributes idlType ident |]
   <|> def "enum" [| Enum ident (inBraces $ sepList1 ',' stringLit) |]
   <|> def "dictionary" [| Dictionary ident inheritance (inBraces dictMembers) |]
+  <|> def "namespace" [| Namespace ident (inBraces namespaceMembers) |]
 
 
 --------------------------------------------------------------------------------

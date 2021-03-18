@@ -374,6 +374,24 @@ dictMemberRest =
 dictMembers : Gen DictionaryMembers
 dictMembers = linList 5 (attributed dictMemberRest)
 
+attributeName : Gen AttributeName
+attributeName =
+  frequency [ (5, map (MkAttributeName . value) identifier)
+            , (1, map MkAttributeName $ element ["async","required"])
+            ]
+
+readonlyAttribute : Gen ReadonlyAttribute
+readonlyAttribute =
+  [| MkReadonlyAttribute extAttributes (idlType 3) attributeName |]
+
+namespaceMember : Gen NamespaceMember
+namespaceMember = choice [ map (\v => inject v) regularOperation
+                         , map (\v => inject v) readonlyAttribute
+                         ]
+
+namespaceMembers : Gen NamespaceMembers
+namespaceMembers = linList 5 (attributed namespaceMember)
+
 --------------------------------------------------------------------------------
 --          Definition
 --------------------------------------------------------------------------------
@@ -384,4 +402,5 @@ definition =
   choice [ [| Typedef extAttributes (idlType 3) identifier |]
          , [| Enum identifier (linList1 5 stringLit) |]
          , [| Dictionary identifier inheritance dictMembers |]
+         , [| Namespace identifier namespaceMembers |]
          ]

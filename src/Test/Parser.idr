@@ -91,6 +91,7 @@ prop_definition = property $ do
                        (Enum _ _)         => label "Enum"
                        (Typedef _ _ _)    => label "Typedef"
                        (Dictionary _ _ _) => label "Dictionary"
+                       (Namespace _ _)    => label "Namespace"
 
                   footnote ("Encoded: " ++ definition v)
 

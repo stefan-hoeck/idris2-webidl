@@ -168,3 +168,50 @@ DictionaryMember = Attributed DictionaryMemberRest
 public export
 0 DictionaryMembers : Type
 DictionaryMembers = List DictionaryMember
+
+--------------------------------------------------------------------------------
+--          Attributes
+--------------------------------------------------------------------------------
+
+||| AttributeName ::
+|||     AttributeNameKeyword
+|||     identifier
+||| 
+||| AttributeNameKeyword ::
+|||     async
+|||     required
+public export
+record AttributeName where
+  constructor MkAttributeName
+  value : String
+
+%runElab derive "AttributeName" [Generic,Meta,Eq,Show]
+
+||| AttributeRest ::
+|||     attribute TypeWithExtendedAttributes AttributeName ;
+public export
+record ReadonlyAttribute where
+  constructor MkReadonlyAttribute
+  attrs : ExtAttributeList
+  type  : IdlType
+  name  : AttributeName
+
+%runElab derive "ReadonlyAttribute" [Generic,Meta,Eq,Show]
+
+--------------------------------------------------------------------------------
+--          Namespace
+--------------------------------------------------------------------------------
+
+||| NamespaceMember ::
+|||     RegularOperation
+|||     readonly AttributeRest
+public export
+0 NamespaceMember : Type
+NamespaceMember = NS I [RegularOperation, ReadonlyAttribute]
+
+||| NamespaceMembers ::
+|||     ExtendedAttributeList NamespaceMember NamespaceMembers
+|||     ε
+public export
+0 NamespaceMembers : Type
+NamespaceMembers = List (Attributed NamespaceMember)

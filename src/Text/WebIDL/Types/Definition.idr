@@ -28,6 +28,9 @@ import Text.WebIDL.Types.Type
 |||
 ||| Dictionary ::
 |||     dictionary identifier Inheritance { DictionaryMembers } ;
+||| 
+||| Namespace ::
+|||     namespace identifier { NamespaceMembers } ;
 public export
 data Definition : Type where
   Enum :  (name   : Identifier)
@@ -43,5 +46,9 @@ data Definition : Type where
              -> (inherits : Inheritance)
              -> (members  : DictionaryMembers)
              -> Definition
+
+  Namespace :  (name : Identifier)
+            -> (members : NamespaceMembers)
+            -> Definition
 
 %runElab derive "Definition" [Generic,Meta,Eq,Show]

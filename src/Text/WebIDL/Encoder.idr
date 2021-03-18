@@ -307,6 +307,17 @@ dictMemberRest (Optional t n d) =
 dictMembers : Encoder DictionaryMembers
 dictMembers = sepList " " $ attributed dictMemberRest
 
+readonlyAttribute : Encoder ReadonlyAttribute
+readonlyAttribute (MkReadonlyAttribute as t n) =
+  defn "readonly attribute" $ spaced [extAttributes as, idlType t, n.value]
+
+namespaceMember : Encoder NamespaceMember
+namespaceMember = collapseNS 
+                . hliftA2 runEnc [regularOperation,readonlyAttribute]
+
+namespaceMembers : Encoder NamespaceMembers
+namespaceMembers = sepList " " $ attributed namespaceMember
+
 --------------------------------------------------------------------------------
 --          Definition
 --------------------------------------------------------------------------------
@@ -321,3 +332,6 @@ definition (Typedef as t n) =
 
 definition (Dictionary n i ms) =
   defn "dictionary" $ spaced [n.value, inheritance i, inBraces dictMembers ms]
+
+definition (Namespace n ms) =
+  defn "namespace" $ spaced [n.value, inBraces namespaceMembers ms]

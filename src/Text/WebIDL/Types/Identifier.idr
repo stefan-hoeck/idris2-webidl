@@ -40,6 +40,11 @@ isArgumentNameKeyword "typedef" = True
 isArgumentNameKeyword "unrestricted" = True
 isArgumentNameKeyword _ = False
 
+isAttributeNameKeyword : String -> Bool
+isAttributeNameKeyword "async"    = True
+isAttributeNameKeyword "required" = True
+isAttributeNameKeyword _          = False
+
 public export
 isKeyword : String -> Bool
 isKeyword "ArrayBuffer" = True
@@ -104,6 +109,18 @@ record ArgumentNameKeyword where
   0 isValid : So (isArgumentNameKeyword value)
 
 %runElab refinedString "ArgumentNameKeyword"
+
+--------------------------------------------------------------------------------
+--          AttributeNameKeyword
+--------------------------------------------------------------------------------
+
+public export
+record AttributeNameKeyword where
+  constructor MkAttributeNameKeyword
+  value : String
+  0 isValid : So (isAttributeNameKeyword value)
+
+%runElab refinedString "AttributeNameKeyword"
 
 --------------------------------------------------------------------------------
 --          Identifier

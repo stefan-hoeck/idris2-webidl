@@ -1,9 +1,5 @@
 module Text.WebIDL.Types.Numbers
 
-import Data.String
-import Data.List1
-import Data.Nat
-
 import Generics.Derive
 
 %language ElabReflection
@@ -15,47 +11,16 @@ export
   (==) = (==) `on` natToInteger
 
 --------------------------------------------------------------------------------
---          Encoding Integers
+--          IntLit
 --------------------------------------------------------------------------------
 
-toOctDigit : Integer -> Char
-toOctDigit 0 = '0'
-toOctDigit 1 = '1'
-toOctDigit 2 = '2'
-toOctDigit 3 = '3'
-toOctDigit 4 = '4'
-toOctDigit 5 = '5'
-toOctDigit 6 = '6'
-toOctDigit 7 = '7'
-toOctDigit _ = '_'
+public export
+data IntLit = Hex Nat | Oct Nat | I Integer
 
-toHexDigit : Integer -> Char
-toHexDigit 8 = '8'
-toHexDigit 9 = '9'
-toHexDigit 10 = 'A'
-toHexDigit 11 = 'B'
-toHexDigit 12 = 'C'
-toHexDigit 13 = 'D'
-toHexDigit 14 = 'E'
-toHexDigit 15 = 'F'
-toHexDigit n  = toOctDigit n
+%runElab derive "IntLit" [Generic,Meta,Show]
 
 export
-toHex : Nat -> String
-toHex n = "0x" ++ fastPack(run (natToInteger n) [])
-  where run : Integer -> List Char -> List Char
-        run n cs = let n'  = n `div` 16
-                       cs' = (toHexDigit $ n `mod` 16) :: cs
-                    in if n' == 0 then cs' else run n' cs'
-
-export
-toOct : Nat -> String
-toOct n = "0" ++ fastPack(run (natToInteger n) [])
-  where run : Integer -> List Char -> List Char
-        run n cs = let n'  = n `div` 8
-                       cs' = (toOctDigit $ n `mod` 8) :: cs
-                    in if n' == 0 then cs' else run n' cs'
-
+Eq IntLit using FastNatEq where (==) = genEq
 
 --------------------------------------------------------------------------------
 --          Parsing Integers
@@ -76,13 +41,13 @@ charsToPosInt base t = calc <$> traverse readDigit t
         calc = foldl (\a,e => a * base + e) 0
 
 export
-readInt : String -> Maybe Integer
+readInt : String -> Maybe IntLit
 readInt s = case fastUnpack s of
-                 '0'::'x'::t => charsToPosInt 16 t
-                 '0'::'X'::t => charsToPosInt 16 t
-                 '0'::t      => charsToPosInt 8  t
-                 '-'::t      => negate <$> charsToPosInt 10 t
-                 t           => charsToPosInt 10 t
+                 '0'::'x'::t => map (Hex . fromInteger) $ charsToPosInt 16 t
+                 '0'::'X'::t => map (Hex . fromInteger) $ charsToPosInt 16 t
+                 '0'::t      => map (Oct . fromInteger) $ charsToPosInt 8  t
+                 '-'::t      => I . negate <$> charsToPosInt 10 t
+                 t           => map I $ charsToPosInt 10 t
 
 --------------------------------------------------------------------------------
 --          Floating Point Literals
@@ -115,26 +80,7 @@ data FloatLit : Type where
 %runElab derive "FloatLit" [Generic,Meta,Show]
 
 export
-Eq FloatLit using FastNatEq where
-  (==) = genEq
-
---------------------------------------------------------------------------------
---          Encoding Floats
---------------------------------------------------------------------------------
-
-sig : Signum -> String
-sig Plus  = ""
-sig Minus = "-"
-
-export
-toFloatLit : FloatLit -> String
-toFloatLit Infinity         = "Infinity"
-toFloatLit NegativeInfinity = "-Infinity"
-toFloatLit NaN              = "NaN"
-toFloatLit (Exp s bd ad exp) =
-  fastConcat [sig s,show bd,maybe "" (("." ++) . show) ad,"e",show exp]
-toFloatLit (NoExp s bd ad) =
-  fastConcat [sig s,show bd,".",show ad]
+Eq FloatLit using FastNatEq where (==) = genEq
 
 --------------------------------------------------------------------------------
 --          Parsing Floats

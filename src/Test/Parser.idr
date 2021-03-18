@@ -1,22 +1,18 @@
 module Test.Parser
 
+import Text.WebIDL.Encoder
 import Text.WebIDL.Parser
 import Test.Generators
 
-prop_identifierList : Property
-prop_identifierList = property $ do
-                        (s,is) <- forAll identifiers
-                        parseIdl identifierList s === Right is
-
 prop_other : Property
 prop_other = property $ do
-               (s,v) <- forAll other
-               parseIdl other s === Right v
+               v <- forAll other
+               parseIdl other (other v) === Right v
 
 export
 prop_extAttributes : Property
 prop_extAttributes = property $ do
-                       (s,v) <- forAll (extAttributes 4)
+                       v <- forAll (list (linear 1 5) (extAttribute 4))
                        let dv : Nat
                            dv = foldl (\n,a => max n (depth a)) 0 v
 
@@ -40,16 +36,19 @@ prop_extAttributes = property $ do
                        classify "size in [01,05)"   (sv >= 1 && sv < 5)
                        classify "size in [05,10)"  (sv >= 5 && sv < 10)
                        classify "size in [10,15)" (sv >= 10 && sv < 15)
-                       parseIdl extAttributes s === Right v
+
+                       footnote ("Encoded: " ++ extAttributes v)
+
+                       parseIdl extAttributes (extAttributes v) === Right v
 
 prop_primitiveType : Property
 prop_primitiveType = property $ do
-                       (s,v) <- forAll primitive
-                       parseIdl primitive s === Right v
+                       v <- forAll primitive
+                       parseIdl primitive (primitive v) === Right v
 
 prop_idlType : Property
 prop_idlType = property $ do
-                 (s,v) <- forAll (idlType 5)
+                 v <- forAll (idlType 5)
                  let sv : Nat
                      sv = sizeIdl v
 
@@ -62,44 +61,42 @@ prop_idlType = property $ do
                  classify "size 7" (sv == 7)
                  classify "size > 7" (sv > 7)
 
-                 parseIdl idlType s === Right v
+                 parseIdl idlType (idlType v) === Right v
 
 prop_argumentRest : Property
 prop_argumentRest = property $ do
-                      (s,v) <- forAll argumentRest
-                      parseIdl argumentRest s === Right v
+                      v <- forAll argumentRest
+                      parseIdl argumentRest (argumentRest v) === Right v
 
 prop_const : Property
 prop_const = property $ do
-               (s,v) <- forAll const
-               parseIdl const s === Right v
+               v <- forAll const
+               parseIdl const (const v) === Right v
 
 prop_operation : Property
 prop_operation = property $ do
-                 (s,v) <- forAll operation
-                 parseIdl operation s === Right v
+                 v <- forAll operation
+                 parseIdl operation (operation v) === Right v
 
 prop_definition : Property
 prop_definition = property $ do
-                  (s,v) <- forAll definition
+                  v <- forAll definition
 
                   case v of
                        (Enum _ _)      => label "Enum"
                        (Typedef _ _ _) => label "Typedef"
 
-                  parseIdl definition s === Right v
+                  parseIdl definition (definition v) === Right v
 
 export
 props : Group
-props = withTests 1000 $
-          MkGroup "Parser Properties" [
-              ("prop_identifierList", prop_identifierList)
-            , ("prop_other", prop_other)
-            , ("prop_extAttributes", prop_extAttributes)
-            , ("prop_primitiveType", prop_primitiveType)
-            , ("prop_idlType", prop_idlType)
-            , ("prop_argumentRest", prop_argumentRest)
-            , ("prop_const", prop_const)
-            , ("prop_operation", prop_operation)
-            , ("prop_definition", prop_definition)
-            ]
+props = MkGroup "Parser Properties"
+          [ ("prop_other", prop_other)
+          , ("prop_extAttributes", prop_extAttributes)
+          , ("prop_primitiveType", prop_primitiveType)
+          , ("prop_idlType", prop_idlType)
+          , ("prop_argumentRest", prop_argumentRest)
+          , ("prop_const", prop_const)
+          , ("prop_operation", prop_operation)
+          , ("prop_definition", prop_definition)
+          ]

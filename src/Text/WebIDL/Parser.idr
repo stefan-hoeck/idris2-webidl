@@ -30,17 +30,17 @@ withKey : String -> (String -> Maybe a) -> IdlGrammar a
 withKey s f = tok s \case (Key $ MkKeyword s _) => f s
                           _                     => Nothing
 
-intLit : IdlGrammar Integer
-intLit = tok "Int Lit" \case IntLit n => Just n
-                             _        => Nothing
+intLit : IdlGrammar IntLit
+intLit = tok "Int Lit" \case ILit n => Just n
+                             _      => Nothing
 
 stringLit : IdlGrammar StringLit
-stringLit = tok "String Lit" \case StrLit s => Just s
-                                   _        => Nothing
+stringLit = tok "String Lit" \case SLit s => Just s
+                                   _      => Nothing
 
 floatLit : IdlGrammar FloatLit
-floatLit = tok "Float Lit" \case FltLit v => Just v
-                                 _        => Nothing
+floatLit = tok "Float Lit" \case FLit v => Just v
+                                 _      => Nothing
 
 --------------------------------------------------------------------------------
 --          Symbols

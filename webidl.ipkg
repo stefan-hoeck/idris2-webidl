@@ -9,7 +9,8 @@ depends    = base        >= 0.3.0
            , pretty-show >= 0.1.1
            , sop         >= 0.1.1
 
-modules = Text.WebIDL.Lexer
+modules = Text.WebIDL.Encoder
+        , Text.WebIDL.Lexer
         , Text.WebIDL.Parser
         , Text.WebIDL.Types
         , Text.WebIDL.Types.Argument

@@ -17,7 +17,7 @@ import Generics.Derive
 |||     true
 |||     false
 public export
-data ConstValue = B Bool | F FloatLit | I Integer
+data ConstValue = B Bool | F FloatLit | I IntLit
 
 %runElab derive "ConstValue" [Generic,Meta,Eq,Show]
 
@@ -74,11 +74,11 @@ data ArgumentRest : Type where
 |||     Argument Arguments
 |||     ε
 ||| 
-||| (part of ArgumentList)] Arguments ::
+||| Arguments ::
 |||     , Argument Arguments
 |||     ε
 ||| 
-||| (part of ArgumentList)] Argument ::
+||| Argument ::
 |||     ExtendedAttributeList ArgumentRest
 public export
 0 ArgumentList : Type

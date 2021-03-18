@@ -55,3 +55,5 @@ main = do (pn :: args) <- getArgs
           Right config <- pure $ applyArgs args
                        | Left es => traverse_ putStrLn es
           run config
+
+-- recheck 22 (MkSeed 16532607737298476357 1627243149246889911) prop_callbackRest

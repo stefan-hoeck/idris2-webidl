@@ -46,6 +46,13 @@ isAttributeNameKeyword "required" = True
 isAttributeNameKeyword _          = False
 
 public export
+isFloatKeyword : String -> Bool
+isFloatKeyword "NaN"       = True
+isFloatKeyword "Infinity"  = True
+isFloatKeyword "-Infinity" = True
+isFloatKeyword _           = False
+
+public export
 isKeyword : String -> Bool
 isKeyword "ArrayBuffer" = True
 isKeyword "ByteString" = True
@@ -84,7 +91,8 @@ isKeyword "symbol" = True
 isKeyword "true" = True
 isKeyword "undefined" = True
 isKeyword "unsigned" = True
-isKeyword s = isArgumentNameKeyword s
+isKeyword s =  isArgumentNameKeyword s
+            || isFloatKeyword s
 
 --------------------------------------------------------------------------------
 --          Keyword

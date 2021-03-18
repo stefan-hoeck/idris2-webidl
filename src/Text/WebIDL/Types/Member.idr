@@ -205,6 +205,27 @@ record Attribute where
 
 %runElab derive "Attribute" [Generic,Meta,Eq,Show]
 
+||| StringifierRest ::
+|||     OptionalReadOnly AttributeRest
+|||     RegularOperation
+|||     ;
+||| 
+||| Stringifier ::
+|||     stringifier StringifierRest
+public export
+0 Stringifier : Type
+Stringifier = NS I [Attribute, Readonly Attribute, RegularOperation,()]
+
+||| StaticMember ::
+|||     static StaticMemberRest
+||| 
+||| StaticMemberRest ::
+|||     OptionalReadOnly AttributeRest
+|||     RegularOperation
+public export
+0 StaticMember : Type
+StaticMember = NS I [Attribute, Readonly Attribute, RegularOperation]
+
 --------------------------------------------------------------------------------
 --          Namespace
 --------------------------------------------------------------------------------
@@ -227,7 +248,6 @@ NamespaceMembers = List (Attributed NamespaceMember)
 --          Interface
 --------------------------------------------------------------------------------
 
-
 ||| Constructor ::
 |||     constructor ( ArgumentList ) ;
 public export
@@ -249,12 +269,19 @@ record Constructor where
 |||     ReadWriteMaplike
 |||     ReadWriteSetlike
 |||     InheritAttribute
+||| 
+||| Iterable ::
+|||     iterable < TypeWithExtendedAttributes OptionalType > ;
 public export
 data PartialInterfaceMember =
     IConst   Const
   | IOp      Operation
+  | IStr     Stringifier
+  | IStatic  StaticMember
   | IAttr    Attribute
   | IAttrRO  (Readonly Attribute)
+  | IIterable (Attributed IdlType) OptionalType
+  | IAsync   (Attributed IdlType) OptionalType ArgumentList
 
 %runElab derive "PartialInterfaceMember" [Generic,Meta,Eq,Show]
 

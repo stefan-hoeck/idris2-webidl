@@ -264,6 +264,9 @@ mutual
                              , map UU (nullable $ union k)
                              ]
 
+optionalType : Gen OptionalType
+optionalType = maybe (attributed $ idlType 3)
+
 --------------------------------------------------------------------------------
 --          Arguments
 --------------------------------------------------------------------------------
@@ -386,6 +389,19 @@ readonly = map MkRO
 attribute : Gen Attribute
 attribute = [| MkAttribute extAttributes (idlType 3) attributeName |]
 
+stringifier : Gen Stringifier
+stringifier = choice [ map (\v => inject v) regularOperation
+                     , map (\v => inject v) $ readonly attribute
+                     , map (\v => inject v) $ attribute
+                     , map (\v => inject v) (pure ())
+                     ]
+
+static : Gen StaticMember
+static = choice [ map (\v => inject v) regularOperation
+                , map (\v => inject v) $ readonly attribute
+                , map (\v => inject v) $ attribute
+                ]
+
 namespaceMember : Gen NamespaceMember
 namespaceMember = choice [ map (\v => inject v) regularOperation
                          , map (\v => inject v) $ readonly attribute
@@ -398,11 +414,16 @@ constructor_ : Gen Constructor
 constructor_ = map MkConstructor argumentList
 
 partialInterfaceMember : Gen PartialInterfaceMember
-partialInterfaceMember = choice [ map IConst const
-                                , map IOp operation
-                                , map IAttr attribute
-                                , map IAttrRO (readonly attribute)
-                                ]
+partialInterfaceMember =
+  choice [ map IConst const
+         , map IOp operation
+         , map IAttr attribute
+         , map IAttrRO (readonly attribute)
+         , map IStr stringifier
+         , map IStatic static
+         , [| IIterable (attributed $ idlType 3) optionalType |]
+         , [| IAsync (attributed $ idlType 3) optionalType argumentList |]
+         ]
 
 partialInterfaceMembers : Gen PartialInterfaceMembers
 partialInterfaceMembers = linList 5 (attributed partialInterfaceMember)

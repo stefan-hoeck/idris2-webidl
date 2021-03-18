@@ -75,7 +75,7 @@ Grammar
 [TODO] PartialInterfaceRest ::
     identifier { PartialInterfaceMembers } ;
 
-[TODO] InterfaceMembers ::
+[done] InterfaceMembers ::
     ExtendedAttributeList InterfaceMember InterfaceMembers
     ε
 
@@ -83,16 +83,16 @@ Grammar
     PartialInterfaceMember
     Constructor
 
-[TODO] PartialInterfaceMembers ::
+[done] PartialInterfaceMembers ::
     ExtendedAttributeList PartialInterfaceMember PartialInterfaceMembers
     ε
 
 [TODO] PartialInterfaceMember ::
     [done] Const
     [done] Operation
-    Stringifier
-    StaticMember
-    Iterable
+    [done] Stringifier
+    [done] StaticMember
+    [done] Iterable
     AsyncIterable
     ReadOnlyMember
     [done] ReadWriteAttribute
@@ -242,35 +242,35 @@ Grammar
     ...
     ε
 
-[TODO] Constructor ::
+[done] Constructor ::
     constructor ( ArgumentList ) ;
 
-[TODO] Stringifier ::
+[done] Stringifier ::
     stringifier StringifierRest
 
-[TODO] StringifierRest ::
+[done] StringifierRest ::
     OptionalReadOnly AttributeRest
     RegularOperation
     ;
 
-[TODO] StaticMember ::
+[done] StaticMember ::
     static StaticMemberRest
 
-[TODO] StaticMemberRest ::
+[done] StaticMemberRest ::
     OptionalReadOnly AttributeRest
     RegularOperation
 
-[TODO] Iterable ::
+[done] Iterable ::
     iterable < TypeWithExtendedAttributes OptionalType > ;
 
-[TODO] OptionalType ::
+[done] OptionalType ::
     , TypeWithExtendedAttributes
     ε
 
-[TODO] AsyncIterable ::
+[done] AsyncIterable ::
     async iterable < TypeWithExtendedAttributes OptionalType > OptionalArgumentList ;
 
-[TODO] OptionalArgumentList ::
+[done] OptionalArgumentList ::
     ( ArgumentList )
     ε
 

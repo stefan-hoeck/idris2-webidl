@@ -212,3 +212,10 @@ mutual
                       , ("UnionType",       [Generic,Meta,Show,Eq])
                       , ("IdlType",         [Generic,Meta,Show,Eq])
                       ]
+
+||| OptionalType ::
+|||     , TypeWithExtendedAttributes
+|||     ε
+public export
+0 OptionalType : Type
+OptionalType = Maybe (Attributed IdlType)

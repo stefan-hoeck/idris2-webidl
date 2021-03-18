@@ -17,7 +17,7 @@ record Config where
   numTests : TestLimit
 
 init : Config
-init = MkConfig 100
+init = MkConfig 1000
 
 setTests : String -> Config -> Either (List String) Config
 setTests s c = maybe (Left ["Not a natural number: " ++ s])

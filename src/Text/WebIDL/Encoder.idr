@@ -214,6 +214,9 @@ mutual
   distinguishable Object = "object"
   distinguishable Symbol = "symbol"
 
+optionalType : Encoder OptionalType
+optionalType = maybe "" (\p => "," ++ attributed idlType p)
+
 --------------------------------------------------------------------------------
 --          Arguments
 --------------------------------------------------------------------------------
@@ -244,6 +247,10 @@ argumentRest (VarArg t n)    = spaced [idlType t ++ "...",n.value]
 export
 argumentList : Encoder ArgumentList
 argumentList = sepList "," (attributed argumentRest)
+
+optArgList : Encoder ArgumentList
+optArgList Nil = ""
+optArgList as  = inParens argumentList as
 
 --------------------------------------------------------------------------------
 --          Members
@@ -314,6 +321,16 @@ attribute : Encoder Attribute
 attribute (MkAttribute as t n) =
   defn "attribute" $ spaced [extAttributes as, idlType t, n.value]
 
+stringifier : Encoder Stringifier
+stringifier = ("stringifier " ++)
+            . collapseNS
+            . hliftA2 runEnc [attribute,readonly attribute,regularOperation,const ";"]
+
+static : Encoder StaticMember
+static = ("static " ++)
+       . collapseNS
+       . hliftA2 runEnc [attribute,readonly attribute,regularOperation]
+
 namespaceMember : Encoder NamespaceMember
 namespaceMember = collapseNS 
                 . hliftA2 runEnc [regularOperation,readonly attribute]
@@ -326,10 +343,17 @@ constructor_ (MkConstructor args) =
   defn "constructor" (inParens argumentList args)
 
 partialInterfaceMember : Encoder PartialInterfaceMember
-partialInterfaceMember (IConst x)  = const x
-partialInterfaceMember (IOp x)     = operation x
-partialInterfaceMember (IAttr x)   = attribute x
-partialInterfaceMember (IAttrRO x) = readonly attribute x
+partialInterfaceMember (IConst x)       = const x
+partialInterfaceMember (IOp x)          = operation x
+partialInterfaceMember (IAttr x)        = attribute x
+partialInterfaceMember (IAttrRO x)      = readonly attribute x
+partialInterfaceMember (IStr x)         = stringifier x
+partialInterfaceMember (IStatic x)      = static x
+partialInterfaceMember (IIterable p o)  =
+  defn "iterable<" (attributed idlType p ++ optionalType o ++ ">")
+partialInterfaceMember (IAsync p o a)   =
+  defn "async iterable<"
+    (attributed idlType p ++ optionalType o ++ ">" ++ optArgList a)
 
 partialInterfaceMembers : Encoder PartialInterfaceMembers
 partialInterfaceMembers = sepList " " $ attributed partialInterfaceMember

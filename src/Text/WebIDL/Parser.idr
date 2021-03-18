@@ -283,6 +283,9 @@ mutual
   unionMember =   map UD (attributed distinguishableType)
               <|> map UU (nullable union)
 
+optionalType : IdlGrammar' OptionalType
+optionalType = optional (symbol ',' *> attributed idlType)
+
 --------------------------------------------------------------------------------
 --          Arguments
 --------------------------------------------------------------------------------
@@ -314,6 +317,9 @@ argumentRest =   [| Optional (key "optional" *> attrTpe) argName defaultV |]
 
 argumentList : IdlGrammar' ArgumentList
 argumentList = sepBy comma (attributed argumentRest)
+
+optArgList : IdlGrammar' ArgumentList
+optArgList = inParens argumentList <|> pure Nil
 
 --------------------------------------------------------------------------------
 --          Member
@@ -382,6 +388,21 @@ attribute : IdlGrammar Attribute
 attribute = def "attribute"
             [| MkAttribute extAttributes idlType attributeName |]
 
+stringifier : IdlGrammar Stringifier
+stringifier =   key "stringifier" *> (
+                map (\v => inject v) attribute
+            <|> map (\v => inject v) (readonly attribute)
+            <|> map (\v => inject v) regularOperation
+            <|> map (\v => inject v) (symbol ';')
+            )
+
+static : IdlGrammar StaticMember
+static =   key "static" *> (
+           map (\v => inject v) attribute
+       <|> map (\v => inject v) (readonly attribute)
+       <|> map (\v => inject v) regularOperation
+       )
+
 namespaceMember : IdlGrammar NamespaceMember
 namespaceMember =   map (\v => inject v) regularOperation
                 <|> map (\v => inject v) (readonly attribute)
@@ -393,10 +414,19 @@ constructor_ : IdlGrammar Constructor
 constructor_ = def "constructor" (map MkConstructor $ inParens argumentList)
 
 partialInterfaceMember : IdlGrammar PartialInterfaceMember
-partialInterfaceMember =   map IConst const
-                       <|> map IOp operation
-                       <|> map IAttr attribute
-                       <|> map IAttrRO (readonly attribute)
+partialInterfaceMember =
+      map IConst const
+  <|> map IOp operation
+  <|> map IAttr attribute
+  <|> map IAttrRO (readonly attribute)
+  <|> map IStr stringifier
+  <|> map IStatic static
+  <|> def "iterable" (inAngles [| IIterable (attributed idlType)
+                                            optionalType |])
+  <|> def "async" (do key "iterable"
+                      p  <- inAngles [| (,) (attributed idlType) optionalType |]
+                      as <- optArgList
+                      pure (IAsync (fst p) (snd p) as))
 
 partialInterfaceMembers : IdlGrammar' PartialInterfaceMembers
 partialInterfaceMembers = many (attributed partialInterfaceMember)

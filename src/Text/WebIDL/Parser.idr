@@ -375,14 +375,16 @@ attributeName =  withKey "AttributeNameKeyword"
                    (map (MkAttributeName . value) . AttributeNameKeyword.refine)
              <|> map (MkAttributeName . value) ident
 
-readonlyAttribute : IdlGrammar ReadonlyAttribute
-readonlyAttribute = key "readonly" *>
-                    def "attribute" [| MkReadonlyAttribute
-                                       extAttributes idlType attributeName |]
+readonly : IdlGrammar a -> IdlGrammar (Readonly a)
+readonly g = key "readonly" *> map MkRO g
+
+attribute : IdlGrammar Attribute
+attribute = def "attribute"
+            [| MkAttribute extAttributes idlType attributeName |]
 
 namespaceMember : IdlGrammar NamespaceMember
 namespaceMember =   map (\v => inject v) regularOperation
-                <|> map (\v => inject v) readonlyAttribute
+                <|> map (\v => inject v) (readonly attribute)
 
 namespaceMembers : IdlGrammar' NamespaceMembers
 namespaceMembers = many (attributed namespaceMember)

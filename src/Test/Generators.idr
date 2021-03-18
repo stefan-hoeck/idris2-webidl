@@ -380,13 +380,15 @@ attributeName =
             , (1, map MkAttributeName $ element ["async","required"])
             ]
 
-readonlyAttribute : Gen ReadonlyAttribute
-readonlyAttribute =
-  [| MkReadonlyAttribute extAttributes (idlType 3) attributeName |]
+readonly : Gen a -> Gen (Readonly a)
+readonly = map MkRO
+
+attribute : Gen Attribute
+attribute = [| MkAttribute extAttributes (idlType 3) attributeName |]
 
 namespaceMember : Gen NamespaceMember
 namespaceMember = choice [ map (\v => inject v) regularOperation
-                         , map (\v => inject v) readonlyAttribute
+                         , map (\v => inject v) $ readonly attribute
                          ]
 
 namespaceMembers : Gen NamespaceMembers

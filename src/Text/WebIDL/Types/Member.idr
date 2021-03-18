@@ -173,6 +173,13 @@ DictionaryMembers = List DictionaryMember
 --          Attributes
 --------------------------------------------------------------------------------
 
+public export
+record Readonly a where
+  constructor MkRO
+  value : a
+
+%runElab derive "Readonly" [Generic,Meta,Eq,Show]
+
 ||| AttributeName ::
 |||     AttributeNameKeyword
 |||     identifier
@@ -190,13 +197,13 @@ record AttributeName where
 ||| AttributeRest ::
 |||     attribute TypeWithExtendedAttributes AttributeName ;
 public export
-record ReadonlyAttribute where
-  constructor MkReadonlyAttribute
+record Attribute where
+  constructor MkAttribute
   attrs : ExtAttributeList
   type  : IdlType
   name  : AttributeName
 
-%runElab derive "ReadonlyAttribute" [Generic,Meta,Eq,Show]
+%runElab derive "Attribute" [Generic,Meta,Eq,Show]
 
 --------------------------------------------------------------------------------
 --          Namespace
@@ -207,7 +214,7 @@ record ReadonlyAttribute where
 |||     readonly AttributeRest
 public export
 0 NamespaceMember : Type
-NamespaceMember = NS I [RegularOperation, ReadonlyAttribute]
+NamespaceMember = NS I [RegularOperation, Readonly Attribute]
 
 ||| NamespaceMembers ::
 |||     ExtendedAttributeList NamespaceMember NamespaceMembers

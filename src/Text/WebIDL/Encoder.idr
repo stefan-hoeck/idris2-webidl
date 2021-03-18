@@ -9,6 +9,7 @@ import Text.WebIDL.Types
 --          Utilities
 --------------------------------------------------------------------------------
 
+public export
 0 Encoder : Type -> Type
 Encoder a = a -> String
 
@@ -126,12 +127,12 @@ extAttribute (EAParens i r) = inParens eaInner i ++ emaybe extAttribute r
 extAttribute (EAOther o r)  = other o ++ " " ++ emaybe extAttribute r
 
 export
-extAttributeList : Encoder ExtAttributeList
-extAttributeList = emptyIfNull . inBrackets $ sepList "," extAttribute
+extAttributes : Encoder ExtAttributeList
+extAttributes = emptyIfNull . inBrackets $ sepList "," extAttribute
 
 export
 attributed : Encoder a -> Encoder (Attributed a)
-attributed f (as,a) = extAttributeList as ++ " " ++ f a
+attributed f (as,a) = extAttributes as ++ " " ++ f a
 
 --------------------------------------------------------------------------------
 --          Type
@@ -208,7 +209,7 @@ mutual
     "FrozenArray" ++ inAngles (attributed idlType) x
   distinguishable (ObservableArray x) =
     "ObservableArray" ++ inAngles (attributed idlType) x
-  distinguishable (Record x y) = ?distinguishable_rhs_8
+  distinguishable (Record x y) =
     "record<" ++ stringType x ++ "," ++ attributed idlType y ++ ">"
   distinguishable Object = "object"
   distinguishable Symbol = "symbol"
@@ -258,7 +259,7 @@ member k f = defn k . f
 export
 const : Encoder Const
 const = member "const" \(MkConst t n v) =>
-        spaced [constType t,n.value,constValue v]
+        spaced [constType t,n.value,"=",constValue v]
 
 export
 special : Encoder Special
@@ -293,5 +294,5 @@ definition (Enum n vs) =
   defn "enum" $ n.value ++ inBraces (sepList "," stringLit) (forget vs)
 
 definition (Typedef as t n) =
-  defn "typedef" $ spaced [extAttributeList as, idlType t, n.value]
+  defn "typedef" $ spaced [extAttributes as, idlType t, n.value]
 

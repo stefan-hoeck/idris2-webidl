@@ -142,16 +142,16 @@ extAttribute =   [| EAParens (inAnyParens eaInner) (optional extAttribute) |]
              <|> [| EAOther other (optional extAttribute) |]
 
 export
-extAttributes : IdlGrammar ExtAttributeList
-extAttributes = inBrackets (sepBy1 comma extAttribute)
+extAttrs1 : IdlGrammar ExtAttributeList
+extAttrs1 = inBrackets (sepBy1 comma extAttribute)
 
 export
-extAttributes' : IdlGrammar' ExtAttributeList
-extAttributes' = extAttributes <|> pure Nil
+extAttributes : IdlGrammar' ExtAttributeList
+extAttributes = extAttrs1 <|> pure Nil
 
 export
 attributed : IdlGrammar a -> IdlGrammar (Attributed a)
-attributed g = [| (,) extAttributes g |] <|> map (Nil,) g
+attributed g = [| (,) extAttrs1 g |] <|> map (Nil,) g
 
 --------------------------------------------------------------------------------
 --          Types
@@ -348,6 +348,28 @@ export
 operation : IdlGrammar Operation
 operation = map specToOp specialOp <|> map regToOp regularOp
 
+callbackInterfaceMember : IdlGrammar CallbackInterfaceMember
+callbackInterfaceMember =   map (\v => inject v) const
+                        <|> map (\v => inject v) regularOp
+
+callbackInterfaceMembers : IdlGrammar' CallbackInterfaceMembers
+callbackInterfaceMembers = many (attributed callbackInterfaceMember)
+
+export
+callbackRest : IdlGrammar CallbackRest
+callbackRest = def "" [| MkCallbackRest ident idlType
+                          (symbol '=' *> inParens argumentList) |]
+
+dictMemberRest : IdlGrammar DictionaryMemberRest
+dictMemberRest =   def "required" [| Required extAttributes idlType ident |]
+               <|> def "" [| Optional idlType ident defaultV |]
+
+dictMembers : IdlGrammar' DictionaryMembers
+dictMembers = many (attributed dictMemberRest)
+
+inheritance : IdlGrammar' Inheritance
+inheritance = optional (symbol ':' *> ident)
+
 --------------------------------------------------------------------------------
 --          Definition
 --------------------------------------------------------------------------------
@@ -355,8 +377,9 @@ operation = map specToOp specialOp <|> map regToOp regularOp
 export
 definition : IdlGrammar Definition
 definition =
-      def "typedef" [| Typedef extAttributes' idlType ident |]
+      def "typedef" [| Typedef extAttributes idlType ident |]
   <|> def "enum" [| Enum ident (inBraces $ sepList1 ',' stringLit) |]
+  <|> def "dictionary" [| Dictionary ident inheritance (inBraces dictMembers) |]
 
 
 --------------------------------------------------------------------------------

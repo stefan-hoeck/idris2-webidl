@@ -284,6 +284,29 @@ export
 operation : Encoder Operation
 operation = op (maybe "" special)
 
+callbackInterfaceMember : Encoder CallbackInterfaceMember
+callbackInterfaceMember = collapseNS . hliftA2 runEnc [const,regularOperation]
+
+callbackInterfaceMembers : Encoder CallbackInterfaceMembers
+callbackInterfaceMembers = sepList " " $ attributed callbackInterfaceMember
+
+export
+callbackRest : Encoder CallbackRest
+callbackRest (MkCallbackRest n t as) =
+  defn "" $ spaced [n.value, idlType t, "=", inParens argumentList as]
+
+inheritance : Encoder Inheritance
+inheritance = maybe "" \i => " : " ++ i.value
+
+dictMemberRest : Encoder DictionaryMemberRest
+dictMemberRest (Required as t n) =
+  defn "required" $ spaced [extAttributes as,idlType t,n.value]
+dictMemberRest (Optional t n d) =
+  defn "" $ spaced [idlType t, n.value, defaultV d]
+
+dictMembers : Encoder DictionaryMembers
+dictMembers = sepList " " $ attributed dictMemberRest
+
 --------------------------------------------------------------------------------
 --          Definition
 --------------------------------------------------------------------------------
@@ -296,3 +319,5 @@ definition (Enum n vs) =
 definition (Typedef as t n) =
   defn "typedef" $ spaced [extAttributes as, idlType t, n.value]
 
+definition (Dictionary n i ms) =
+  defn "dictionary" $ spaced [n.value, inheritance i, inBraces dictMembers ms]

@@ -350,12 +350,38 @@ operation = choice [ map regToOp  regularOperation
                    , map specToOp specialOperation
                    ]
 
+callbackInterfaceMember : Gen CallbackInterfaceMember
+callbackInterfaceMember = choice [ map (\v => inject v) const
+                                 , map (\v => inject v) regularOperation
+                                 ]
+
+callbackInterfaceMembers : Gen CallbackInterfaceMembers
+callbackInterfaceMembers = linList 5 (attributed callbackInterfaceMember)
+
+export
+callbackRest : Gen CallbackRest
+callbackRest = [| MkCallbackRest identifier (idlType 3) argumentList |]
+
+inheritance : Gen Inheritance
+inheritance = maybe identifier
+
+dictMemberRest : Gen DictionaryMemberRest
+dictMemberRest =
+  choice [ [| Required extAttributes (idlType 3) identifier |]
+         , [| Optional (idlType 3) identifier defaultVal |]
+         ]
+
+dictMembers : Gen DictionaryMembers
+dictMembers = linList 5 (attributed dictMemberRest)
+
 --------------------------------------------------------------------------------
 --          Definition
 --------------------------------------------------------------------------------
 
 export
 definition : Gen Definition
-definition = choice [ [| Typedef extAttributes (idlType 3) identifier |]
-                    , [| Enum identifier (linList1 5 stringLit) |]
-                    ]
+definition =
+  choice [ [| Typedef extAttributes (idlType 3) identifier |]
+         , [| Enum identifier (linList1 5 stringLit) |]
+         , [| Dictionary identifier inheritance dictMembers |]
+         ]

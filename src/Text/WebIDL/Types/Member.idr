@@ -96,3 +96,75 @@ regToOp = record { special = Nothing }
 public export
 specToOp : SpecialOperation -> Operation
 specToOp = record { special $= Just }
+
+--------------------------------------------------------------------------------
+--          Callbacks
+--------------------------------------------------------------------------------
+
+
+||| CallbackInterfaceMember ::
+|||     Const
+|||     RegularOperation
+public export
+0 CallbackInterfaceMember : Type
+CallbackInterfaceMember = NS I [Const,RegularOperation]
+
+||| CallbackInterfaceMembers ::
+|||     ExtendedAttributeList CallbackInterfaceMember CallbackInterfaceMembers
+|||     ε
+public export
+0 CallbackInterfaceMembers : Type
+CallbackInterfaceMembers = List (Attributed CallbackInterfaceMember)
+
+
+||| CallbackRest ::
+|||     identifier = Type ( ArgumentList ) ;
+public export
+record CallbackRest where
+  constructor MkCallbackRest
+  name : Identifier
+  type : IdlType
+  args : ArgumentList
+
+%runElab derive "CallbackRest" [Generic,Meta,Eq,Show]
+
+--------------------------------------------------------------------------------
+--          Dictionary
+--------------------------------------------------------------------------------
+
+||| Inheritance ::
+|||     : identifier
+|||     ε
+public export
+0 Inheritance : Type
+Inheritance = Maybe Identifier
+
+||| DictionaryMemberRest ::
+|||     required TypeWithExtendedAttributes identifier ;
+|||     Type identifier Default ;
+public export
+data DictionaryMemberRest : Type where
+  Required :  (attrs : ExtAttributeList)
+           -> (type : IdlType)
+           -> (name : Identifier)
+           -> DictionaryMemberRest
+
+  Optional :  (type  : IdlType)
+           -> (name  : Identifier)
+           -> (deflt : Default)
+           -> DictionaryMemberRest
+
+%runElab derive "DictionaryMemberRest" [Generic,Meta,Eq,Show]
+
+||| DictionaryMember ::
+|||     ExtendedAttributeList DictionaryMemberRest
+public export
+0 DictionaryMember : Type
+DictionaryMember = Attributed DictionaryMemberRest
+
+||| DictionaryMembers ::
+|||     DictionaryMember DictionaryMembers
+|||     ε
+public export
+0 DictionaryMembers : Type
+DictionaryMembers = List DictionaryMember

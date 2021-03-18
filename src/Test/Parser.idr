@@ -39,7 +39,7 @@ prop_extAttributes = property $ do
 
                        footnote ("Encoded: " ++ extAttributes v)
 
-                       parseIdl extAttributes (extAttributes v) === Right v
+                       parseIdl extAttrs1 (extAttributes v) === Right v
 
 prop_primitiveType : Property
 prop_primitiveType = property $ do
@@ -78,13 +78,21 @@ prop_operation = property $ do
                  v <- forAll operation
                  parseIdl operation (operation v) === Right v
 
+prop_callbackRest : Property
+prop_callbackRest = property $ do
+                      v <- forAll callbackRest
+                      parseIdl callbackRest (callbackRest v) === Right v
+
 prop_definition : Property
 prop_definition = property $ do
                   v <- forAll definition
 
                   case v of
-                       (Enum _ _)      => label "Enum"
-                       (Typedef _ _ _) => label "Typedef"
+                       (Enum _ _)         => label "Enum"
+                       (Typedef _ _ _)    => label "Typedef"
+                       (Dictionary _ _ _) => label "Dictionary"
+
+                  footnote ("Encoded: " ++ definition v)
 
                   parseIdl definition (definition v) === Right v
 
@@ -99,4 +107,5 @@ props = MkGroup "Parser Properties"
           , ("prop_const", prop_const)
           , ("prop_operation", prop_operation)
           , ("prop_definition", prop_definition)
+          , ("prop_callbackRest", prop_callbackRest)
           ]

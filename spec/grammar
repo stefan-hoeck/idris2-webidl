@@ -15,8 +15,8 @@ Grammar
 
 [TODO] Definition ::
     CallbackOrInterfaceOrMixin
-    Namespace
-    Partial
+    [done] Namespace
+    [done] Partial
     [done] Dictionary
     [done] Enum
     [done] Typedef
@@ -60,13 +60,13 @@ Grammar
 [TODO] InterfaceRest ::
     identifier Inheritance { InterfaceMembers } ;
 
-[TODO] Partial ::
+[done] Partial ::
     partial PartialDefinition
 
-[TODO] [TODO (part of Partial)] PartialDefinition ::
+[TODO] PartialDefinition ::
     interface PartialInterfaceOrPartialMixin
-    PartialDictionary
-    Namespace
+    [done] PartialDictionary
+    [done] Namespace
 
 [TODO] PartialInterfaceOrPartialMixin ::
     PartialInterfaceRest
@@ -168,14 +168,14 @@ Grammar
 [TODO] InheritAttribute ::
     inherit AttributeRest
 
-[TODO] AttributeRest ::
+[done] AttributeRest ::
     attribute TypeWithExtendedAttributes AttributeName ;
 
-[TODO] AttributeName ::
+[done] AttributeName ::
     AttributeNameKeyword
     identifier
 
-[TODO] AttributeNameKeyword ::
+[done] AttributeNameKeyword ::
     async
     required
 
@@ -286,14 +286,14 @@ Grammar
 [TODO] SetlikeRest ::
     setlike < TypeWithExtendedAttributes > ;
 
-[TODO] Namespace ::
+[done] Namespace ::
     namespace identifier { NamespaceMembers } ;
 
-[TODO] NamespaceMembers ::
+[done] NamespaceMembers ::
     ExtendedAttributeList NamespaceMember NamespaceMembers
     ε
 
-[TODO] NamespaceMember ::
+[done] NamespaceMember ::
     RegularOperation
     readonly AttributeRest
 
@@ -311,7 +311,7 @@ Grammar
     required TypeWithExtendedAttributes identifier ;
     Type identifier Default ;
 
-[TODO (part of PartialDefinition)] PartialDictionary ::
+[done (part of PartialDefinition)] PartialDictionary ::
     dictionary identifier { DictionaryMembers } ;
 
 [done] Default ::

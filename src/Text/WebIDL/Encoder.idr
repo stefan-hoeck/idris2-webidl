@@ -322,6 +322,12 @@ namespaceMembers = sepList " " $ attributed namespaceMember
 --          Definition
 --------------------------------------------------------------------------------
 
+partialDefinition : Encoder PartialDefinition
+partialDefinition (Dictionary n ms) =
+  defn "dictionary" $ spaced [n.value, inBraces dictMembers ms]
+partialDefinition (Namespace n ms) =
+  defn "namespace" $ spaced [n.value, inBraces namespaceMembers ms]
+
 export
 definition : Encoder Definition
 definition (Enum n vs) =
@@ -335,3 +341,5 @@ definition (Dictionary n i ms) =
 
 definition (Namespace n ms) =
   defn "namespace" $ spaced [n.value, inBraces namespaceMembers ms]
+
+definition (Partial d) = "partial " ++ partialDefinition d

@@ -92,6 +92,7 @@ prop_definition = property $ do
                        (Typedef _ _ _)    => label "Typedef"
                        (Dictionary _ _ _) => label "Dictionary"
                        (Namespace _ _)    => label "Namespace"
+                       (Partial _)        => label "Partial"
 
                   footnote ("Encoded: " ++ definition v)
 

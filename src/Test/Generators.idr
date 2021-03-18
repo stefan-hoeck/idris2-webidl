@@ -396,6 +396,12 @@ namespaceMembers = linList 5 (attributed namespaceMember)
 --          Definition
 --------------------------------------------------------------------------------
 
+partialDefinition : Gen PartialDefinition
+partialDefinition =
+  choice [ [| Dictionary identifier dictMembers |]
+         , [| Namespace identifier namespaceMembers |]
+         ]
+
 export
 definition : Gen Definition
 definition =
@@ -403,4 +409,5 @@ definition =
          , [| Enum identifier (linList1 5 stringLit) |]
          , [| Dictionary identifier inheritance dictMembers |]
          , [| Namespace identifier namespaceMembers |]
+         , [| Partial partialDefinition |]
          ]

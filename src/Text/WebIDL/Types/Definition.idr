@@ -9,6 +9,37 @@ import Text.WebIDL.Types.Type
 
 %language ElabReflection
 
+namespace Partial
+  ||| PartialDefinition ::
+  |||     interface PartialInterfaceOrPartialMixin
+  |||     PartialDictionary
+  |||     Namespace
+  ||| 
+  ||| Namespace ::
+  |||     namespace identifier { NamespaceMembers } ;
+  ||| 
+  ||| PartialDictionary ::
+  |||     dictionary identifier { DictionaryMembers } ;
+  public export
+  data PartialDefinition : Type where
+    Dictionary :  (name : Identifier)
+               -> (members  : DictionaryMembers)
+               -> PartialDefinition
+
+    Namespace :  (name : Identifier)
+              -> (members : NamespaceMembers)
+              -> PartialDefinition
+
+  %runElab derive "PartialDefinition" [Generic,Meta,Eq,Show]
+
+||| Definition ::
+|||     CallbackOrInterfaceOrMixin
+|||     Namespace
+|||     Partial
+|||     Dictionary
+|||     Enum
+|||     Typedef
+|||     IncludesStatement
 ||| Enum ::
 |||     enum identifier { EnumValueList } ;
 ||| 
@@ -50,5 +81,7 @@ data Definition : Type where
   Namespace :  (name : Identifier)
             -> (members : NamespaceMembers)
             -> Definition
+
+  Partial : (def : PartialDefinition) -> Definition
 
 %runElab derive "Definition" [Generic,Meta,Eq,Show]

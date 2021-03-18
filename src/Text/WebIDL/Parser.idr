@@ -391,6 +391,11 @@ namespaceMembers = many (attributed namespaceMember)
 --          Definition
 --------------------------------------------------------------------------------
 
+partialDefinition : IdlGrammar PartialDefinition
+partialDefinition =
+      def "dictionary" [| Dictionary ident (inBraces dictMembers) |]
+  <|> def "namespace" [| Namespace ident (inBraces namespaceMembers) |]
+
 export
 definition : IdlGrammar Definition
 definition =
@@ -398,6 +403,7 @@ definition =
   <|> def "enum" [| Enum ident (inBraces $ sepList1 ',' stringLit) |]
   <|> def "dictionary" [| Dictionary ident inheritance (inBraces dictMembers) |]
   <|> def "namespace" [| Namespace ident (inBraces namespaceMembers) |]
+  <|> (key "partial" *> map Partial partialDefinition)
 
 
 --------------------------------------------------------------------------------

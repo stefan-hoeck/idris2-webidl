@@ -40,6 +40,9 @@ sepList sep f = fastConcat . intersperse sep . map f
 emptyIfNull : Foldable f =>  Encoder (f a) -> Encoder (f a)
 emptyIfNull f as = if null as then "" else f as
 
+spaced : List String -> String
+spaced = fastConcat . intersperse " "
+
 --------------------------------------------------------------------------------
 --          Literals
 --------------------------------------------------------------------------------
@@ -184,10 +187,14 @@ mutual
   idlType (Promise x) = "Promise" ++ inAngles idlType x
 
   export
-  union : Encoder UnionType
+  unionMember : Encoder UnionMemberType
+  unionMember (UD x) = attributed (nullable distinguishable) x
+  unionMember (UU x) = nullable union x
 
   export
   union : Encoder UnionType
+  union (UT fst snd rest) =
+    inParens (sepList " or " unionMember) (fst :: snd :: rest)
 
   export
   distinguishable : Encoder Distinguishable
@@ -205,3 +212,86 @@ mutual
     "record<" ++ stringType x ++ "," ++ attributed idlType y ++ ">"
   distinguishable Object = "object"
   distinguishable Symbol = "symbol"
+
+--------------------------------------------------------------------------------
+--          Arguments
+--------------------------------------------------------------------------------
+
+export
+constValue : Encoder ConstValue
+constValue (B True)  = "true"
+constValue (B False) = "false"
+constValue (F x)     = floatLit x
+constValue (I x)     = intLit x
+
+export
+defaultV : Encoder Default
+defaultV None      = ""
+defaultV EmptyList = "[]"
+defaultV EmptySet  = "{}"
+defaultV Null      = "null"
+defaultV (S x)     = stringLit x
+defaultV (C x)     = constValue x
+
+export
+argumentRest : Encoder ArgumentRest
+argumentRest (Optional t n d) =
+  spaced ["optional",attributed idlType t,n.value,defaultV d]
+argumentRest (Mandatory t n) = spaced [idlType t,n.value]
+argumentRest (VarArg t n)    = spaced [idlType t ++ "...",n.value]
+
+export
+argumentList : Encoder ArgumentList
+argumentList = sepList "," (attributed argumentRest)
+
+--------------------------------------------------------------------------------
+--          Members
+--------------------------------------------------------------------------------
+
+defn : (key : String) -> String -> String
+defn ""  s = s ++ ";"
+defn key s = spaced [key,s ++ ";"]
+
+member : (key : String) -> Encoder a -> Encoder a
+member k f = defn k . f
+
+export
+const : Encoder Const
+const = member "const" \(MkConst t n v) =>
+        spaced [constType t,n.value,constValue v]
+
+export
+special : Encoder Special
+special Getter  = "getter"
+special Setter  = "setter"
+special Deleter = "deleter"
+
+export
+op : Encoder a -> Encoder (Op a)
+op f = member "" \(MkOp s t n a) =>
+       spaced [f s, idlType t, maybe "" value n, inParens argumentList a]
+
+export
+regularOperation : Encoder RegularOperation
+regularOperation = op (const "")
+
+export
+specialOperation : Encoder SpecialOperation
+specialOperation = op special
+
+export
+operation : Encoder Operation
+operation = op (maybe "" special)
+
+--------------------------------------------------------------------------------
+--          Definition
+--------------------------------------------------------------------------------
+
+export
+definition : Encoder Definition
+definition (Enum n vs) =
+  defn "enum" $ n.value ++ inBraces (sepList "," stringLit) (forget vs)
+
+definition (Typedef as t n) =
+  defn "typedef" $ spaced [extAttributeList as, idlType t, n.value]
+

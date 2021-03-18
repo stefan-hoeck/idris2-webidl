@@ -74,11 +74,11 @@ data ArgumentRest : Type where
 |||     Argument Arguments
 |||     ε
 ||| 
-||| (part of ArgumentList)] Arguments ::
+||| Arguments ::
 |||     , Argument Arguments
 |||     ε
 ||| 
-||| (part of ArgumentList)] Argument ::
+||| Argument ::
 |||     ExtendedAttributeList ArgumentRest
 public export
 0 ArgumentList : Type

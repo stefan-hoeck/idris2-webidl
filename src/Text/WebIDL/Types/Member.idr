@@ -180,6 +180,13 @@ record Readonly a where
 
 %runElab derive "Readonly" [Generic,Meta,Eq,Show]
 
+public export
+record Inherit a where
+  constructor MkI
+  value : a
+
+%runElab derive "Inherit" [Generic,Meta,Eq,Show]
+
 ||| AttributeName ::
 |||     AttributeNameKeyword
 |||     identifier
@@ -204,6 +211,32 @@ record Attribute where
   name  : AttributeName
 
 %runElab derive "Attribute" [Generic,Meta,Eq,Show]
+
+||| ReadWriteMaplike ::
+|||     MaplikeRest
+||| 
+||| MaplikeRest ::
+|||     maplike < TypeWithExtendedAttributes , TypeWithExtendedAttributes > ;
+public export
+record Maplike where
+  constructor MkMaplike
+  fstTpe : Attributed IdlType
+  sndTpe : Attributed IdlType
+
+%runElab derive "Maplike" [Generic,Meta,Eq,Show]
+
+
+||| ReadWriteSetlike ::
+|||     SetlikeRest
+||| 
+||| SetlikeRest ::
+|||     setlike < TypeWithExtendedAttributes > ;
+public export
+record Setlike where
+  constructor MkSetlike
+  type : Attributed IdlType
+
+%runElab derive "Setlike" [Generic,Meta,Eq,Show]
 
 ||| StringifierRest ::
 |||     OptionalReadOnly AttributeRest
@@ -279,7 +312,12 @@ data PartialInterfaceMember =
   | IStr     Stringifier
   | IStatic  StaticMember
   | IAttr    Attribute
+  | IMap     Maplike
+  | ISet     Setlike
   | IAttrRO  (Readonly Attribute)
+  | IMapRO   (Readonly Maplike)
+  | ISetRO   (Readonly Setlike)
+  | IAttrInh (Inherit Attribute)
   | IIterable (Attributed IdlType) OptionalType
   | IAsync   (Attributed IdlType) OptionalType ArgumentList
 

@@ -87,15 +87,15 @@ Grammar
     ExtendedAttributeList PartialInterfaceMember PartialInterfaceMembers
     ε
 
-[TODO] PartialInterfaceMember ::
-    [done] Const
-    [done] Operation
-    [done] Stringifier
-    [done] StaticMember
-    [done] Iterable
+[done] PartialInterfaceMember ::
+    Const
+    Operation
+    Stringifier
+    StaticMember
+    Iterable
     AsyncIterable
     ReadOnlyMember
-    [done] ReadWriteAttribute
+    ReadWriteAttribute
     ReadWriteMaplike
     ReadWriteSetlike
     InheritAttribute
@@ -154,18 +154,18 @@ Grammar
     PrimitiveType
     identifier
 
-[TODO] ReadOnlyMember ::
+[done] ReadOnlyMember ::
     readonly ReadOnlyMemberRest
 
-[TODO] ReadOnlyMemberRest ::
+[done] ReadOnlyMemberRest ::
     AttributeRest
     MaplikeRest
     SetlikeRest
 
-[TODO] ReadWriteAttribute ::
+[done] ReadWriteAttribute ::
     AttributeRest
 
-[TODO] InheritAttribute ::
+[done] InheritAttribute ::
     inherit AttributeRest
 
 [done] AttributeRest ::
@@ -179,7 +179,7 @@ Grammar
     async
     required
 
-[TODO] OptionalReadOnly ::
+[done] OptionalReadOnly ::
     readonly
     ε
 
@@ -274,16 +274,16 @@ Grammar
     ( ArgumentList )
     ε
 
-[TODO] ReadWriteMaplike ::
+[done] ReadWriteMaplike ::
     MaplikeRest
 
-[TODO] MaplikeRest ::
+[done] MaplikeRest ::
     maplike < TypeWithExtendedAttributes , TypeWithExtendedAttributes > ;
 
-[TODO] ReadWriteSetlike ::
+[done] ReadWriteSetlike ::
     SetlikeRest
 
-[TODO] SetlikeRest ::
+[done] SetlikeRest ::
     setlike < TypeWithExtendedAttributes > ;
 
 [done] Namespace ::

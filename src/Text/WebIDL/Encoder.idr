@@ -317,6 +317,9 @@ dictMembers = sepList " " $ attributed dictMemberRest
 readonly : Encoder a -> Encoder (Readonly a)
 readonly f = ("readonly " ++) . f . value
 
+inherit : Encoder a -> Encoder (Inherit a)
+inherit f = ("inherit " ++) . f . value
+
 attribute : Encoder Attribute
 attribute (MkAttribute as t n) =
   defn "attribute" $ spaced [extAttributes as, idlType t, n.value]
@@ -330,6 +333,15 @@ static : Encoder StaticMember
 static = ("static " ++)
        . collapseNS
        . hliftA2 runEnc [attribute,readonly attribute,regularOperation]
+
+maplike : Encoder Maplike
+maplike (MkMaplike l r) =
+  defn "maplike" $ fastConcat
+    ["<",attributed idlType l,",",attributed idlType r,">"]
+
+setlike : Encoder Setlike
+setlike (MkSetlike p) =
+  defn "setlike" $ fastConcat ["<",attributed idlType p,">"]
 
 namespaceMember : Encoder NamespaceMember
 namespaceMember = collapseNS 
@@ -347,6 +359,11 @@ partialInterfaceMember (IConst x)       = const x
 partialInterfaceMember (IOp x)          = operation x
 partialInterfaceMember (IAttr x)        = attribute x
 partialInterfaceMember (IAttrRO x)      = readonly attribute x
+partialInterfaceMember (IAttrInh x)     = inherit attribute x
+partialInterfaceMember (IMap x)         = maplike x
+partialInterfaceMember (IMapRO x)       = readonly maplike x
+partialInterfaceMember (ISet x)         = setlike x
+partialInterfaceMember (ISetRO x)       = readonly setlike x
 partialInterfaceMember (IStr x)         = stringifier x
 partialInterfaceMember (IStatic x)      = static x
 partialInterfaceMember (IIterable p o)  =

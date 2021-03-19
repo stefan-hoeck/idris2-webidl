@@ -384,6 +384,9 @@ attributeName =  withKey "AttributeNameKeyword"
 readonly : IdlGrammar a -> IdlGrammar (Readonly a)
 readonly g = key "readonly" *> map MkRO g
 
+inherit : IdlGrammar a -> IdlGrammar (Inherit a)
+inherit g = key "inherit" *> map MkI g
+
 attribute : IdlGrammar Attribute
 attribute = def "attribute"
             [| MkAttribute extAttributes idlType attributeName |]
@@ -403,6 +406,13 @@ static =   key "static" *> (
        <|> map (\v => inject v) regularOperation
        )
 
+maplike : IdlGrammar Maplike
+maplike = def "maplike" $ inAngles [| MkMaplike (attributed idlType)
+                                        (symbol ',' *> attributed idlType) |]
+
+setlike : IdlGrammar Setlike
+setlike = def "setlike" $ inAngles [| MkSetlike (attributed idlType) |]
+
 namespaceMember : IdlGrammar NamespaceMember
 namespaceMember =   map (\v => inject v) regularOperation
                 <|> map (\v => inject v) (readonly attribute)
@@ -419,6 +429,11 @@ partialInterfaceMember =
   <|> map IOp operation
   <|> map IAttr attribute
   <|> map IAttrRO (readonly attribute)
+  <|> map IAttrInh (inherit attribute)
+  <|> map IMap maplike
+  <|> map IMapRO (readonly maplike)
+  <|> map ISet setlike
+  <|> map ISetRO (readonly setlike)
   <|> map IStr stringifier
   <|> map IStatic static
   <|> def "iterable" (inAngles [| IIterable (attributed idlType)

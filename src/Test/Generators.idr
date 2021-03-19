@@ -386,6 +386,9 @@ attributeName =
 readonly : Gen a -> Gen (Readonly a)
 readonly = map MkRO
 
+inherit : Gen a -> Gen (Inherit a)
+inherit = map MkI
+
 attribute : Gen Attribute
 attribute = [| MkAttribute extAttributes (idlType 3) attributeName |]
 
@@ -401,6 +404,12 @@ static = choice [ map (\v => inject v) regularOperation
                 , map (\v => inject v) $ readonly attribute
                 , map (\v => inject v) $ attribute
                 ]
+
+maplike : Gen Maplike
+maplike = [| MkMaplike (attributed $ idlType 3) (attributed $ idlType 3) |]
+
+setlike : Gen Setlike
+setlike = [| MkSetlike (attributed $ idlType 3) |]
 
 namespaceMember : Gen NamespaceMember
 namespaceMember = choice [ map (\v => inject v) regularOperation
@@ -419,6 +428,11 @@ partialInterfaceMember =
          , map IOp operation
          , map IAttr attribute
          , map IAttrRO (readonly attribute)
+         , map IAttrInh (inherit attribute)
+         , map IMap maplike
+         , map IMapRO (readonly maplike)
+         , map ISet setlike
+         , map ISetRO (readonly setlike)
          , map IStr stringifier
          , map IStatic static
          , [| IIterable (attributed $ idlType 3) optionalType |]

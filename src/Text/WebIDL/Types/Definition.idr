@@ -20,6 +20,16 @@ namespace Partial
   ||| 
   ||| PartialDictionary ::
   |||     dictionary identifier { DictionaryMembers } ;
+  ||| 
+  ||| PartialInterfaceOrPartialMixin ::
+  |||     PartialInterfaceRest
+  |||     MixinRest
+  ||| 
+  ||| PartialInterfaceRest ::
+  |||     identifier { PartialInterfaceMembers } ;
+  ||| 
+  ||| MixinRest ::
+  |||     mixin identifier { MixinMembers } ;
   public export
   data PartialDefinition : Type where
     Dictionary :  (name : Identifier)
@@ -28,6 +38,14 @@ namespace Partial
 
     Namespace :  (name : Identifier)
               -> (members : NamespaceMembers)
+              -> PartialDefinition
+
+    Mixin     :  (name : Identifier)
+              -> (members : MixinMembers)
+              -> PartialDefinition
+
+    Interface :  (name : Identifier)
+              -> (members : PartialInterfaceMembers)
               -> PartialDefinition
 
   %runElab derive "PartialDefinition" [Generic,Meta,Eq,Show]
@@ -62,6 +80,9 @@ namespace Partial
 ||| 
 ||| Namespace ::
 |||     namespace identifier { NamespaceMembers } ;
+||| 
+||| IncludesStatement ::
+|||     identifier includes identifier ;
 public export
 data Definition : Type where
   Enum :  (name   : Identifier)
@@ -83,5 +104,7 @@ data Definition : Type where
             -> Definition
 
   Partial : (def : PartialDefinition) -> Definition
+
+  Includes : (name : Identifier) -> (includes : Identifier) -> Definition
 
 %runElab derive "Definition" [Generic,Meta,Eq,Show]

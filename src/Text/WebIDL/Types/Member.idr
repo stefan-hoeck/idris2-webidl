@@ -324,6 +324,22 @@ data PartialInterfaceMember =
 %runElab derive "PartialInterfaceMember" [Generic,Meta,Eq,Show]
 
 
+||| MixinMember ::
+|||     Const
+|||     RegularOperation
+|||     Stringifier
+|||     OptionalReadOnly AttributeRest
+public export
+data MixinMember =
+    MConst   Const
+  | MOp      RegularOperation
+  | MStr     Stringifier
+  | MAttr    Attribute
+  | MAttrRO  (Readonly Attribute)
+
+%runElab derive "MixinMember" [Generic,Meta,Eq,Show]
+
+
 ||| PartialInterfaceMembers ::
 |||     ExtendedAttributeList PartialInterfaceMember PartialInterfaceMembers
 |||     ε
@@ -345,3 +361,10 @@ InterfaceMember = NS I [Constructor,PartialInterfaceMember]
 public export
 0 InterfaceMembers : Type
 InterfaceMembers = List (Attributed InterfaceMember)
+
+||| MixinMembers ::
+|||     ExtendedAttributeList MixinMember MixinMembers
+|||     ε
+public export
+0 MixinMembers : Type
+MixinMembers = List (Attributed MixinMember)

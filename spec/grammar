@@ -20,7 +20,7 @@ Grammar
     [done] Dictionary
     [done] Enum
     [done] Typedef
-    IncludesStatement
+    [done] IncludesStatement
 
 [done] ArgumentNameKeyword ::
     async
@@ -63,16 +63,16 @@ Grammar
 [done] Partial ::
     partial PartialDefinition
 
-[TODO] PartialDefinition ::
+[done] PartialDefinition ::
     interface PartialInterfaceOrPartialMixin
-    [done] PartialDictionary
-    [done] Namespace
+    PartialDictionary
+    Namespace
 
-[TODO] PartialInterfaceOrPartialMixin ::
+[done] PartialInterfaceOrPartialMixin ::
     PartialInterfaceRest
     MixinRest
 
-[TODO] PartialInterfaceRest ::
+[done] PartialInterfaceRest ::
     identifier { PartialInterfaceMembers } ;
 
 [done] InterfaceMembers ::
@@ -107,17 +107,17 @@ Grammar
 [TODO] MixinRest ::
     mixin identifier { MixinMembers } ;
 
-[TODO] MixinMembers ::
+[done] MixinMembers ::
     ExtendedAttributeList MixinMember MixinMembers
     ε
 
-[TODO] MixinMember ::
+[cone] MixinMember ::
     Const
     RegularOperation
     Stringifier
     OptionalReadOnly AttributeRest
 
-[TODO] IncludesStatement ::
+[done] IncludesStatement ::
     identifier includes identifier ;
 
 [TODO] CallbackRestOrInterface ::

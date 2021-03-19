@@ -443,8 +443,18 @@ partialInterfaceMember =
                       as <- optArgList
                       pure (IAsync (fst p) (snd p) as))
 
+mixinMember : IdlGrammar MixinMember
+mixinMember =   map MConst const
+            <|> map MOp regularOperation
+            <|> map MAttr attribute
+            <|> map MAttrRO (readonly attribute)
+            <|> map MStr stringifier
+
 partialInterfaceMembers : IdlGrammar' PartialInterfaceMembers
 partialInterfaceMembers = many (attributed partialInterfaceMember)
+
+mixinMembers : IdlGrammar' MixinMembers
+mixinMembers = many (attributed mixinMember)
 
 export
 interfaceMember : IdlGrammar InterfaceMember
@@ -462,6 +472,8 @@ partialDefinition : IdlGrammar PartialDefinition
 partialDefinition =
       def "dictionary" [| Dictionary ident (inBraces dictMembers) |]
   <|> def "namespace" [| Namespace ident (inBraces namespaceMembers) |]
+  <|> def "interface" [| Mixin (key "mixin" *> ident) (inBraces mixinMembers) |]
+  <|> def "interface" [| Interface ident (inBraces partialInterfaceMembers) |]
 
 export
 definition : IdlGrammar Definition
@@ -471,6 +483,7 @@ definition =
   <|> def "dictionary" [| Dictionary ident inheritance (inBraces dictMembers) |]
   <|> def "namespace" [| Namespace ident (inBraces namespaceMembers) |]
   <|> (key "partial" *> map Partial partialDefinition)
+  <|> def "" [| Includes ident (key "includes" *> ident) |]
 
 
 --------------------------------------------------------------------------------

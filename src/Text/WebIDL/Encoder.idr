@@ -372,8 +372,18 @@ partialInterfaceMember (IAsync p o a)   =
   defn "async iterable<"
     (attributed idlType p ++ optionalType o ++ ">" ++ optArgList a)
 
+mixinMember : Encoder MixinMember
+mixinMember (MConst x)       = const x
+mixinMember (MOp x)          = regularOperation x
+mixinMember (MAttr x)        = attribute x
+mixinMember (MAttrRO x)      = readonly attribute x
+mixinMember (MStr x)         = stringifier x
+
 partialInterfaceMembers : Encoder PartialInterfaceMembers
 partialInterfaceMembers = sepList " " $ attributed partialInterfaceMember
+
+mixinMembers : Encoder MixinMembers
+mixinMembers = sepList " " $ attributed mixinMember
 
 export
 interfaceMember : Encoder InterfaceMember
@@ -392,6 +402,10 @@ partialDefinition (Dictionary n ms) =
   defn "dictionary" $ spaced [n.value, inBraces dictMembers ms]
 partialDefinition (Namespace n ms) =
   defn "namespace" $ spaced [n.value, inBraces namespaceMembers ms]
+partialDefinition (Mixin n ms) =
+  defn "interface mixin" $ spaced [n.value, inBraces mixinMembers ms]
+partialDefinition (Interface n ms) =
+  defn "interface" $ spaced [n.value, inBraces partialInterfaceMembers ms]
 
 export
 definition : Encoder Definition
@@ -408,3 +422,5 @@ definition (Namespace n ms) =
   defn "namespace" $ spaced [n.value, inBraces namespaceMembers ms]
 
 definition (Partial d) = "partial " ++ partialDefinition d
+
+definition (Includes a b) = defn "" $ spaced [a.value,"includes",b.value]

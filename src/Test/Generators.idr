@@ -439,6 +439,17 @@ partialInterfaceMember =
          , [| IAsync (attributed $ idlType 3) optionalType argumentList |]
          ]
 
+mixinMember : Gen MixinMember
+mixinMember = choice [ map MConst const
+                     , map MOp regularOperation
+                     , map MAttr attribute
+                     , map MAttrRO (readonly attribute)
+                     , map MStr stringifier
+                     ]
+
+mixinMembers : Gen MixinMembers
+mixinMembers = linList 5 (attributed mixinMember)
+
 partialInterfaceMembers : Gen PartialInterfaceMembers
 partialInterfaceMembers = linList 5 (attributed partialInterfaceMember)
 
@@ -459,6 +470,8 @@ partialDefinition : Gen PartialDefinition
 partialDefinition =
   choice [ [| Dictionary identifier dictMembers |]
          , [| Namespace identifier namespaceMembers |]
+         , [| Mixin identifier mixinMembers |]
+         , [| Interface identifier partialInterfaceMembers |]
          ]
 
 export
@@ -469,4 +482,5 @@ definition =
          , [| Dictionary identifier inheritance dictMembers |]
          , [| Namespace identifier namespaceMembers |]
          , [| Partial partialDefinition |]
+         , [| Includes identifier identifier |]
          ]

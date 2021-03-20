@@ -359,15 +359,9 @@ callbackInterfaceMember : IdlGrammar CallbackInterfaceMember
 callbackInterfaceMember =   map (\v => inject v) const
                         <|> map (\v => inject v) regularOperation
 
-callbackInterfaceMembers : IdlGrammar' CallbackInterfaceMembers
-callbackInterfaceMembers = many (attributed callbackInterfaceMember)
-
-dictMemberRest : IdlGrammar DictionaryMemberRest
-dictMemberRest =   def "required" [| Required extAttributes idlType ident |]
-               <|> def "" [| Optional idlType ident defaultV |]
-
-dictMembers : IdlGrammar' DictionaryMembers
-dictMembers = many (attributed dictMemberRest)
+dictMember : IdlGrammar DictionaryMemberRest
+dictMember =   def "required" [| Required extAttributes idlType ident |]
+           <|> def "" [| Optional idlType ident defaultV |]
 
 inheritance : IdlGrammar' Inheritance
 inheritance = optional (symbol ':' *> ident)
@@ -413,9 +407,6 @@ namespaceMember : IdlGrammar NamespaceMember
 namespaceMember =   map (\v => inject v) regularOperation
                 <|> map (\v => inject v) (readonly attribute)
 
-namespaceMembers : IdlGrammar' NamespaceMembers
-namespaceMembers = many (attributed namespaceMember)
-
 constructor_ : IdlGrammar Constructor
 constructor_ = def "constructor" (map MkConstructor $ inParens argumentList)
 
@@ -446,19 +437,14 @@ mixinMember =   map MConst const
             <|> map MAttrRO (readonly attribute)
             <|> map MStr stringifier
 
-partialInterfaceMembers : IdlGrammar' PartialInterfaceMembers
-partialInterfaceMembers = many (attributed partialInterfaceMember)
-
-mixinMembers : IdlGrammar' MixinMembers
-mixinMembers = many (attributed mixinMember)
-
 export
 interfaceMember : IdlGrammar InterfaceMember
 interfaceMember =   map (\v => inject v) constructor_
                 <|> map (\v => inject v) partialInterfaceMember
 
-interfaceMembers : IdlGrammar' InterfaceMembers
-interfaceMembers = many (attributed interfaceMember)
+members : IdlGrammar a -> IdlGrammar (List $ Attributed a)
+members g =   (inBraces (many $ attributed g) <* symbol ';')
+          <|> (symbol ';' $> Nil)
 
 --------------------------------------------------------------------------------
 --          Definition
@@ -466,24 +452,28 @@ interfaceMembers = many (attributed interfaceMember)
 
 partialDefinition : IdlGrammar PartialDefinition
 partialDefinition =
-      def "dictionary" [| Dictionary ident (inBraces dictMembers) |]
-  <|> def "namespace" [| Namespace ident (inBraces namespaceMembers) |]
-  <|> def "interface" [| Mixin (key "mixin" *> ident) (inBraces mixinMembers) |]
-  <|> def "interface" [| Interface ident (inBraces partialInterfaceMembers) |]
+      key "dictionary" *> [| Dictionary ident (members dictMember) |]
+  <|> key "namespace"  *> [| Namespace ident (members namespaceMember) |]
+  <|> key "interface"  *> [| Mixin (key "mixin" *> ident) (members mixinMember) |]
+  <|> key "interface"  *> [| Interface ident (members partialInterfaceMember) |]
+
+-- optional trailing comma
+enumLits : IdlGrammar (List1 StringLit)
+enumLits = sepList1 ',' stringLit <* (symbol ',' <|> pure ())
 
 export
 definition : IdlGrammar Definition
 definition =
       def "typedef" [| Typedef extAttributes idlType ident |]
-  <|> def "enum" [| Enum ident (inBraces $ sepList1 ',' stringLit) |]
-  <|> def "interface" [| Mixin (key "mixin" *> ident) (inBraces mixinMembers) |]
-  <|> def "interface" [| Interface ident inheritance (inBraces interfaceMembers) |]
-  <|> def "dictionary" [| Dictionary ident inheritance (inBraces dictMembers) |]
-  <|> def "namespace" [| Namespace ident (inBraces namespaceMembers) |]
+  <|> def "enum" [| Enum ident (inBraces enumLits) |]
+  <|> key "interface" *> [| Mixin (key "mixin" *> ident) (members mixinMember) |]
+  <|> key "interface" *> [| Interface ident inheritance (members interfaceMember) |]
+  <|> key "dictionary" *> [| Dictionary ident inheritance (members dictMember) |]
+  <|> key "namespace" *> [| Namespace ident (members namespaceMember) |]
   <|> (key "partial" *> map Partial partialDefinition)
   <|> def "" [| Includes ident (key "includes" *> ident) |]
-  <|> def "callback" [| CallbackInterface (key "interface" *> ident)
-                          (inBraces callbackInterfaceMembers) |]
+  <|> key "callback" *> [| CallbackInterface (key "interface" *> ident)
+                            (members callbackInterfaceMember) |]
   <|> def "callback" [| Callback ident idlType
                           (symbol '=' *> inParens argumentList) |]
 

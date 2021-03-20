@@ -231,11 +231,11 @@ constValue (I x)     = intLit x
 export
 defaultV : Encoder Default
 defaultV None      = ""
-defaultV EmptyList = "[]"
-defaultV EmptySet  = "{}"
-defaultV Null      = "null"
-defaultV (S x)     = stringLit x
-defaultV (C x)     = constValue x
+defaultV EmptyList = "= []"
+defaultV EmptySet  = "= {}"
+defaultV Null      = "= null"
+defaultV (S x)     = "= " ++ stringLit x
+defaultV (C x)     = "= " ++ constValue x
 
 export
 argumentRest : Encoder ArgumentRest
@@ -296,11 +296,6 @@ callbackInterfaceMember = collapseNS . hliftA2 runEnc [const,regularOperation]
 
 callbackInterfaceMembers : Encoder CallbackInterfaceMembers
 callbackInterfaceMembers = sepList " " $ attributed callbackInterfaceMember
-
-export
-callbackRest : Encoder CallbackRest
-callbackRest (MkCallbackRest n t as) =
-  defn "" $ spaced [n.value, idlType t, "=", inParens argumentList as]
 
 inheritance : Encoder Inheritance
 inheritance = maybe "" \i => " : " ++ i.value
@@ -418,9 +413,22 @@ definition (Typedef as t n) =
 definition (Dictionary n i ms) =
   defn "dictionary" $ spaced [n.value, inheritance i, inBraces dictMembers ms]
 
+definition (Interface n i ms) =
+  defn "interface" $ spaced [n.value, inheritance i, inBraces interfaceMembers ms]
+
+definition (Mixin n ms) =
+  defn "interface mixin" $ spaced [n.value, inBraces mixinMembers ms]
+
 definition (Namespace n ms) =
   defn "namespace" $ spaced [n.value, inBraces namespaceMembers ms]
 
 definition (Partial d) = "partial " ++ partialDefinition d
 
 definition (Includes a b) = defn "" $ spaced [a.value,"includes",b.value]
+
+definition (Callback n t as) =
+  defn "callback" $ spaced [n.value, idlType t, "=", inParens argumentList as]
+
+definition (CallbackInterface n ms) =
+  defn "callback interface" $
+  spaced [n.value, inBraces callbackInterfaceMembers ms]

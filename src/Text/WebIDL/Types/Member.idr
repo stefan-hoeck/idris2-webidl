@@ -116,18 +116,6 @@ public export
 0 CallbackInterfaceMembers : Type
 CallbackInterfaceMembers = List (Attributed CallbackInterfaceMember)
 
-
-||| CallbackRest ::
-|||     identifier = Type ( ArgumentList ) ;
-public export
-record CallbackRest where
-  constructor MkCallbackRest
-  name : Identifier
-  type : IdlType
-  args : ArgumentList
-
-%runElab derive "CallbackRest" [Generic,Meta,Eq,Show]
-
 --------------------------------------------------------------------------------
 --          Dictionary
 --------------------------------------------------------------------------------

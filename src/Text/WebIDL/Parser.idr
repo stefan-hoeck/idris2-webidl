@@ -297,12 +297,13 @@ constValue : IdlGrammar ConstValue
 constValue = map B boolLit <|> map F floatLit <|> map I intLit
 
 defaultV : IdlGrammar' Default
-defaultV =   (symbol '[' *> symbol ']' $> EmptyList)
-         <|> (symbol '{' *> symbol '}' $> EmptySet)
-         <|> (key "null" $> Null)
-         <|> map S stringLit
-         <|> map C constValue
-         <|> pure None
+defaultV =   (symbol '=' *> (
+                   (symbol '[' *> symbol ']' $> EmptyList)
+               <|> (symbol '{' *> symbol '}' $> EmptySet)
+               <|> (key "null" $> Null)
+               <|> map S stringLit
+               <|> map C constValue
+             )) <|> pure None
 
 argName : IdlGrammar ArgumentName
 argName =   withKey "ArgumentNameKeyword"
@@ -360,11 +361,6 @@ callbackInterfaceMember =   map (\v => inject v) const
 
 callbackInterfaceMembers : IdlGrammar' CallbackInterfaceMembers
 callbackInterfaceMembers = many (attributed callbackInterfaceMember)
-
-export
-callbackRest : IdlGrammar CallbackRest
-callbackRest = def "" [| MkCallbackRest ident idlType
-                          (symbol '=' *> inParens argumentList) |]
 
 dictMemberRest : IdlGrammar DictionaryMemberRest
 dictMemberRest =   def "required" [| Required extAttributes idlType ident |]
@@ -480,11 +476,20 @@ definition : IdlGrammar Definition
 definition =
       def "typedef" [| Typedef extAttributes idlType ident |]
   <|> def "enum" [| Enum ident (inBraces $ sepList1 ',' stringLit) |]
+  <|> def "interface" [| Mixin (key "mixin" *> ident) (inBraces mixinMembers) |]
+  <|> def "interface" [| Interface ident inheritance (inBraces interfaceMembers) |]
   <|> def "dictionary" [| Dictionary ident inheritance (inBraces dictMembers) |]
   <|> def "namespace" [| Namespace ident (inBraces namespaceMembers) |]
   <|> (key "partial" *> map Partial partialDefinition)
   <|> def "" [| Includes ident (key "includes" *> ident) |]
+  <|> def "callback" [| CallbackInterface (key "interface" *> ident)
+                          (inBraces callbackInterfaceMembers) |]
+  <|> def "callback" [| Callback ident idlType
+                          (symbol '=' *> inParens argumentList) |]
 
+export
+definitions : IdlGrammar (List $ Attributed Definition)
+definitions = some $ attributed definition
 
 --------------------------------------------------------------------------------
 --          Parsing WebIDL

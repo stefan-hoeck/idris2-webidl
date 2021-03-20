@@ -13,14 +13,14 @@ Grammar
     ExtendedAttributeList Definition Definitions
     ε
 
-[TODO] Definition ::
+[don] Definition ::
     CallbackOrInterfaceOrMixin
-    [done] Namespace
-    [done] Partial
-    [done] Dictionary
-    [done] Enum
-    [done] Typedef
-    [done] IncludesStatement
+    Namespace
+    Partial
+    Dictionary
+    Enum
+    Typedef
+    IncludesStatement
 
 [done] ArgumentNameKeyword ::
     async
@@ -49,15 +49,15 @@ Grammar
     typedef
     unrestricted
 
-[TODO] CallbackOrInterfaceOrMixin ::
+[done] CallbackOrInterfaceOrMixin ::
     callback CallbackRestOrInterface
     interface InterfaceOrMixin
 
-[TODO] InterfaceOrMixin ::
+[done] InterfaceOrMixin ::
     InterfaceRest
     MixinRest
 
-[TODO] InterfaceRest ::
+[done] InterfaceRest ::
     identifier Inheritance { InterfaceMembers } ;
 
 [done] Partial ::
@@ -104,14 +104,14 @@ Grammar
     : identifier
     ε
 
-[TODO] MixinRest ::
+[done] MixinRest ::
     mixin identifier { MixinMembers } ;
 
 [done] MixinMembers ::
     ExtendedAttributeList MixinMember MixinMembers
     ε
 
-[cone] MixinMember ::
+[done] MixinMember ::
     Const
     RegularOperation
     Stringifier
@@ -120,7 +120,7 @@ Grammar
 [done] IncludesStatement ::
     identifier includes identifier ;
 
-[TODO] CallbackRestOrInterface ::
+[done] CallbackRestOrInterface ::
     CallbackRest
     interface identifier { CallbackInterfaceMembers } ;
 

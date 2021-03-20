@@ -474,8 +474,8 @@ definition =
   <|> def "" [| Includes ident (key "includes" *> ident) |]
   <|> key "callback" *> [| CallbackInterface (key "interface" *> ident)
                             (members callbackInterfaceMember) |]
-  <|> def "callback" [| Callback ident idlType
-                          (symbol '=' *> inParens argumentList) |]
+  <|> def "callback" [| Callback ident (symbol '=' *> idlType)
+                          (inParens argumentList) |]
 
 export
 definitions : IdlGrammar (List $ Attributed Definition)

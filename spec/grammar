@@ -9,11 +9,11 @@
   [done] other      = /[^\t\n\r 0-9A-Za-z]/
 
 Grammar
-[TODO] Definitions ::
+[done] Definitions ::
     ExtendedAttributeList Definition Definitions
     ε
 
-[don] Definition ::
+[done] Definition ::
     CallbackOrInterfaceOrMixin
     Namespace
     Partial

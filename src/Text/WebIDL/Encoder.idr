@@ -427,7 +427,7 @@ definition (Partial d) = "partial " ++ partialDefinition d
 definition (Includes a b) = defn "" $ spaced [a.value,"includes",b.value]
 
 definition (Callback n t as) =
-  defn "callback" $ spaced [n.value, idlType t, "=", inParens argumentList as]
+  defn "callback" $ spaced [n.value, "=", idlType t, inParens argumentList as]
 
 definition (CallbackInterface n ms) =
   defn "callback interface" $

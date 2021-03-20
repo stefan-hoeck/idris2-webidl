@@ -4,6 +4,15 @@ import Text.WebIDL.Encoder
 import Text.WebIDL.Parser
 import Test.Generators
 
+export
+definitions : String -> Property
+definitions s = withTests 1 . property $ do
+                  v <- forAll (pure s)
+                  let res = parseIdl definitions v
+                  footnote (show res)
+
+                  assert $ either (const False) (const True) res
+
 prp : Eq a => Show a => Encoder a -> Gen a -> IdlGrammar a -> Property
 prp enc gen p = property $ do
                   v <- forAll gen
@@ -45,10 +54,6 @@ prop_const = prp const const const
 prop_operation : Property
 prop_operation = prp operation operation operation
 
-export
-prop_callbackRest : Property
-prop_callbackRest = prp callbackRest callbackRest callbackRest
-
 prop_interfaceMember : Property
 prop_interfaceMember = prp interfaceMember interfaceMember interfaceMember
 
@@ -65,7 +70,6 @@ props = MkGroup "Parser Properties"
           , ("prop_argumentRest", prop_argumentRest)
           , ("prop_const", prop_const)
           , ("prop_operation", prop_operation)
-          , ("prop_definition", prop_definition)
-          , ("prop_callbackRest", prop_callbackRest)
           , ("prop_interfaceMember", prop_interfaceMember)
+          , ("prop_definition", prop_definition)
           ]

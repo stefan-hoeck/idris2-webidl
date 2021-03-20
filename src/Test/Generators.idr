@@ -263,9 +263,14 @@ mutual
   unionMember (S k) = choice [ map UD (attributed $ distinguishable k)
                              , map UU (nullable $ union k)
                              ]
+idlType' : Gen IdlType
+idlType' = idlType 4
+
+attributedType : Gen (Attributed IdlType)
+attributedType = attributed idlType'
 
 optionalType : Gen OptionalType
-optionalType = maybe (attributed $ idlType 3)
+optionalType = maybe attributedType
 
 --------------------------------------------------------------------------------
 --          Arguments
@@ -312,8 +317,8 @@ argName = choice [ map (MkArgName . value) identifier
 export
 argumentRest : Gen ArgumentRest
 argumentRest = choice [ [| Optional (typeWithAttr 3) argName defaultVal |]
-                      , [| Mandatory (idlType 3) argName |]
-                      , [| VarArg (idlType 3) argName |]
+                      , [| Mandatory idlType' argName |]
+                      , [| VarArg idlType' argName |]
                       ]
 
 argumentList : Gen ArgumentList
@@ -325,6 +330,9 @@ constType = choice [map CP primitive, map CI identifier]
 --------------------------------------------------------------------------------
 --          Member
 --------------------------------------------------------------------------------
+
+memberSize : Nat
+memberSize = 20
 
 export
 const : Gen Const
@@ -339,7 +347,7 @@ opName = frequency [ (1, pure (MkOpName "includes"))
                    ]
 
 op : Gen a -> Gen (Op a)
-op g = [| MkOp g (idlType 3) (maybe opName) (argumentList) |]
+op g = [| MkOp g idlType' (maybe opName) (argumentList) |]
 
 regularOperation : Gen RegularOperation
 regularOperation = op $ pure ()
@@ -359,23 +367,19 @@ callbackInterfaceMember = choice [ map (\v => inject v) const
                                  ]
 
 callbackInterfaceMembers : Gen CallbackInterfaceMembers
-callbackInterfaceMembers = linList 5 (attributed callbackInterfaceMember)
-
-export
-callbackRest : Gen CallbackRest
-callbackRest = [| MkCallbackRest identifier (idlType 3) argumentList |]
+callbackInterfaceMembers = linList memberSize (attributed callbackInterfaceMember)
 
 inheritance : Gen Inheritance
 inheritance = maybe identifier
 
 dictMemberRest : Gen DictionaryMemberRest
 dictMemberRest =
-  choice [ [| Required extAttributes (idlType 3) identifier |]
-         , [| Optional (idlType 3) identifier defaultVal |]
+  choice [ [| Required extAttributes idlType' identifier |]
+         , [| Optional idlType' identifier defaultVal |]
          ]
 
 dictMembers : Gen DictionaryMembers
-dictMembers = linList 5 (attributed dictMemberRest)
+dictMembers = linList memberSize (attributed dictMemberRest)
 
 attributeName : Gen AttributeName
 attributeName =
@@ -390,7 +394,7 @@ inherit : Gen a -> Gen (Inherit a)
 inherit = map MkI
 
 attribute : Gen Attribute
-attribute = [| MkAttribute extAttributes (idlType 3) attributeName |]
+attribute = [| MkAttribute extAttributes idlType' attributeName |]
 
 stringifier : Gen Stringifier
 stringifier = choice [ map (\v => inject v) regularOperation
@@ -406,10 +410,10 @@ static = choice [ map (\v => inject v) regularOperation
                 ]
 
 maplike : Gen Maplike
-maplike = [| MkMaplike (attributed $ idlType 3) (attributed $ idlType 3) |]
+maplike = [| MkMaplike attributedType attributedType |]
 
 setlike : Gen Setlike
-setlike = [| MkSetlike (attributed $ idlType 3) |]
+setlike = [| MkSetlike attributedType |]
 
 namespaceMember : Gen NamespaceMember
 namespaceMember = choice [ map (\v => inject v) regularOperation
@@ -417,7 +421,7 @@ namespaceMember = choice [ map (\v => inject v) regularOperation
                          ]
 
 namespaceMembers : Gen NamespaceMembers
-namespaceMembers = linList 5 (attributed namespaceMember)
+namespaceMembers = linList memberSize (attributed namespaceMember)
 
 constructor_ : Gen Constructor
 constructor_ = map MkConstructor argumentList
@@ -435,8 +439,8 @@ partialInterfaceMember =
          , map ISetRO (readonly setlike)
          , map IStr stringifier
          , map IStatic static
-         , [| IIterable (attributed $ idlType 3) optionalType |]
-         , [| IAsync (attributed $ idlType 3) optionalType argumentList |]
+         , [| IIterable attributedType optionalType |]
+         , [| IAsync attributedType optionalType argumentList |]
          ]
 
 mixinMember : Gen MixinMember
@@ -448,10 +452,10 @@ mixinMember = choice [ map MConst const
                      ]
 
 mixinMembers : Gen MixinMembers
-mixinMembers = linList 5 (attributed mixinMember)
+mixinMembers = linList memberSize (attributed mixinMember)
 
 partialInterfaceMembers : Gen PartialInterfaceMembers
-partialInterfaceMembers = linList 5 (attributed partialInterfaceMember)
+partialInterfaceMembers = linList memberSize (attributed partialInterfaceMember)
 
 export
 interfaceMember : Gen InterfaceMember
@@ -460,7 +464,7 @@ interfaceMember = frequency [ (1, map (\v => inject v) constructor_)
                             ]
 
 interfaceMembers : Gen InterfaceMembers
-interfaceMembers = linList 5 (attributed interfaceMember)
+interfaceMembers = linList memberSize (attributed interfaceMember)
 
 --------------------------------------------------------------------------------
 --          Definition
@@ -477,10 +481,14 @@ partialDefinition =
 export
 definition : Gen Definition
 definition =
-  choice [ [| Typedef extAttributes (idlType 3) identifier |]
+  choice [ [| Typedef extAttributes idlType' identifier |]
          , [| Enum identifier (linList1 5 stringLit) |]
+         , [| Interface identifier inheritance interfaceMembers |]
+         , [| Mixin  identifier mixinMembers |]
          , [| Dictionary identifier inheritance dictMembers |]
          , [| Namespace identifier namespaceMembers |]
          , [| Partial partialDefinition |]
          , [| Includes identifier identifier |]
+         , [| Callback identifier idlType' argumentList |]
+         , [| CallbackInterface identifier callbackInterfaceMembers |]
          ]

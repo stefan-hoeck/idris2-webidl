@@ -131,7 +131,7 @@ interface KeyboardEvent : UIEvent {
   boolean getModifierState(DOMString keyArg);
 };
 
-dictionary eyboardEventInit : EventModifierInit {
+dictionary KeyboardEventInit : EventModifierInit {
   DOMString key = "";
   DOMString code = "";
   unsigned long location = 0;

@@ -198,3 +198,44 @@ Definition = NS I [ Callback
                   , PMixin
                   , PNamespace
                   ]
+
+public export
+record Definitions where
+  constructor MkDefinitions
+  callbackInterfaces  : List (Attributed CallbackInterface)
+  callbacks           : List (Attributed Callback)
+  dictionaries        : List (Attributed Dictionary)
+  enums               : List (Attributed Enum)
+  includeStatements   : List (Attributed Includes)
+  interfaces          : List (Attributed Interface)
+  mixins              : List (Attributed Mixin)
+  namespaces          : List (Attributed Namespace)
+  partialDictionaries : List (Attributed PDictionary)
+  partialInterfaces   : List (Attributed PInterface)
+  partialMixins       : List (Attributed PMixin)
+  partialNamespaces   : List (Attributed PNamespace)
+  typedefs            : List (Attributed Typedef)
+
+%runElab derive "Definitions" [Generic,Meta,Eq,Show,Semigroup,Monoid]
+
+export
+toDefinitions : Attributed Definition -> Definitions
+toDefinitions (a,d) =
+  collapseNS $ hliftA2 injDefn [ \d => record {callbacks = d} neutral
+                               , \d => record {callbackInterfaces = d} neutral
+                               , \d => record {dictionaries = d} neutral
+                               , \d => record {enums = d} neutral
+                               , \d => record {includeStatements = d} neutral
+                               , \d => record {interfaces = d} neutral
+                               , \d => record {mixins = d} neutral
+                               , \d => record {namespaces = d} neutral
+                               , \d => record {typedefs = d} neutral
+                               , \d => record {partialDictionaries = d} neutral
+                               , \d => record {partialInterfaces = d} neutral
+                               , \d => record {partialMixins = d} neutral
+                               , \d => record {partialNamespaces = d} neutral
+                               ] d
+
+  where injDefn :  forall a . (List $ Attributed a -> Definitions)
+                -> a -> Definitions
+        injDefn f x = f [(a, x)]

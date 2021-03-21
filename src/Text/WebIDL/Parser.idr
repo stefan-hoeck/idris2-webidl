@@ -520,8 +520,8 @@ definition =
 
 
 export
-definitions : IdlGrammar (List $ Attributed Definition)
-definitions = some $ attributed definition
+definitions : IdlGrammar Definitions
+definitions = concatMap toDefinitions <$> some (attributed definition)
 
 --------------------------------------------------------------------------------
 --          Parsing WebIDL

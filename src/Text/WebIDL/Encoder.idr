@@ -392,43 +392,73 @@ interfaceMembers = sepList " " $ attributed interfaceMember
 --          Definition
 --------------------------------------------------------------------------------
 
-partialDefinition : Encoder PartialDefinition
-partialDefinition (Dictionary n ms) =
-  defn "dictionary" $ spaced [n.value, inBraces dictMembers ms]
-partialDefinition (Namespace n ms) =
-  defn "namespace" $ spaced [n.value, inBraces namespaceMembers ms]
-partialDefinition (Mixin n ms) =
+callback : Encoder Callback
+callback (MkCallback n t as) =
+  defn "callback" $
+  spaced [n.value, "=", idlType t, inParens argumentList as]
+
+callbackInterface : Encoder CallbackInterface
+callbackInterface (MkCallbackInterface n ms) =
+  defn "callback interface" $
+  spaced [n.value, inBraces callbackInterfaceMembers ms]
+
+dictionary : Encoder Dictionary
+dictionary (MkDictionary n i ms) =
+  defn "dictionary" $ spaced [n.value, inheritance i, inBraces dictMembers ms]
+
+enum : Encoder Enum
+enum (MkEnum n vs) =
+  defn "enum" $ n.value ++ inBraces (sepList "," stringLit) (forget vs)
+
+iface : Encoder Interface
+iface (MkInterface n i ms) =
+  defn "interface" $ spaced [n.value, inheritance i, inBraces interfaceMembers ms]
+
+includes : Encoder Includes
+includes (MkIncludes a b) = defn "" $ spaced [a.value,"includes",b.value]
+
+mixin : Encoder Mixin
+mixin (MkMixin n ms) =
   defn "interface mixin" $ spaced [n.value, inBraces mixinMembers ms]
-partialDefinition (Interface n ms) =
-  defn "interface" $ spaced [n.value, inBraces partialInterfaceMembers ms]
+
+nspace : Encoder Namespace
+nspace (MkNamespace n ms) =
+  defn "namespace" $ spaced [n.value, inBraces namespaceMembers ms]
+
+pdictionary : Encoder PDictionary
+pdictionary (MkPDictionary n ms) =
+  defn "partial dictionary" $ spaced [n.value, inBraces dictMembers ms]
+
+pinterface : Encoder PInterface
+pinterface (MkPInterface n ms) =
+  defn "partial interface" $ spaced [n.value, inBraces partialInterfaceMembers ms]
+
+pmixin : Encoder PMixin
+pmixin (MkPMixin n ms) =
+  defn "partial interface mixin" $ spaced [n.value, inBraces mixinMembers ms]
+
+pnamespace : Encoder PNamespace
+pnamespace (MkPNamespace n ms) =
+  defn "partial namespace" $ spaced [n.value, inBraces namespaceMembers ms]
+
+typedef : Encoder Typedef
+typedef (MkTypedef as t n) =
+  defn "typedef" $ spaced [extAttributes as, idlType t, n.value]
 
 export
 definition : Encoder Definition
-definition (Enum n vs) =
-  defn "enum" $ n.value ++ inBraces (sepList "," stringLit) (forget vs)
-
-definition (Typedef as t n) =
-  defn "typedef" $ spaced [extAttributes as, idlType t, n.value]
-
-definition (Dictionary n i ms) =
-  defn "dictionary" $ spaced [n.value, inheritance i, inBraces dictMembers ms]
-
-definition (Interface n i ms) =
-  defn "interface" $ spaced [n.value, inheritance i, inBraces interfaceMembers ms]
-
-definition (Mixin n ms) =
-  defn "interface mixin" $ spaced [n.value, inBraces mixinMembers ms]
-
-definition (Namespace n ms) =
-  defn "namespace" $ spaced [n.value, inBraces namespaceMembers ms]
-
-definition (Partial d) = "partial " ++ partialDefinition d
-
-definition (Includes a b) = defn "" $ spaced [a.value,"includes",b.value]
-
-definition (Callback n t as) =
-  defn "callback" $ spaced [n.value, "=", idlType t, inParens argumentList as]
-
-definition (CallbackInterface n ms) =
-  defn "callback interface" $
-  spaced [n.value, inBraces callbackInterfaceMembers ms]
+definition = collapseNS 
+           . hliftA2 runEnc [ callback
+                            , callbackInterface
+                            , dictionary
+                            , enum
+                            , includes
+                            , iface
+                            , mixin
+                            , nspace
+                            , typedef
+                            , pdictionary
+                            , pinterface
+                            , pmixin
+                            , pnamespace
+                            ]

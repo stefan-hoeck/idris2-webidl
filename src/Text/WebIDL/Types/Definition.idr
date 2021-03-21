@@ -8,60 +8,45 @@ import Text.WebIDL.Types.Member
 import Text.WebIDL.Types.StringLit
 import Text.WebIDL.Types.Type
 
+%hide Language.Reflection.TT.Namespace
 %language ElabReflection
 
-namespace Partial
-  ||| PartialDefinition ::
-  |||     interface PartialInterfaceOrPartialMixin
-  |||     PartialDictionary
-  |||     Namespace
-  ||| 
-  ||| Namespace ::
-  |||     namespace identifier { NamespaceMembers } ;
-  ||| 
-  ||| PartialDictionary ::
-  |||     dictionary identifier { DictionaryMembers } ;
-  ||| 
-  ||| PartialInterfaceOrPartialMixin ::
-  |||     PartialInterfaceRest
-  |||     MixinRest
-  ||| 
-  ||| PartialInterfaceRest ::
-  |||     identifier { PartialInterfaceMembers } ;
-  ||| 
-  ||| MixinRest ::
-  |||     mixin identifier { MixinMembers } ;
-  public export
-  data PartialDefinition : Type where
-    Dictionary :  (name : Identifier)
-               -> (members  : DictionaryMembers)
-               -> PartialDefinition
+||| CallbackRest ::
+|||     identifier = Type ( ArgumentList ) ;
+public export
+record Callback where
+  constructor MkCallback
+  name : Identifier
+  type : IdlType
+  args : ArgumentList
 
-    Namespace :  (name : Identifier)
-              -> (members : NamespaceMembers)
-              -> PartialDefinition
+%runElab derive "Callback" [Generic,Meta,Eq,Show]
 
-    Mixin     :  (name : Identifier)
-              -> (members : MixinMembers)
-              -> PartialDefinition
+||| CallbackRestOrInterface ::
+|||     CallbackRest
+|||     interface identifier { CallbackInterfaceMembers } ;
+public export
+record CallbackInterface where
+  constructor MkCallbackInterface
+  name    : Identifier
+  members : CallbackInterfaceMembers
 
-    Interface :  (name : Identifier)
-              -> (members : PartialInterfaceMembers)
-              -> PartialDefinition
+%runElab derive "CallbackInterface" [Generic,Meta,Eq,Show]
 
-  %runElab derive "PartialDefinition" [Generic,Meta,Eq,Show]
+||| Dictionary ::
+|||     dictionary identifier Inheritance { DictionaryMembers } ;
+public export
+record Dictionary where
+  constructor MkDictionary
+  name     : Identifier
+  inherits : Inheritance
+  members  : DictionaryMembers
 
-||| Definition ::
-|||     CallbackOrInterfaceOrMixin
-|||     Namespace
-|||     Partial
-|||     Dictionary
-|||     Enum
-|||     Typedef
-|||     IncludesStatement
+%runElab derive "Dictionary" [Generic,Meta,Eq,Show]
+
 ||| Enum ::
 |||     enum identifier { EnumValueList } ;
-||| 
+|||
 ||| EnumValueList ::
 |||     string EnumValueListComma
 ||| 
@@ -72,77 +57,144 @@ namespace Partial
 ||| EnumValueListString ::
 |||     string EnumValueListComma
 |||     ε
-|||
-||| Typedef ::
-|||     typedef TypeWithExtendedAttributes identifier ;
-|||
-||| Dictionary ::
-|||     dictionary identifier Inheritance { DictionaryMembers } ;
-||| 
-||| Namespace ::
-|||     namespace identifier { NamespaceMembers } ;
-||| 
+public export
+record Enum where
+  constructor MkEnum
+  name   : Identifier
+  values : List1 StringLit
+
+%runElab derive "Enum" [Generic,Meta,Eq,Show]
+
 ||| IncludesStatement ::
 |||     identifier includes identifier ;
-||| 
+public export
+record Includes where
+  constructor MkIncludes
+  name     : Identifier
+  includes : Identifier
+
+%runElab derive "Includes" [Generic,Meta,Eq,Show]
+
+||| InterfaceRest ::
+|||     identifier Inheritance { InterfaceMembers } ;
+public export
+record Interface where
+  constructor MkInterface
+  name     : Identifier
+  inherits : Inheritance
+  members  : InterfaceMembers
+
+%runElab derive "Interface" [Generic,Meta,Eq,Show]
+
+||| MixinRest ::
+|||     mixin identifier { MixinMembers } ;
+public export
+record Mixin where
+  constructor MkMixin
+  name    : Identifier
+  members : MixinMembers
+
+%runElab derive "Mixin" [Generic,Meta,Eq,Show]
+
+||| Namespace ::
+|||     namespace identifier { NamespaceMembers } ;
+public export
+record Namespace where
+  constructor MkNamespace
+  name    : Identifier
+  members : NamespaceMembers
+
+%runElab derive "Namespace" [Generic,Meta,Eq,Show]
+
+||| Typedef ::
+|||     typedef TypeWithExtendedAttributes identifier ;
+public export
+record Typedef where
+  constructor MkTypedef
+  attributes : ExtAttributeList
+  type       : IdlType
+  name       : Identifier
+
+%runElab derive "Typedef" [Generic,Meta,Eq,Show]
+
+||| PartialDictionary ::
+|||     dictionary identifier { DictionaryMembers } ;
+public export
+record PDictionary where
+  constructor MkPDictionary
+  name    : Identifier
+  members : DictionaryMembers
+
+%runElab derive "PDictionary" [Generic,Meta,Eq,Show]
+
+||| PartialInterfaceRest ::
+|||     identifier { PartialInterfaceMembers } ;
+public export
+record PInterface where
+  constructor MkPInterface
+  name    : Identifier
+  members : PartialInterfaceMembers
+
+%runElab derive "PInterface" [Generic,Meta,Eq,Show]
+
+||| MixinRest ::
+|||     mixin identifier { MixinMembers } ;
+public export
+record PMixin where
+  constructor MkPMixin
+  name    : Identifier
+  members : MixinMembers
+
+%runElab derive "PMixin" [Generic,Meta,Eq,Show]
+
+||| Namespace ::
+|||     namespace identifier { NamespaceMembers } ;
+public export
+record PNamespace where
+  constructor MkPNamespace
+  name    : Identifier
+  members : NamespaceMembers
+
+%runElab derive "PNamespace" [Generic,Meta,Eq,Show]
+
+||| Definition ::
+|||     CallbackOrInterfaceOrMixin
+|||     Namespace
+|||     Partial
+|||     Dictionary
+|||     Enum
+|||     Typedef
+|||     IncludesStatement
 ||| CallbackOrInterfaceOrMixin ::
 |||     callback CallbackRestOrInterface
 |||     interface InterfaceOrMixin
 ||| 
-||| CallbackRestOrInterface ::
-|||     CallbackRest
-|||     interface identifier { CallbackInterfaceMembers } ;
-|||
-||| CallbackRest ::
-|||     identifier = Type ( ArgumentList ) ;
-||| 
 ||| InterfaceOrMixin ::
 |||     InterfaceRest
 |||     MixinRest
+|||
+||| PartialDefinition ::
+|||     interface PartialInterfaceOrPartialMixin
+|||     PartialDictionary
+|||     Namespace
 ||| 
-||| InterfaceRest ::
-|||     identifier Inheritance { InterfaceMembers } ;
+||| PartialInterfaceOrPartialMixin ::
+|||     PartialInterfaceRest
+|||     MixinRest
 ||| 
-||| MixinRest ::
-|||     mixin identifier { MixinMembers } ;
 public export
-data Definition : Type where
-  Enum :  (name   : Identifier)
-       -> (values : List1 StringLit)
-       -> Definition
-
-  Typedef :  (attributes : ExtAttributeList)
-          -> (type       : IdlType)
-          -> (name       : Identifier)
-          -> Definition
-
-  Interface :  (name : Identifier)
-            -> (inherits : Inheritance)
-            -> (members  : InterfaceMembers)
-            -> Definition
-
-  Dictionary :  (name : Identifier)
-             -> (inherits : Inheritance)
-             -> (members  : DictionaryMembers)
-             -> Definition
-
-  Mixin : (name : Identifier) -> (members  : MixinMembers) -> Definition
-
-  Partial : (def : PartialDefinition) -> Definition
-
-  Includes : (name : Identifier) -> (includes : Identifier) -> Definition
-
-  Namespace :  (name : Identifier)
-            -> (members : NamespaceMembers)
-            -> Definition
-
-  Callback :  (name : Identifier)
-           -> (type : IdlType)
-           -> (args : ArgumentList)
-           -> Definition
-
-  CallbackInterface :  (name : Identifier)
-                    -> (members : CallbackInterfaceMembers)
-                    -> Definition
-
-%runElab derive "Definition" [Generic,Meta,Eq,Show]
+0 Definition : Type
+Definition = NS I [ Callback
+                  , CallbackInterface
+                  , Dictionary
+                  , Enum
+                  , Includes
+                  , Interface
+                  , Mixin
+                  , Namespace
+                  , Typedef
+                  , PDictionary
+                  , PInterface
+                  , PMixin
+                  , PNamespace
+                  ]

@@ -1,6 +1,7 @@
 module Test.Generators
 
 import Data.Nat
+import Data.List
 import Data.List.Elem
 import Data.String
 import Data.Vect
@@ -470,25 +471,20 @@ interfaceMembers = linList memberSize (attributed interfaceMember)
 --          Definition
 --------------------------------------------------------------------------------
 
-partialDefinition : Gen PartialDefinition
-partialDefinition =
-  choice [ [| Dictionary identifier dictMembers |]
-         , [| Namespace identifier namespaceMembers |]
-         , [| Mixin identifier mixinMembers |]
-         , [| Interface identifier partialInterfaceMembers |]
-         ]
-
 export
 definition : Gen Definition
-definition =
-  choice [ [| Typedef extAttributes idlType' identifier |]
-         , [| Enum identifier (linList1 5 stringLit) |]
-         , [| Interface identifier inheritance interfaceMembers |]
-         , [| Mixin  identifier mixinMembers |]
-         , [| Dictionary identifier inheritance dictMembers |]
-         , [| Namespace identifier namespaceMembers |]
-         , [| Partial partialDefinition |]
-         , [| Includes identifier identifier |]
-         , [| Callback identifier idlType' argumentList |]
-         , [| CallbackInterface identifier callbackInterfaceMembers |]
-         ]
+definition = ns
+  [ [| MkCallback identifier idlType' argumentList |]
+  , [| MkCallbackInterface identifier callbackInterfaceMembers |]
+  , [| MkDictionary identifier inheritance dictMembers |]
+  , [| MkEnum identifier (linList1 5 stringLit) |]
+  , [| MkIncludes identifier identifier |]
+  , [| MkInterface identifier inheritance interfaceMembers |]
+  , [| MkMixin  identifier mixinMembers |]
+  , [| MkNamespace identifier namespaceMembers |]
+  , [| MkTypedef extAttributes idlType' identifier |]
+  , [| MkPDictionary identifier dictMembers |]
+  , [| MkPInterface identifier partialInterfaceMembers |]
+  , [| MkPMixin identifier mixinMembers |]
+  , [| MkPNamespace identifier namespaceMembers |]
+  ]

@@ -326,13 +326,13 @@ optArgList = inParens argumentList <|> pure Nil
 --          Member
 --------------------------------------------------------------------------------
 
-def : String -> IdlGrammar a -> IdlGrammar a
-def "" g = g <* symbol ';'
-def kw g = key kw *> g <* symbol ';'
+def : List String -> IdlGrammar a -> IdlGrammar a
+def [] g = g <* symbol ';'
+def (h :: t) g = key h *> def t g
 
 export
 const : IdlGrammar Const
-const = def "const" [| MkConst constType ident (symbol '=' *> constValue) |]
+const = def ["const"] [| MkConst constType ident (symbol '=' *> constValue) |]
 
 special : IdlGrammar Special
 special =   (key "getter"  $> Getter)
@@ -345,11 +345,11 @@ opName =   (key "includes" $> MkOpName "includes")
 
 regularOperation : IdlGrammar RegularOperation
 regularOperation =
-  def "" [| MkOp (pure ()) idlType (optional opName) (inParens argumentList) |]
+  def [] [| MkOp (pure ()) idlType (optional opName) (inParens argumentList) |]
 
 specialOperation : IdlGrammar SpecialOperation
 specialOperation =
-  def "" [| MkOp special idlType (optional opName) (inParens argumentList) |]
+  def [] [| MkOp special idlType (optional opName) (inParens argumentList) |]
 
 export
 operation : IdlGrammar Operation
@@ -360,8 +360,8 @@ callbackInterfaceMember =   map (\v => inject v) const
                         <|> map (\v => inject v) regularOperation
 
 dictMember : IdlGrammar DictionaryMemberRest
-dictMember =   def "required" [| Required extAttributes idlType ident |]
-           <|> def "" [| Optional idlType ident defaultV |]
+dictMember =   def ["required"] [| Required extAttributes idlType ident |]
+           <|> def [] [| Optional idlType ident defaultV |]
 
 inheritance : IdlGrammar' Inheritance
 inheritance = optional (symbol ':' *> ident)
@@ -378,7 +378,7 @@ inherit : IdlGrammar a -> IdlGrammar (Inherit a)
 inherit g = key "inherit" *> map MkI g
 
 attribute : IdlGrammar Attribute
-attribute = def "attribute"
+attribute = def ["attribute"]
             [| MkAttribute extAttributes idlType attributeName |]
 
 stringifier : IdlGrammar Stringifier
@@ -397,18 +397,18 @@ static =   key "static" *> (
        )
 
 maplike : IdlGrammar Maplike
-maplike = def "maplike" $ inAngles [| MkMaplike (attributed idlType)
+maplike = def ["maplike"] $ inAngles [| MkMaplike (attributed idlType)
                                         (symbol ',' *> attributed idlType) |]
 
 setlike : IdlGrammar Setlike
-setlike = def "setlike" $ inAngles [| MkSetlike (attributed idlType) |]
+setlike = def ["setlike"] $ inAngles [| MkSetlike (attributed idlType) |]
 
 namespaceMember : IdlGrammar NamespaceMember
 namespaceMember =   map (\v => inject v) regularOperation
                 <|> map (\v => inject v) (readonly attribute)
 
 constructor_ : IdlGrammar Constructor
-constructor_ = def "constructor" (map MkConstructor $ inParens argumentList)
+constructor_ = def ["constructor"] (map MkConstructor $ inParens argumentList)
 
 partialInterfaceMember : IdlGrammar PartialInterfaceMember
 partialInterfaceMember =
@@ -423,12 +423,12 @@ partialInterfaceMember =
   <|> map ISetRO (readonly setlike)
   <|> map IStr stringifier
   <|> map IStatic static
-  <|> def "iterable" (inAngles [| IIterable (attributed idlType)
+  <|> def ["iterable"] (inAngles [| IIterable (attributed idlType)
                                             optionalType |])
-  <|> def "async" (do key "iterable"
-                      p  <- inAngles [| (,) (attributed idlType) optionalType |]
-                      as <- optArgList
-                      pure (IAsync (fst p) (snd p) as))
+  <|> def ["async","iterable"] (
+        do p  <- inAngles [| (,) (attributed idlType) optionalType |]
+           as <- optArgList
+           pure (IAsync (fst p) (snd p) as))
 
 mixinMember : IdlGrammar MixinMember
 mixinMember =   map MConst const
@@ -443,39 +443,81 @@ interfaceMember =   map (\v => inject v) constructor_
                 <|> map (\v => inject v) partialInterfaceMember
 
 members : IdlGrammar a -> IdlGrammar (List $ Attributed a)
-members g =   (inBraces (many $ attributed g) <* symbol ';')
-          <|> (symbol ';' $> Nil)
+members g = inBraces (many $ attributed g)
 
 --------------------------------------------------------------------------------
 --          Definition
 --------------------------------------------------------------------------------
 
-partialDefinition : IdlGrammar PartialDefinition
-partialDefinition =
-      key "dictionary" *> [| Dictionary ident (members dictMember) |]
-  <|> key "namespace"  *> [| Namespace ident (members namespaceMember) |]
-  <|> key "interface"  *> [| Mixin (key "mixin" *> ident) (members mixinMember) |]
-  <|> key "interface"  *> [| Interface ident (members partialInterfaceMember) |]
-
 -- optional trailing comma
 enumLits : IdlGrammar (List1 StringLit)
 enumLits = sepList1 ',' stringLit <* (symbol ',' <|> pure ())
 
+callback : IdlGrammar Callback
+callback = def ["callback"] [| MkCallback ident (symbol '=' *> idlType)
+                                          (inParens argumentList) |]
+
+callbackInterface : IdlGrammar CallbackInterface
+callbackInterface =
+  def ["callback","interface"] [| MkCallbackInterface ident
+                                    (members callbackInterfaceMember) |]
+
+dictionary : IdlGrammar Dictionary
+dictionary = def ["dictionary"]
+             [| MkDictionary ident inheritance (members dictMember) |]
+
+enum : IdlGrammar Enum
+enum = def ["enum"] [| MkEnum ident (inBraces enumLits) |]
+
+iface : IdlGrammar Interface
+iface = def ["interface"]
+        [| MkInterface ident inheritance (members interfaceMember) |]
+
+includes : IdlGrammar Includes
+includes = def [] [| MkIncludes ident (key "includes" *> ident) |]
+
+mixin : IdlGrammar Mixin
+mixin = def ["interface","mixin"] [| MkMixin ident (members mixinMember) |]
+
+nspace : IdlGrammar Namespace
+nspace = def ["namespace"] [| MkNamespace ident (members namespaceMember) |]
+
+pdictionary : IdlGrammar PDictionary
+pdictionary = def ["partial","dictionary"]
+              [| MkPDictionary ident (members dictMember) |]
+
+pnamespace : IdlGrammar PNamespace
+pnamespace = def ["partial","namespace"]
+             [| MkPNamespace ident (members namespaceMember) |]
+
+pmixin : IdlGrammar PMixin
+pmixin = def ["partial","interface","mixin"] 
+         [| MkPMixin ident (members mixinMember) |]
+
+pinterface : IdlGrammar PInterface
+pinterface = def ["partial","interface"]
+             [| MkPInterface ident (members partialInterfaceMember) |]
+
+typedef : IdlGrammar Typedef
+typedef = def ["typedef"] [| MkTypedef extAttributes idlType ident |]
+
 export
 definition : IdlGrammar Definition
 definition =
-      def "typedef" [| Typedef extAttributes idlType ident |]
-  <|> def "enum" [| Enum ident (inBraces enumLits) |]
-  <|> key "interface" *> [| Mixin (key "mixin" *> ident) (members mixinMember) |]
-  <|> key "interface" *> [| Interface ident inheritance (members interfaceMember) |]
-  <|> key "dictionary" *> [| Dictionary ident inheritance (members dictMember) |]
-  <|> key "namespace" *> [| Namespace ident (members namespaceMember) |]
-  <|> (key "partial" *> map Partial partialDefinition)
-  <|> def "" [| Includes ident (key "includes" *> ident) |]
-  <|> key "callback" *> [| CallbackInterface (key "interface" *> ident)
-                            (members callbackInterfaceMember) |]
-  <|> def "callback" [| Callback ident (symbol '=' *> idlType)
-                          (inParens argumentList) |]
+      map (\v => inject v) callbackInterface
+  <|> map (\v => inject v) callback
+  <|> map (\v => inject v) dictionary
+  <|> map (\v => inject v) enum
+  <|> map (\v => inject v) iface
+  <|> map (\v => inject v) includes
+  <|> map (\v => inject v) mixin
+  <|> map (\v => inject v) nspace
+  <|> map (\v => inject v) pdictionary
+  <|> map (\v => inject v) pinterface
+  <|> map (\v => inject v) pmixin
+  <|> map (\v => inject v) pnamespace
+  <|> map (\v => inject v) typedef
+
 
 export
 definitions : IdlGrammar (List $ Attributed Definition)

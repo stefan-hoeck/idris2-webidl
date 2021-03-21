@@ -9,6 +9,8 @@ import System.Console.GetOpt
 import System.File
 import Test.Lexer
 import Test.Parser
+import Text.WebIDL.Types
+import Text.WebIDL.Parser
 
 --------------------------------------------------------------------------------
 --          Command line options
@@ -55,6 +57,46 @@ parseFile f = do putStrLn $ "Parsing " ++ f
                  ignore $ checkNamed (MkTagged f) (definitions s)
 
 --------------------------------------------------------------------------------
+--          Analysis
+--------------------------------------------------------------------------------
+
+indent : Nat -> String -> String
+indent n s = fastPack (replicate n ' ') ++ s
+
+nameList : (a -> Identifier) -> List (Attributed a) -> List String
+nameList f = sort . map (indent 4 . value . f . snd)
+
+analyze : String -> IO ()
+analyze f = do putStrLn $ "\n\nParsing " ++ f ++ "\n"
+               Right s <- readFile f
+                 | Left err => putStrLn $ "File error " ++ f
+               Right ds <- pure (parseIdl definitions s)
+                 | Left err => printLn err
+
+               putStrLn $ indent 2 "=== Enums ==="
+               for_ (nameList name ds.enums) putStrLn
+
+               putStrLn "\n"
+               putStrLn $ indent 2 "=== Typedefs ==="
+               for_ (nameList name ds.typedefs) putStrLn
+
+               putStrLn "\n"
+               putStrLn $ indent 2 "=== Namespaces ==="
+               for_ (nameList name ds.namespaces) putStrLn
+
+               putStrLn "\n"
+               putStrLn $ indent 2 "=== Interfaces ==="
+               for_ (nameList name ds.interfaces) putStrLn
+
+               putStrLn "\n"
+               putStrLn $ indent 2 "=== Dictionaries ==="
+               for_ (nameList name ds.dictionaries) putStrLn
+
+               putStrLn "\n"
+               putStrLn $ indent 2 "=== Mixins ==="
+               for_ (nameList name ds.mixins) putStrLn
+
+--------------------------------------------------------------------------------
 --          Main Function
 --------------------------------------------------------------------------------
 
@@ -70,4 +112,4 @@ main = do (pn :: args) <- getArgs
 
           if null config.files
              then run config
-             else traverse_ parseFile config.files
+             else traverse_ analyze config.files

@@ -110,8 +110,8 @@
 //    done MessageChannel
 //    done MessageEvent
 //    done MessagePort
-//    done done MimeType
-//    done done MimeTypeArray
+//    done MimeType
+//    done MimeTypeArray
 //    done Navigator
 //    done OffscreenCanvas
 //    done OffscreenCanvasRenderingContext2D
@@ -543,27 +543,6 @@ dictionary EventSourceInit {
 interface External {
   undefined AddSearchProvider();
   undefined IsSearchProviderInstalled();
-};
-
-interface mixin NavigatorPlugins {
-  [SameObject] readonly attribute PluginArray plugins;
-  [SameObject] readonly attribute MimeTypeArray mimeTypes;
-  boolean javaEnabled();
-};
-
-[Exposed=Window]
-interface PluginArray {
-  undefined refresh();
-  readonly attribute unsigned long length;
-  getter object? item(unsigned long index);
-  object? namedItem(DOMString name);
-};
-
-[Exposed=Window]
-interface MimeTypeArray {
-  readonly attribute unsigned long length;
-  getter object? item(unsigned long index);
-  object? namedItem(DOMString name);
 };
 
 [Exposed=Window]
@@ -2281,16 +2260,6 @@ interface MimeTypeArray {
 };
 
 [Exposed=Window]
-interface Plugin {
-  readonly attribute undefined name;
-  readonly attribute undefined description;
-  readonly attribute undefined filename;
-  readonly attribute undefined length;
-  getter undefined item(unsigned long index);
-  undefined namedItem(DOMString name);
-};
-
-[Exposed=Window]
 interface MimeType {
   readonly attribute undefined type;
   readonly attribute undefined description;
@@ -2702,19 +2671,6 @@ interface WorkerGlobalScope : EventTarget {
   attribute EventHandler ononline;
   attribute EventHandler onrejectionhandled;
   attribute EventHandler onunhandledrejection;
-};
-
-[Exposed=Worker]
-interface WorkerLocation {
-  stringifier readonly attribute USVString href;
-  readonly attribute USVString origin;
-  readonly attribute USVString protocol;
-  readonly attribute USVString host;
-  readonly attribute USVString hostname;
-  readonly attribute USVString port;
-  readonly attribute USVString pathname;
-  readonly attribute USVString search;
-  readonly attribute USVString hash;
 };
 
 [Exposed=Worker]

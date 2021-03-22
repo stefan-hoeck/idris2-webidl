@@ -1,4 +1,5 @@
 // Extracted from https://svgwg.org/svg2-draft/idl.html
+//            and https://mathml-refresh.github.io/mathml-core/
 
 [Exposed=Window]
 interface SVGElement : Element {
@@ -677,3 +678,10 @@ SVGAElement includes HTMLHyperlinkElementUtils;
 interface SVGViewElement : SVGElement {};
 
 SVGViewElement includes SVGFitToViewBox;
+
+[Exposed=Window]
+interface MathMLElement : Element { };
+MathMLElement includes GlobalEventHandlers;
+MathMLElement includes DocumentAndElementEventHandlers;
+MathMLElement includes HTMLOrSVGElement;
+MathMLElement includes ElementCSSInlineStyle;

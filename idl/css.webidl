@@ -1,4 +1,5 @@
 // Extracted from https://drafts.csswg.org/cssom/
+//            and https://www.w3.org/TR/css-pseudo-4/
 
 [Exposed=Window]
 interface MediaList {
@@ -141,4 +142,14 @@ partial interface Window {
 [Exposed=Window]
 namespace CSS {
   CSSOMString escape(CSSOMString ident);
+};
+
+[Exposed=Window]
+interface CSSPseudoElement : EventTarget {
+    readonly attribute CSSOMString type;
+    readonly attribute Element element;
+};
+
+partial interface Element {
+  CSSPseudoElement? pseudo(CSSOMString type);
 };

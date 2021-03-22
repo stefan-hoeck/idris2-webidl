@@ -1,5 +1,5 @@
 // Extracted from https://html.spec.whatwg.org/multipage/indices.html
-//           and  https://drafts.csswg.org/cssom/
+//           and  https://w3c.github.io/aria/
 
 //    List of Interfaces
 
@@ -837,11 +837,6 @@ HTMLElement includes GlobalEventHandlers;
 HTMLElement includes DocumentAndElementEventHandlers;
 HTMLElement includes ElementContentEditable;
 HTMLElement includes HTMLOrSVGElement;
-
-[Exposed=Window]
-interface HTMLUnknownElement : HTMLElement {
-  // Note: intentionally no [HTMLConstructor]
-};
 
 [Exposed=Window]
 interface HTMLEmbedElement : HTMLElement {
@@ -2724,3 +2719,88 @@ dictionary WorkletOptions {
 
 [Exposed=Worklet, SecureContext]
 interface WorkletGlobalScope {};
+
+interface mixin HTMLHyperlinkElementUtils {
+  [CEReactions] stringifier attribute USVString href;
+  readonly attribute USVString origin;
+  [CEReactions] attribute USVString protocol;
+  [CEReactions] attribute USVString username;
+  [CEReactions] attribute USVString password;
+  [CEReactions] attribute USVString host;
+  [CEReactions] attribute USVString hostname;
+  [CEReactions] attribute USVString port;
+  [CEReactions] attribute USVString pathname;
+  [CEReactions] attribute USVString search;
+  [CEReactions] attribute USVString hash;
+};
+
+interface mixin HTMLOrSVGElement {
+  [SameObject] readonly attribute DOMStringMap dataset;
+  attribute DOMString nonce; // intentionally no [CEReactions]
+
+  [CEReactions] attribute boolean autofocus;
+  [CEReactions] attribute long tabIndex;
+  undefined focus(optional FocusOptions options = {});
+  undefined blur();
+};
+
+interface mixin ElementContentEditable {
+  [CEReactions] attribute DOMString contentEditable;
+  [CEReactions] attribute DOMString enterKeyHint;
+  readonly attribute boolean isContentEditable;
+  [CEReactions] attribute DOMString inputMode;
+};
+
+interface mixin ARIAMixin {
+	attribute DOMString? role;
+
+	
+	attribute DOMString ariaAtomic;
+	attribute DOMString ariaAutoComplete;
+	attribute DOMString ariaBusy;
+	attribute DOMString ariaChecked;
+	attribute DOMString ariaColCount;
+	attribute DOMString ariaColIndex;
+	attribute DOMString ariaColIndexText;
+	attribute DOMString ariaColSpan;
+	
+	attribute DOMString ariaCurrent;
+	
+	attribute DOMString ariaDescription;
+	
+	attribute DOMString ariaDisabled;
+	
+	attribute DOMString ariaExpanded;
+	
+	attribute DOMString ariaHasPopup;
+	attribute DOMString ariaHidden;
+	attribute DOMString ariaInvalid;
+	attribute DOMString ariaKeyShortcuts;
+	attribute DOMString ariaLabel;
+	
+	attribute DOMString ariaLevel;
+	attribute DOMString ariaLive;
+	attribute DOMString ariaModal;
+	attribute DOMString ariaMultiLine;
+	attribute DOMString ariaMultiSelectable;
+	attribute DOMString ariaOrientation;
+	
+	attribute DOMString ariaPlaceholder;
+	attribute DOMString ariaPosInSet;
+	attribute DOMString ariaPressed;
+	attribute DOMString ariaReadOnly;
+	
+	attribute DOMString ariaRequired;
+	attribute DOMString ariaRoleDescription;
+	attribute DOMString ariaRowCount;
+	attribute DOMString ariaRowIndex;
+	attribute DOMString ariaRowIndexText;
+	attribute DOMString ariaRowSpan;
+	attribute DOMString ariaSelected;
+	attribute DOMString ariaSetSize;
+	attribute DOMString ariaSort;
+	attribute DOMString ariaValueMax;
+	attribute DOMString ariaValueMin;
+	attribute DOMString ariaValueNow;
+	attribute DOMString ariaValueText;
+};

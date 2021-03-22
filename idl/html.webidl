@@ -1,4 +1,5 @@
 // Extracted from https://html.spec.whatwg.org/multipage/indices.html
+//           and  https://drafts.csswg.org/cssom/
 
 //    List of Interfaces
 
@@ -2291,6 +2292,28 @@ interface mixin NavigatorID {
   [Exposed=Window] readonly attribute DOMString vendorSub; // constant ""
 };
 
+interface mixin NavigatorLanguage {
+  readonly attribute DOMString language;
+  readonly attribute FrozenArray<DOMString> languages;
+};
+
+interface mixin NavigatorOnLine {
+  readonly attribute boolean onLine;
+};
+
+interface mixin NavigatorContentUtils {
+  [SecureContext] undefined registerProtocolHandler(DOMString scheme, USVString url);
+  [SecureContext] undefined unregisterProtocolHandler(DOMString scheme, USVString url);
+};
+
+interface mixin NavigatorCookies {
+  readonly attribute boolean cookieEnabled;
+};
+
+interface mixin NavigatorConcurrentHardware {
+  readonly attribute unsigned long long hardwareConcurrency;
+};
+
 typedef (OffscreenCanvasRenderingContext2D or ImageBitmapRenderingContext or WebGLRenderingContext or WebGL2RenderingContext) OffscreenRenderingContext;
 
 dictionary ImageEncodeOptions {
@@ -2367,6 +2390,10 @@ interface PromiseRejectionEvent : Event {
 dictionary PromiseRejectionEventInit : EventInit {
   required Promise<any> promise;
   any reason;
+};
+
+interface mixin AbstractWorker {
+  attribute EventHandler onerror;
 };
 
 [Exposed=Window]

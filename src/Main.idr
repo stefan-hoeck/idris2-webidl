@@ -1,5 +1,6 @@
 module Main
 
+import Data.String
 import System
 import System.Console.GetOpt
 import System.File
@@ -41,13 +42,29 @@ applyArgs args =
 --          Codegen
 --------------------------------------------------------------------------------
 
-codegen : String -> IO ()
-codegen f = do Right s <- readFile f
-                 | Left err => putStrLn $ "File error " ++ f
-               Right ds <- pure (parseIdl definitions s)
-                 | Left err => printLn err
+moduleName : String -> String
+moduleName s = let (h ::: _) = split ('.' ==) . last $ split ('/' ==) s
+                in firstToUpper h
+  where firstToUpper : String -> String
+        firstToUpper s = case fastUnpack s of
+                              [] => ""
+                              (h :: t) => fastPack (toUpper h :: t)
+        
 
-               for_ ds.enums \(_,e) => printLn (Codegen.enum e)
+codegen : Config -> String -> IO ()
+codegen c f = do Right s <- readFile f
+                   | Left err => putStrLn $ "File error " ++ f ++ ": " ++ show err
+                 Right ds <- pure (parseIdl definitions s)
+                   | Left err => printLn err
+
+                 let mod = moduleName f
+                     modFile = c.outDir ++ "/" ++ mod ++ ".idr"
+
+                 Right () <- writeFile modFile
+                                       (show $ Codegen.definitions mod ds)
+                   | Left err => putStrLn $ "File error " ++ modFile  ++ ": " ++ show err
+
+                 pure ()
 
 --------------------------------------------------------------------------------
 --          Main Function
@@ -59,4 +76,4 @@ main = do (pn :: args) <- getArgs
           Right config <- pure $ applyArgs args
                        | Left es => traverse_ putStrLn es
 
-          traverse_ codegen config.files
+          traverse_ (codegen config) config.files

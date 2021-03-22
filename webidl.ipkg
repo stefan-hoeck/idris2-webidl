@@ -13,9 +13,14 @@ main       = Main
 executable = generateDomBindings
 
 modules = Text.WebIDL.Codegen
+        , Text.WebIDL.Codegen.Definitions
+        , Text.WebIDL.Codegen.Enum
+        , Text.WebIDL.Codegen.Util
+
         , Text.WebIDL.Encoder
         , Text.WebIDL.Lexer
         , Text.WebIDL.Parser
+
         , Text.WebIDL.Types
         , Text.WebIDL.Types.Argument
         , Text.WebIDL.Types.Attribute

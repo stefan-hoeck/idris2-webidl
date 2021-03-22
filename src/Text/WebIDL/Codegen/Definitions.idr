@@ -11,11 +11,20 @@ import public Text.WebIDL.Codegen.Util
 --          Imports
 --------------------------------------------------------------------------------
 
-imports : Definitions -> SortedSet String
-imports ds = fromList $ enumImports
+imports : (moduleName : String) -> Definitions -> SortedSet String
+imports mn ds = fromList $ custom ++ enumImports
 
   where enumImports : List String
         enumImports = guard (not $ null ds.enums) *> ["Data.Maybe"]
+
+        custom : List String
+        custom = case mn of
+                      "Clipboard" => [ "JS.DOM.Raw.Event"
+                                     , "JS.DOM.Raw.Dom"]
+                      "Event"     => [ "JS.DOM.Raw.Dom" ]
+                      "Html"      => [ "JS.DOM.Raw.Dom" ]
+                      "Xhr"       => [ "JS.DOM.Raw.Dom" ]
+                      _           => []
 
 --------------------------------------------------------------------------------
 --          Data Declarations
@@ -69,7 +78,9 @@ casts ds = section "Casts" (map toCast $ sort pairs)
 export
 definitions : (moduleName : String) -> Codegen Definitions
 definitions moduleName ds =
-  let imps = vsep . map (("import" <++>) . pretty) . SortedSet.toList $ imports ds
+  let imps = vsep 
+           . map (("import" <++>) . pretty) 
+           . SortedSet.toList $ imports moduleName ds
 
    in vsep [ "module JS.DOM.Raw." <+> pretty moduleName
            , ""

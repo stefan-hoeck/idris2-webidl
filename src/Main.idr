@@ -1,5 +1,6 @@
 module Main
 
+import Control.Monad.Either
 import Data.String
 import System
 import System.Console.GetOpt
@@ -42,6 +43,20 @@ applyArgs args =
 --          Codegen
 --------------------------------------------------------------------------------
 
+0 Prog : Type -> Type
+Prog = EitherT String IO
+
+toProg : Show a => IO (Either a b) -> Prog b
+toProg io = MkEitherT $ map (mapFst show) io
+
+runProg : Prog () -> IO ()
+runProg (MkEitherT p) = do Right _ <- p
+                             | Left e => putStrLn ("Error: " ++ e)
+                           pure ()
+
+writeDoc : String -> Doc () -> Prog ()
+writeDoc f doc = toProg $ writeFile f (show doc)
+
 moduleName : String -> String
 moduleName s = let (h ::: _) = split ('.' ==) . last $ split ('/' ==) s
                 in firstToUpper h
@@ -50,40 +65,40 @@ moduleName s = let (h ::: _) = split ('.' ==) . last $ split ('/' ==) s
                               [] => ""
                               (h :: t) => fastPack (toUpper h :: t)
         
+loadDef : String -> Prog (String,Definitions)
+loadDef f = let mn = moduleName f
+             in do s <- toProg (readFile f)
+                   d <- toProg (pure $ parseIdl definitions s)
+                   pure (mn,d)
 
-codegen : Config -> String -> IO ()
-codegen c f = do Right s <- readFile f
-                   | Left err => putStrLn $ "File error " ++ f ++ ": " ++ show err
-                 Right ds <- pure (parseIdl definitions s)
-                   | Left err => printLn err
+typesGen : Config -> Definitions -> Prog ()
+typesGen c ds =
+  let typesFile = c.outDir ++ "/JS/DOM/Raw/Types.idr"
+   in writeDoc typesFile (typedefs ds)
 
-                 let mod = moduleName f
-                     typesFile = c.outDir ++ "/JS/DOM/Raw/" ++ mod ++ "Types.idr"
-                     modFile = c.outDir ++ "/JS/DOM/Raw/" ++ mod ++ ".idr"
-                     typesTestFile = c.outDir ++ "/Test/" ++ mod ++ "Types.idr"
+codegen : Config -> (String,Definitions) -> Prog ()
+codegen c (mod,ds) =
+  let typesFile = c.outDir ++ "/JS/DOM/Raw/" ++ mod ++ "Types.idr"
+      modFile = c.outDir ++ "/JS/DOM/Raw/" ++ mod ++ ".idr"
+      typesTestFile = c.outDir ++ "/Test/" ++ mod ++ "Types.idr"
 
-                 Right () <- writeFile typesFile
-                                       (show $ Codegen.types mod ds)
-                   | Left err => putStrLn $ "File error " ++ typesFile  ++ ": " ++ show err
-
-                 Right () <- writeFile modFile
-                                       (show $ Codegen.definitions mod ds)
-                   | Left err => putStrLn $ "File error " ++ modFile  ++ ": " ++ show err
-
-                 Right () <- writeFile typesTestFile
-                                       (show $ Codegen.typeTests mod ds)
-                   | Left err => putStrLn $ "File error " ++ typesTestFile  ++ ": " ++ show err
-
-                 pure ()
+   in do writeDoc typesFile (types mod ds)
+         writeDoc modFile (definitions mod ds)
+         writeDoc typesTestFile (typeTests mod ds)
 
 --------------------------------------------------------------------------------
 --          Main Function
 --------------------------------------------------------------------------------
 
+run : List String -> Prog ()
+run args = do config <- toProg (pure $ applyArgs args)
+              ps     <- traverse loadDef config.files
+              traverse_ (codegen config) ps
+              typesGen config (concatMap snd ps)
+              pure ()
+
 main : IO ()
 main = do (pn :: args) <- getArgs
                        |  Nil => putStrLn "Missing executable name. Aborting..."
-          Right config <- pure $ applyArgs args
-                       | Left es => traverse_ putStrLn es
 
-          traverse_ (codegen config) config.files
+          runProg (run args)

@@ -70,16 +70,31 @@ casts ds = section "Casts" (map toCast $ sort pairs)
 --          Typedefs
 --------------------------------------------------------------------------------
 
+export
 typedefs : Codegen Definitions
-typedefs ds = let ts = sortBy (comparing (value . name)) (map snd ds.typedefs)
-                  docs = map toTypedef ts
-               in case docs of
-                       Nil => section "Typedefs" Nil
-                       ds  => section "Typedefs" $
-                              ["", "mutual"] ++ map (indent 2) docs
+typedefs ds =
+  let ts = sortBy (comparing (value . name)) (map snd ds.typedefs)
+      docs = map toTypedef ts
+   in vsep [ "module JS.DOM.Raw.Types"
+           , ""
+           , "import Data.SOP"
+           , "import JS.Util"
+           , "import public JS.DOM.Raw.AnimationTypes as Types"
+           , "import public JS.DOM.Raw.ClipboardTypes as Types"
+           , "import public JS.DOM.Raw.CssTypes as Types"
+           , "import public JS.DOM.Raw.DomTypes as Types"
+           , "import public JS.DOM.Raw.EventTypes as Types"
+           , "import public JS.DOM.Raw.FileTypes as Types"
+           , "import public JS.DOM.Raw.HtmlTypes as Types"
+           , "import public JS.DOM.Raw.PermissionsTypes as Types"
+           , "import public JS.DOM.Raw.SvgTypes as Types"
+           , "import public JS.DOM.Raw.XhrTypes as Types"
+           , section "Typedefs" $ ["", "mutual"] ++ map (indent 2) docs
+           ]
 
   where toTypedef : Typedef -> Doc ()
         toTypedef t = vsep [ ""
+                           , "public export"
                            , "0" <++> pretty t.name.value <++> ": Type"
                            , pretty t.name.value <++> "=" <++> pretty t.type
                            ]
@@ -135,5 +150,4 @@ definitions moduleName ds =
            , ""
            , imps
            , casts ds
-           , typedefs ds
            ]

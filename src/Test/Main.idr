@@ -32,7 +32,7 @@ setTests s c = maybe (Left ["Not a natural number: " ++ s])
                      (parsePositive {a = Nat} s)
 
 descs : List $ OptDescr (Config -> Either (List String) Config)
-descs = [ MkOpt ['n'] ["testlimit"] (ReqArg setTests "<tests")
+descs = [ MkOpt ['n'] ["testlimit"] (ReqArg setTests "<tests>")
             "number of tests to be passed by each property"
         ]
 

@@ -5,6 +5,7 @@ import Data.String
 import Data.SortedMap
 import Data.SortedSet
 import Text.WebIDL.Codegen.Enum
+import Text.WebIDL.Codegen.Types
 import public Text.WebIDL.Codegen.Util
 
 --------------------------------------------------------------------------------
@@ -66,8 +67,48 @@ casts ds = section "Casts" (map toCast $ sort pairs)
                      ds.includeStatements
 
 --------------------------------------------------------------------------------
+--          Typedefs
+--------------------------------------------------------------------------------
+
+typedefs : Codegen Definitions
+typedefs ds = let ts = sortBy (comparing (value . name)) (map snd ds.typedefs)
+                  docs = map toTypedef ts
+               in case docs of
+                       Nil => section "Typedefs" Nil
+                       ds  => section "Typedefs" $
+                              ["", "mutual"] ++ map (indent 2) docs
+
+  where toTypedef : Typedef -> Doc ()
+        toTypedef t = vsep [ ""
+                           , "0" <++> pretty t.name.value <++> ": Type"
+                           , pretty t.name.value <++> "=" <++> pretty t.type
+                           ]
+
+--------------------------------------------------------------------------------
 --          Codegen
 --------------------------------------------------------------------------------
+
+export
+typeTests : (moduleName : String) -> Codegen Definitions
+typeTests moduleName ds =
+  let ts = types ds
+      ps = zip [1 .. length ts] ts
+
+   in vsep [ "module Test." <+> pretty moduleName <+> "Types"
+           , ""
+           , "import Data.SOP"
+           , "import JS.DOM.Raw.Types"
+           , "import JS.Util"
+           , vsep (map mkTest ps)
+           ]
+
+  where mkTest : (Nat,IdlType) -> Doc ()
+        mkTest (n,t) =
+          let nm = pretty ("test" ++ show n)
+           in vsep [ ""
+                   , nm <++> ":" <++> pretty t <++> "-> ()"
+                   , nm <++> "_ = ()"
+                   ]
 
 export
 types : (moduleName : String) -> Codegen Definitions
@@ -94,4 +135,5 @@ definitions moduleName ds =
            , ""
            , imps
            , casts ds
+           , typedefs ds
            ]

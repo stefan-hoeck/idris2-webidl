@@ -65,3 +65,16 @@ function n (h :: []) = hsep [pretty n, ":", h]
 function n (h :: t)  =
   let h' = ":" <++> flatAlt (" "  <+> h) h
    in pretty n <++> align (sep (h' :: map ("->" <++>) (toList t)))
+
+--------------------------------------------------------------------------------
+--          Function Application
+--------------------------------------------------------------------------------
+
+export
+prettyParens : (b : Bool) -> Doc ann -> Doc ann
+prettyParens True  = parens
+prettyParens False = id
+
+export
+prettyCon : Prec -> (con : Doc ann) -> (args : List (Doc ann)) -> Doc ann
+prettyCon p con args = prettyParens (p >= App) (con <++> align (sep args))

@@ -219,3 +219,40 @@ mutual
 public export
 0 OptionalType : Type
 OptionalType = Maybe (Attributed IdlType)
+
+--------------------------------------------------------------------------------
+--          Types Interface
+--------------------------------------------------------------------------------
+
+public export
+interface Types a where
+  types : a -> List IdlType
+
+export
+Types () where
+  types () = []
+
+export
+Types IdlType where
+  types t = [t]
+
+export
+Types ConstType where
+  types (CP x) = types (D . NotNull $ P x)
+  types (CI x) = types (D . NotNull $ I x)
+
+export
+Types a => Types (List a) where
+  types = (>>= types)
+
+export
+Types a => Types (Maybe a) where
+  types = maybe Nil types
+
+export
+Types a => Types (Attributed a) where
+  types (_,a) = types a
+
+export
+NP Types ts => Types (NS I ts) where
+  types ns = collapseNS $ hcmap Types types ns

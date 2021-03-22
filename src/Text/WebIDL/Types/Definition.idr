@@ -22,6 +22,10 @@ record Callback where
 
 %runElab derive "Callback" [Generic,Meta,Eq,Show]
 
+export
+Types Callback where
+  types c = types c.type ++ types c.args
+
 ||| CallbackRestOrInterface ::
 |||     CallbackRest
 |||     interface identifier { CallbackInterfaceMembers } ;
@@ -33,6 +37,10 @@ record CallbackInterface where
 
 %runElab derive "CallbackInterface" [Generic,Meta,Eq,Show]
 
+export
+Types CallbackInterface where
+  types = types . members
+
 ||| Dictionary ::
 |||     dictionary identifier Inheritance { DictionaryMembers } ;
 public export
@@ -43,6 +51,10 @@ record Dictionary where
   members  : DictionaryMembers
 
 %runElab derive "Dictionary" [Generic,Meta,Eq,Show]
+
+export
+Types Dictionary where
+  types = types . members
 
 ||| Enum ::
 |||     enum identifier { EnumValueList } ;
@@ -86,6 +98,10 @@ record Interface where
 
 %runElab derive "Interface" [Generic,Meta,Eq,Show]
 
+export
+Types Interface where
+  types = types . members
+
 ||| MixinRest ::
 |||     mixin identifier { MixinMembers } ;
 public export
@@ -96,6 +112,10 @@ record Mixin where
 
 %runElab derive "Mixin" [Generic,Meta,Eq,Show]
 
+export
+Types Mixin where
+  types = types . members
+
 ||| Namespace ::
 |||     namespace identifier { NamespaceMembers } ;
 public export
@@ -105,6 +125,10 @@ record Namespace where
   members : NamespaceMembers
 
 %runElab derive "Namespace" [Generic,Meta,Eq,Show]
+
+export
+Types Namespace where
+  types = types . members
 
 ||| Typedef ::
 |||     typedef TypeWithExtendedAttributes identifier ;
@@ -117,6 +141,10 @@ record Typedef where
 
 %runElab derive "Typedef" [Generic,Meta,Eq,Show]
 
+export
+Types Typedef where
+  types = types . type
+
 ||| PartialDictionary ::
 |||     dictionary identifier { DictionaryMembers } ;
 public export
@@ -126,6 +154,10 @@ record PDictionary where
   members : DictionaryMembers
 
 %runElab derive "PDictionary" [Generic,Meta,Eq,Show]
+
+export
+Types PDictionary where
+  types = types . members
 
 ||| PartialInterfaceRest ::
 |||     identifier { PartialInterfaceMembers } ;
@@ -137,6 +169,10 @@ record PInterface where
 
 %runElab derive "PInterface" [Generic,Meta,Eq,Show]
 
+export
+Types PInterface where
+  types = types . members
+
 ||| MixinRest ::
 |||     mixin identifier { MixinMembers } ;
 public export
@@ -147,6 +183,10 @@ record PMixin where
 
 %runElab derive "PMixin" [Generic,Meta,Eq,Show]
 
+export
+Types PMixin where
+  types = types . members
+
 ||| Namespace ::
 |||     namespace identifier { NamespaceMembers } ;
 public export
@@ -156,6 +196,10 @@ record PNamespace where
   members : NamespaceMembers
 
 %runElab derive "PNamespace" [Generic,Meta,Eq,Show]
+
+export
+Types PNamespace where
+  types = types . members
 
 ||| Definition ::
 |||     CallbackOrInterfaceOrMixin
@@ -217,6 +261,20 @@ record Definitions where
   typedefs            : List (Attributed Typedef)
 
 %runElab derive "Definitions" [Generic,Meta,Eq,Show,Semigroup,Monoid]
+
+export
+Types Definitions where
+  types d =  types d.callbackInterfaces
+          ++ types d.callbacks
+          ++ types d.dictionaries
+          ++ types d.interfaces
+          ++ types d.mixins
+          ++ types d.namespaces
+          ++ types d.partialDictionaries
+          ++ types d.partialInterfaces
+          ++ types d.partialMixins
+          ++ types d.partialNamespaces
+          ++ types d.typedefs
 
 export
 toDefinitions : Attributed Definition -> Definitions

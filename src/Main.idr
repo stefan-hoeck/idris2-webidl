@@ -19,7 +19,7 @@ record Config where
   files  : List String
 
 init : List String -> Config
-init = MkConfig "../dom/src/JS/DOM/Raw"
+init = MkConfig "../dom/src"
 
 setOutDir : String -> Config -> Either (List String) Config
 setOutDir s = Right . record { outDir = s }
@@ -58,8 +58,9 @@ codegen c f = do Right s <- readFile f
                    | Left err => printLn err
 
                  let mod = moduleName f
-                     typesFile = c.outDir ++ "/" ++ mod ++ "Types.idr"
-                     modFile = c.outDir ++ "/" ++ mod ++ ".idr"
+                     typesFile = c.outDir ++ "/JS/DOM/Raw/" ++ mod ++ "Types.idr"
+                     modFile = c.outDir ++ "/JS/DOM/Raw/" ++ mod ++ ".idr"
+                     typesTestFile = c.outDir ++ "/Test/" ++ mod ++ "Types.idr"
 
                  Right () <- writeFile typesFile
                                        (show $ Codegen.types mod ds)
@@ -68,6 +69,10 @@ codegen c f = do Right s <- readFile f
                  Right () <- writeFile modFile
                                        (show $ Codegen.definitions mod ds)
                    | Left err => putStrLn $ "File error " ++ modFile  ++ ": " ++ show err
+
+                 Right () <- writeFile typesTestFile
+                                       (show $ Codegen.typeTests mod ds)
+                   | Left err => putStrLn $ "File error " ++ typesTestFile  ++ ": " ++ show err
 
                  pure ()
 

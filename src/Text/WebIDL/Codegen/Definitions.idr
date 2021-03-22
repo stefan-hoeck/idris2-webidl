@@ -11,20 +11,14 @@ import public Text.WebIDL.Codegen.Util
 --          Imports
 --------------------------------------------------------------------------------
 
-imports : (moduleName : String) -> Definitions -> SortedSet String
-imports mn ds = fromList $ custom ++ enumImports
+defImports : (moduleName : String) -> Definitions -> SortedSet String
+defImports mn ds = fromList ["JS.DOM.Raw.Types"]
+
+typeImports : Definitions -> SortedSet String
+typeImports ds = fromList enumImports
 
   where enumImports : List String
         enumImports = guard (not $ null ds.enums) *> ["Data.Maybe"]
-
-        custom : List String
-        custom = case mn of
-                      "Clipboard" => [ "JS.DOM.Raw.Event"
-                                     , "JS.DOM.Raw.Dom"]
-                      "Event"     => [ "JS.DOM.Raw.Dom" ]
-                      "Html"      => [ "JS.DOM.Raw.Dom" ]
-                      "Xhr"       => [ "JS.DOM.Raw.Dom" ]
-                      _           => []
 
 --------------------------------------------------------------------------------
 --          Data Declarations
@@ -76,16 +70,28 @@ casts ds = section "Casts" (map toCast $ sort pairs)
 --------------------------------------------------------------------------------
 
 export
-definitions : (moduleName : String) -> Codegen Definitions
-definitions moduleName ds =
+types : (moduleName : String) -> Codegen Definitions
+types moduleName ds =
   let imps = vsep 
            . map (("import" <++>) . pretty) 
-           . SortedSet.toList $ imports moduleName ds
+           . SortedSet.toList $ typeImports ds
 
-   in vsep [ "module JS.DOM.Raw." <+> pretty moduleName
+   in vsep [ "module JS.DOM.Raw." <+> pretty moduleName <+> "Types"
            , ""
            , imps
            , enums $ map snd ds.enums
            , extern ds
+           ]
+
+export
+definitions : (moduleName : String) -> Codegen Definitions
+definitions moduleName ds =
+  let imps = vsep 
+           . map (("import" <++>) . pretty) 
+           . SortedSet.toList $ defImports moduleName ds
+
+   in vsep [ "module JS.DOM.Raw." <+> pretty moduleName
+           , ""
+           , imps
            , casts ds
            ]

@@ -58,7 +58,12 @@ codegen c f = do Right s <- readFile f
                    | Left err => printLn err
 
                  let mod = moduleName f
+                     typesFile = c.outDir ++ "/" ++ mod ++ "Types.idr"
                      modFile = c.outDir ++ "/" ++ mod ++ ".idr"
+
+                 Right () <- writeFile typesFile
+                                       (show $ Codegen.types mod ds)
+                   | Left err => putStrLn $ "File error " ++ typesFile  ++ ": " ++ show err
 
                  Right () <- writeFile modFile
                                        (show $ Codegen.definitions mod ds)

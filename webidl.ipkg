@@ -9,6 +9,9 @@ depends    = base        >= 0.3.0
            , pretty-show >= 0.1.1
            , sop         >= 0.1.1
 
+main       = Main
+executable = generateDomBindings
+
 modules = Text.WebIDL.Codegen
         , Text.WebIDL.Encoder
         , Text.WebIDL.Lexer

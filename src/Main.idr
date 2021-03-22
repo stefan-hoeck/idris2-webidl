@@ -19,7 +19,7 @@ record Config where
   files  : List String
 
 init : List String -> Config
-init = MkConfig "generated"
+init = MkConfig "../dom/src/JS/DOM/Raw"
 
 setOutDir : String -> Config -> Either (List String) Config
 setOutDir s = Right . record { outDir = s }

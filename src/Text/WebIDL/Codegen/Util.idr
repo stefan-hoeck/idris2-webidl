@@ -23,11 +23,16 @@ unquote = run . fastUnpack
         run ('"' :: cs)          = run cs
         run (c   :: cs)          = c :: run cs
 
+||| Generates a data constructor from a string literal.
+||| This is used for enums, where some values are not
+||| valid idris identifiers. Some necessary adjustments
+||| are hardcoded here.
 export
 toDataConstructor : String -> String
 toDataConstructor s =
   case unquote s of
-       []      => "Empty"
+       []        => "Empty"
+       ['2','d'] => "TwoD"
        c :: cs => fastPack (toUpper c :: run cs)
 
   where run : List Char -> List Char
@@ -44,6 +49,11 @@ export
 title : String -> Doc ()
 title n = let ln = pretty $ fastPack (replicate 80 '-')
            in vsep ["", ln, pretty ("--          " ++ n), ln]
+
+export
+section : String -> List (Doc ()) -> Doc ()
+section _ Nil = neutral
+section t ds = vsep $ (title t) :: ds
 
 --------------------------------------------------------------------------------
 --          Generating Functions

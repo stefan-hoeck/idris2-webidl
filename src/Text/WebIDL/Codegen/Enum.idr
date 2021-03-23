@@ -43,6 +43,14 @@ enum (MkEnum name vs) =
                        , pn
                        ]
                    , "fromString s = fromJust $ read s"
+                   , ""
+                   , "export"
+                   , "ToJS" <++> pretty name.value <++> "where"
+                   , indent 2 ("toJS = toJS . show")
+                   , ""
+                   , "export"
+                   , "FromJS" <++> pretty name.value <++> "where"
+                   , indent 2 ("fromJS = fromMaybe" <++> pretty c <++> ". read . fromJS")
                    ]
 
    in vsep ["", "namespace" <++> pn, indent 2 code]

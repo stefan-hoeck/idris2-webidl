@@ -16,7 +16,7 @@ defImports : (moduleName : String) -> Definitions -> SortedSet String
 defImports mn ds = fromList ["Web.Types"]
 
 typeImports : Definitions -> SortedSet String
-typeImports ds = fromList enumImports
+typeImports ds = fromList ( "JS.Util" :: enumImports)
 
   where enumImports : List String
         enumImports = guard (not $ null ds.enums) *> ["Data.Maybe"]
@@ -33,7 +33,15 @@ extern ds = vsep [ section "Interfaces" (exts name ds.interfaces)
   where ext : String -> Doc ()
         ext s = vsep [ ""
                      , "export"
-                     ,"data" <++> pretty s <++> ": Type where [external]"
+                     , "data" <++> pretty s <++> ": Type where [external]"
+                     , ""
+                     , "export"
+                     , "ToJS" <++> pretty s <++> "where"
+                     , indent 2 ("toJS = believe_me")
+                     , ""
+                     , "export"
+                     , "FromJS" <++> pretty s <++> "where"
+                     , indent 2 ("fromJS = believe_me")
                      ]
 
         exts : (a -> Identifier) -> List (x,a) -> List (Doc ())

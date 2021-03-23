@@ -2,6 +2,7 @@ module Text.WebIDL.Parser
 
 import Data.SOP
 import Data.List.Elem
+import Data.List1
 import Text.Lexer
 import Text.Parser
 import Text.WebIDL.Types
@@ -143,7 +144,7 @@ extAttribute =   [| EAParens (inAnyParens eaInner) (optional extAttribute) |]
 
 export
 extAttrs1 : IdlGrammar ExtAttributeList
-extAttrs1 = inBrackets (sepBy1 comma extAttribute)
+extAttrs1 = forget <$> inBrackets (sepBy1 comma extAttribute)
 
 export
 extAttributes : IdlGrammar' ExtAttributeList

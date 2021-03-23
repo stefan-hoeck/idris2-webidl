@@ -73,13 +73,13 @@ loadDef f = let mn = moduleName f
 
 typesGen : Config -> Definitions -> Prog ()
 typesGen c ds =
-  let typesFile = c.outDir ++ "/JS/DOM/Raw/Types.idr"
+  let typesFile = c.outDir ++ "/Web/Types.idr"
    in writeDoc typesFile (typedefs ds)
 
 codegen : Config -> (String,Definitions) -> Prog ()
 codegen c (mod,ds) =
-  let typesFile = c.outDir ++ "/JS/DOM/Raw/" ++ mod ++ "Types.idr"
-      modFile = c.outDir ++ "/JS/DOM/Raw/" ++ mod ++ ".idr"
+  let typesFile = c.outDir ++ "/Web/" ++ mod ++ "Types.idr"
+      modFile = c.outDir ++ "/Web/" ++ mod ++ ".idr"
       typesTestFile = c.outDir ++ "/Test/" ++ mod ++ "Types.idr"
 
    in do writeDoc typesFile (types mod ds)

@@ -13,7 +13,7 @@ import public Text.WebIDL.Codegen.Util
 --------------------------------------------------------------------------------
 
 defImports : (moduleName : String) -> Definitions -> SortedSet String
-defImports mn ds = fromList ["JS.DOM.Raw.Types"]
+defImports mn ds = fromList ["Web.Types"]
 
 typeImports : Definitions -> SortedSet String
 typeImports ds = fromList enumImports
@@ -75,23 +75,23 @@ typedefs : Codegen Definitions
 typedefs ds =
   let ts = sortBy (comparing (value . name)) (map snd ds.typedefs)
       docs = map toTypedef ts
-   in vsep [ "module JS.DOM.Raw.Types"
+   in vsep [ "module Web.Types"
            , ""
            , "import Data.SOP"
            , "import JS.Util"
-           , "import public JS.DOM.Raw.AnimationTypes as Types"
-           , "import public JS.DOM.Raw.ClipboardTypes as Types"
-           , "import public JS.DOM.Raw.CssTypes as Types"
-           , "import public JS.DOM.Raw.DomTypes as Types"
-           , "import public JS.DOM.Raw.EventTypes as Types"
-           , "import public JS.DOM.Raw.FetchTypes as Types"
-           , "import public JS.DOM.Raw.FileTypes as Types"
-           , "import public JS.DOM.Raw.GeometryTypes as Types"
-           , "import public JS.DOM.Raw.HtmlTypes as Types"
-           , "import public JS.DOM.Raw.PermissionsTypes as Types"
-           , "import public JS.DOM.Raw.SvgTypes as Types"
-           , "import public JS.DOM.Raw.UrlTypes as Types"
-           , "import public JS.DOM.Raw.XhrTypes as Types"
+           , "import public Web.AnimationTypes as Types"
+           , "import public Web.ClipboardTypes as Types"
+           , "import public Web.CssTypes as Types"
+           , "import public Web.DomTypes as Types"
+           , "import public Web.EventTypes as Types"
+           , "import public Web.FetchTypes as Types"
+           , "import public Web.FileTypes as Types"
+           , "import public Web.GeometryTypes as Types"
+           , "import public Web.HtmlTypes as Types"
+           , "import public Web.PermissionsTypes as Types"
+           , "import public Web.SvgTypes as Types"
+           , "import public Web.UrlTypes as Types"
+           , "import public Web.XhrTypes as Types"
            , section "Typedefs" $ ["", "mutual"] ++ map (indent 2) docs
            ]
 
@@ -115,7 +115,7 @@ typeTests moduleName ds =
    in vsep [ "module Test." <+> pretty moduleName <+> "Types"
            , ""
            , "import Data.SOP"
-           , "import JS.DOM.Raw.Types"
+           , "import Web.Types"
            , "import JS.Util"
            , vsep (map mkTest ps)
            ]
@@ -135,7 +135,7 @@ types moduleName ds =
            . map (("import" <++>) . pretty) 
            . SortedSet.toList $ typeImports ds
 
-   in vsep [ "module JS.DOM.Raw." <+> pretty moduleName <+> "Types"
+   in vsep [ "module Web." <+> pretty moduleName <+> "Types"
            , ""
            , imps
            , enums $ map snd ds.enums
@@ -149,7 +149,7 @@ definitions moduleName ds =
            . map (("import" <++>) . pretty) 
            . SortedSet.toList $ defImports moduleName ds
 
-   in vsep [ "module JS.DOM.Raw." <+> pretty moduleName
+   in vsep [ "module Web." <+> pretty moduleName
            , ""
            , imps
            , casts ds

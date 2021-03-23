@@ -557,14 +557,6 @@ interface Plugin {
 };
 
 [Exposed=Window]
-interface MimeType {
-  readonly attribute undefined type;
-  readonly attribute undefined description;
-  readonly attribute undefined suffixes;
-  readonly attribute undefined enabledPlugin;
-};
-
-[Exposed=Window]
 interface FormDataEvent : Event {
   constructor(DOMString type, FormDataEventInit eventInitDict);
 

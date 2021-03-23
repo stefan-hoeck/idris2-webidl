@@ -9,18 +9,18 @@ prettyIdent (MkIdent value) = pretty value
 
 export
 Pretty PrimitiveType where
-  pretty (Unsigned Short)    = "JSUInt"
-  pretty (Unsigned Long)     = "JSULong"
-  pretty (Unsigned LongLong) = "JSULong"
-  pretty (Signed Short)      = "JSInt"
-  pretty (Signed Long)       = "JSInt"
-  pretty (Signed LongLong)   = "JSLong"
+  pretty (Unsigned Short)    = "UInt16"
+  pretty (Unsigned Long)     = "UInt32"
+  pretty (Unsigned LongLong) = "UInt64"
+  pretty (Signed Short)      = "Int16"
+  pretty (Signed Long)       = "Int32"
+  pretty (Signed LongLong)   = "Int64"
   pretty (Unrestricted x)    = "Double"
   pretty (Restricted x)      = "Double"
   pretty Undefined           = "Undefined"
   pretty Boolean             = "Bool"
-  pretty Byte                = "Byte"
-  pretty Octet               = "Octet"
+  pretty Byte                = "Int8"
+  pretty Octet               = "UInt8"
   pretty BigInt              = "Integer"
 
 export

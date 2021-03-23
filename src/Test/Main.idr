@@ -98,14 +98,6 @@ analyze f = do putStrLn $ "\n\nParsing " ++ f ++ "\n"
                putStrLn $ indent 2 "=== Mixins ==="
                for_ (nameList name ds.mixins) putStrLn
 
-codegen : String -> IO ()
-codegen f = do Right s <- readFile f
-                 | Left err => putStrLn $ "File error " ++ f
-               Right ds <- pure (parseIdl definitions s)
-                 | Left err => printLn err
-
-               for_ ds.enums \(_,e) => printLn (Codegen.enum e)
-
 --------------------------------------------------------------------------------
 --          Main Function
 --------------------------------------------------------------------------------
@@ -122,4 +114,4 @@ main = do (pn :: args) <- getArgs
 
           if null config.files
              then run config
-             else traverse_ codegen config.files
+             else traverse_ analyze config.files

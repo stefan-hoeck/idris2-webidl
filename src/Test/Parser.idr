@@ -4,15 +4,6 @@ import Text.WebIDL.Encoder
 import Text.WebIDL.Parser
 import Test.Generators
 
-export
-definitions : String -> Property
-definitions s = withTests 1 . property $ do
-                  v <- forAll (pure s)
-                  let res = parseIdl definitions v
-                  footnote (show res)
-
-                  assert $ either (const False) (const True) res
-
 prp : Eq a => Show a => Encoder a -> Gen a -> IdlGrammar a -> Property
 prp enc gen p = property $ do
                   v <- forAll gen

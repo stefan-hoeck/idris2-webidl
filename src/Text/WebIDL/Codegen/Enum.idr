@@ -3,9 +3,6 @@ module Text.WebIDL.Codegen.Enum
 import Data.List
 import Text.WebIDL.Codegen.Util
 
-export
-data Foo : Type where [external]
-
 enum : Codegen Enum
 enum (MkEnum _ name vs) =
   let (s ::: ss) = map value vs

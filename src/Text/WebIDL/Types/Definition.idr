@@ -297,3 +297,73 @@ parts = accumNs . get Part
 public export
 defs : PartsAndDefs -> Definitions
 defs = accumNs . get Definition
+
+--------------------------------------------------------------------------------
+--          Domain
+--------------------------------------------------------------------------------
+
+update : Eq k =>
+         (a -> b -> b) -> (a -> k) -> (b -> k) -> a -> List b -> List b
+update f ak bk a =
+  let k = ak a
+   in map (\b => if bk b == k then f a b else b)
+
+mergeDict : PDictionary -> Dictionary -> Dictionary
+mergeDict d = record { members $= (++ d.members) }
+
+mergeIface : PInterface -> Interface -> Interface
+mergeIface i = record { members $= (++ map to i.members) }
+  where to : (a,b) -> (a, NS I [c,b])
+        to (x, y) = (x, inject y)
+
+mergeMixin : PMixin -> Mixin -> Mixin
+mergeMixin m = record { members $= (++ m.members) }
+
+mergeNamespace : PNamespace -> Namespace -> Namespace
+mergeNamespace n = record { members $= (++ n.members) }
+
+public export
+record Domain where
+  constructor MkDomain
+  domain              : String
+  callbacks           : List Callback
+  callbackInterfaces  : List CallbackInterface
+  dictionaries        : List Dictionary
+  enums               : List Enum
+  includeStatements   : List Includes
+  interfaces          : List Interface
+  mixins              : List Mixin
+  namespaces          : List Namespace
+  typedefs            : List Typedef
+
+export
+Types Domain where
+  types d =  types d.callbacks
+          ++ types d.callbackInterfaces
+          ++ types d.dictionaries
+          ++ types d.enums
+          ++ types d.includeStatements
+          ++ types d.interfaces
+          ++ types d.mixins
+          ++ types d.namespaces
+          ++ types d.typedefs
+
+applyPart : Domain -> Part -> Domain
+applyPart d (Z v) =
+  record { dictionaries $= update mergeDict name name v } d
+applyPart d (S $ Z v) =
+  record { interfaces $= update mergeIface name name v } d
+applyPart d (S $ S $ Z v) =
+  record { mixins $= update mergeMixin name name v } d
+applyPart d (S $ S $ S $ Z v) =
+  record { namespaces $= update mergeNamespace name name v } d
+
+export
+toDomains : List (String,PartsAndDefs) -> List Domain
+toDomains ps = 
+  let defs = map (\(s,pad) => fromNP s (defs pad)) ps
+      prts = concatMap (\(_,pad) => get Part pad) ps
+   in map (\d => foldl applyPart d prts) defs
+
+  where fromNP : String -> Definitions -> Domain
+        fromNP s [c,ci,d,e,ic,it,m,n,t] = MkDomain s c ci d e ic it m n t

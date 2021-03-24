@@ -70,22 +70,20 @@ loadDef f = let mn = moduleName
                    d <- toProg (pure $ parseIdl partsAndDefs s)
                    pure (mn,d)
 
-typesGen : Config -> Definitions -> Prog ()
+typesGen : Config -> List Domain -> Prog ()
 typesGen c ds =
   let typesFile = c.outDir ++ "/Web/Types.idr"
    in writeDoc typesFile (typedefs ds)
 
-codegen : Config -> (String,PartsAndDefs) -> Prog ()
-codegen c (mod,pds) =
-  let typesFile = c.outDir ++ "/Web/" ++ mod ++ "Types.idr"
-      modFile = c.outDir ++ "/Web/" ++ mod ++ ".idr"
-      typesTestFile = c.outDir ++ "/Test/" ++ mod ++ "Types.idr"
-      ds = defs pds
-      ps = parts pds
+codegen : Config -> Domain -> Prog ()
+codegen c d =
+  let typesFile = c.outDir ++ "/Web/" ++ d.domain ++ "Types.idr"
+      modFile = c.outDir ++ "/Web/" ++ d.domain ++ ".idr"
+      typesTestFile = c.outDir ++ "/Test/" ++ d.domain ++ "Types.idr"
 
-   in do writeDoc typesFile (types mod ds)
-         writeDoc modFile (definitions mod ds)
-         writeDoc typesTestFile (typeTests mod ps ds)
+   in do writeDoc typesFile (types d)
+         writeDoc modFile (definitions d)
+         writeDoc typesTestFile (typeTests d)
 
 --------------------------------------------------------------------------------
 --          Main Function
@@ -93,10 +91,10 @@ codegen c (mod,pds) =
 
 run : List String -> Prog ()
 run args = do config <- toProg (pure $ applyArgs args)
-              ps     <- traverse loadDef config.files
+              ds     <- toDomains <$> traverse loadDef config.files
 
-              traverse_ (codegen config) ps
-              typesGen config (concatMap (defs . snd) ps)
+              traverse_ (codegen config) ds
+              typesGen config ds
               pure ()
 
 main : IO ()

@@ -14,24 +14,24 @@ import public Text.WebIDL.Codegen.Util
 --          Imports
 --------------------------------------------------------------------------------
 
-defImports : (moduleName : String) -> Definitions -> SortedSet String
-defImports mn ds = fromList ["Web.Types"]
+defImports : Domain -> SortedSet String
+defImports _ = fromList ["Web.Types"]
 
-typeImports : Definitions -> SortedSet String
-typeImports ds = fromList ( "JS.Util" :: enumImports)
+typeImports : Domain -> SortedSet String
+typeImports d = fromList ( "JS.Util" :: enumImports)
 
   where enumImports : List String
-        enumImports = guard (not $ null (get Enum ds)) *> ["Data.Maybe"]
+        enumImports = guard (not $ null d.enums) *> ["Data.Maybe"]
 
 --------------------------------------------------------------------------------
 --          Data Declarations
 --------------------------------------------------------------------------------
 
-extern : Codegen Definitions 
-extern ds = vsep [ section "Interfaces" . exts name $ get Interface ds
-                 , section "Mixins" . exts name $ get Mixin ds
-                 , section "Dictionaries" . exts name $ get Dictionary ds
-                 ]
+extern : Codegen Domain 
+extern d = vsep [ section "Interfaces" $ exts name d.interfaces
+                , section "Mixins" $ exts name d.mixins
+                , section "Dictionaries" $ exts name d.dictionaries
+                ]
   where ext : String -> Doc ()
         ext s = vsep [ ""
                      , "export"
@@ -53,8 +53,8 @@ extern ds = vsep [ section "Interfaces" . exts name $ get Interface ds
 --          Casts
 --------------------------------------------------------------------------------
 
-casts : Codegen Definitions
-casts ds = section "Casts" (map toCast $ sort pairs)
+casts : Codegen Domain
+casts d = section "Casts" (map toCast $ sort pairs)
   where toCast : (String,String) -> Doc ()
         toCast (from,to) =
           vsep [ ""
@@ -71,19 +71,19 @@ casts ds = section "Casts" (map toCast $ sort pairs)
                             map (\to => (value (n v), value to)) (i v)
 
         pairs : List (String,String)
-        pairs =  inheritance inherits name (get Interface ds)
-              ++ inheritance inherits name (get Dictionary ds)
+        pairs =  inheritance inherits name d.interfaces
+              ++ inheritance inherits name d.dictionaries
               ++ map (\s => (s.name.value,s.includes.value))
-                     (get Includes ds)
+                     d.includeStatements
 
 --------------------------------------------------------------------------------
 --          Typedefs
 --------------------------------------------------------------------------------
 
 export
-typedefs : Codegen Definitions
+typedefs : Codegen (List Domain)
 typedefs ds =
-  let ts   = get Typedef ds
+  let ts   = concatMap typedefs ds
       docs = map toTypedef $ sortBy (comparing (value . name)) ts
    in vsep [ "module Web.Types"
            , ""
@@ -117,12 +117,12 @@ typedefs ds =
 --------------------------------------------------------------------------------
 
 export
-typeTests : (moduleName : String) -> Parts -> Definitions -> Doc ()
-typeTests moduleName ds ps =
-  let ts = types ds ++ types ps
+typeTests : Codegen Domain
+typeTests d =
+  let ts = types d
       ps = zip [1 .. length ts] ts
 
-   in vsep [ "module Test." <+> pretty moduleName <+> "Types"
+   in vsep [ "module Test." <+> pretty d.domain <+> "Types"
            , ""
            , "import Data.SOP"
            , "import Web.Types"
@@ -139,28 +139,28 @@ typeTests moduleName ds ps =
                    ]
 
 export
-types : (moduleName : String) -> Codegen Definitions
-types moduleName ds =
+types : Codegen Domain
+types d =
   let imps = vsep 
            . map (("import" <++>) . pretty) 
-           . SortedSet.toList $ typeImports ds
+           . SortedSet.toList $ typeImports d
 
-   in vsep [ "module Web." <+> pretty moduleName <+> "Types"
+   in vsep [ "module Web." <+> pretty d.domain <+> "Types"
            , ""
            , imps
-           , enums $ get Enum ds
-           , extern ds
+           , enums d.enums
+           , extern d
            ]
 
 export
-definitions : (moduleName : String) -> Codegen Definitions
-definitions moduleName ds =
+definitions : Codegen Domain
+definitions d =
   let imps = vsep 
            . map (("import" <++>) . pretty) 
-           . SortedSet.toList $ defImports moduleName ds
+           . SortedSet.toList $ defImports d
 
-   in vsep [ "module Web." <+> pretty moduleName
+   in vsep [ "module Web." <+> pretty d.domain
            , ""
            , imps
-           , casts ds
+           , casts d
            ]

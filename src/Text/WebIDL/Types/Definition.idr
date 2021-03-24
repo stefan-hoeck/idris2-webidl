@@ -16,9 +16,10 @@ import Text.WebIDL.Types.Type
 public export
 record Callback where
   constructor MkCallback
-  name : Identifier
-  type : IdlType
-  args : ArgumentList
+  attributes : ExtAttributeList
+  name       : Identifier
+  type       : IdlType
+  args       : ArgumentList
 
 %runElab derive "Callback" [Generic,Meta,Eq,Show]
 
@@ -32,8 +33,9 @@ Types Callback where
 public export
 record CallbackInterface where
   constructor MkCallbackInterface
-  name    : Identifier
-  members : CallbackInterfaceMembers
+  attributes : ExtAttributeList
+  name       : Identifier
+  members    : CallbackInterfaceMembers
 
 %runElab derive "CallbackInterface" [Generic,Meta,Eq,Show]
 
@@ -46,9 +48,10 @@ Types CallbackInterface where
 public export
 record Dictionary where
   constructor MkDictionary
-  name     : Identifier
-  inherits : Inheritance
-  members  : DictionaryMembers
+  attributes : ExtAttributeList
+  name       : Identifier
+  inherits   : Inheritance
+  members    : DictionaryMembers
 
 %runElab derive "Dictionary" [Generic,Meta,Eq,Show]
 
@@ -72,8 +75,9 @@ Types Dictionary where
 public export
 record Enum where
   constructor MkEnum
-  name   : Identifier
-  values : List1 StringLit
+  attributes : ExtAttributeList
+  name       : Identifier
+  values     : List1 StringLit
 
 %runElab derive "Enum" [Generic,Meta,Eq,Show]
 
@@ -82,8 +86,9 @@ record Enum where
 public export
 record Includes where
   constructor MkIncludes
-  name     : Identifier
-  includes : Identifier
+  attributes : ExtAttributeList
+  name       : Identifier
+  includes   : Identifier
 
 %runElab derive "Includes" [Generic,Meta,Eq,Show]
 
@@ -92,9 +97,10 @@ record Includes where
 public export
 record Interface where
   constructor MkInterface
-  name     : Identifier
-  inherits : Inheritance
-  members  : InterfaceMembers
+  attributes : ExtAttributeList
+  name       : Identifier
+  inherits   : Inheritance
+  members    : InterfaceMembers
 
 %runElab derive "Interface" [Generic,Meta,Eq,Show]
 
@@ -107,8 +113,9 @@ Types Interface where
 public export
 record Mixin where
   constructor MkMixin
-  name    : Identifier
-  members : MixinMembers
+  attributes : ExtAttributeList
+  name       : Identifier
+  members    : MixinMembers
 
 %runElab derive "Mixin" [Generic,Meta,Eq,Show]
 
@@ -121,8 +128,9 @@ Types Mixin where
 public export
 record Namespace where
   constructor MkNamespace
-  name    : Identifier
-  members : NamespaceMembers
+  attributes : ExtAttributeList
+  name       : Identifier
+  members    : NamespaceMembers
 
 %runElab derive "Namespace" [Generic,Meta,Eq,Show]
 
@@ -135,9 +143,10 @@ Types Namespace where
 public export
 record Typedef where
   constructor MkTypedef
-  attributes : ExtAttributeList
-  type       : IdlType
-  name       : Identifier
+  attributes     : ExtAttributeList
+  typeAttributes : ExtAttributeList
+  type           : IdlType
+  name           : Identifier
 
 %runElab derive "Typedef" [Generic,Meta,Eq,Show]
 
@@ -150,8 +159,9 @@ Types Typedef where
 public export
 record PDictionary where
   constructor MkPDictionary
-  name    : Identifier
-  members : DictionaryMembers
+  attributes : ExtAttributeList
+  name       : Identifier
+  members    : DictionaryMembers
 
 %runElab derive "PDictionary" [Generic,Meta,Eq,Show]
 
@@ -164,8 +174,9 @@ Types PDictionary where
 public export
 record PInterface where
   constructor MkPInterface
-  name    : Identifier
-  members : PartialInterfaceMembers
+  attributes : ExtAttributeList
+  name       : Identifier
+  members    : PartialInterfaceMembers
 
 %runElab derive "PInterface" [Generic,Meta,Eq,Show]
 
@@ -178,8 +189,9 @@ Types PInterface where
 public export
 record PMixin where
   constructor MkPMixin
-  name    : Identifier
-  members : MixinMembers
+  attributes : ExtAttributeList
+  name       : Identifier
+  members    : MixinMembers
 
 %runElab derive "PMixin" [Generic,Meta,Eq,Show]
 
@@ -192,8 +204,9 @@ Types PMixin where
 public export
 record PNamespace where
   constructor MkPNamespace
-  name    : Identifier
-  members : NamespaceMembers
+  attributes : ExtAttributeList
+  name       : Identifier
+  members    : NamespaceMembers
 
 %runElab derive "PNamespace" [Generic,Meta,Eq,Show]
 
@@ -246,19 +259,19 @@ Definition = NS I [ Callback
 public export
 record Definitions where
   constructor MkDefinitions
-  callbackInterfaces  : List (Attributed CallbackInterface)
-  callbacks           : List (Attributed Callback)
-  dictionaries        : List (Attributed Dictionary)
-  enums               : List (Attributed Enum)
-  includeStatements   : List (Attributed Includes)
-  interfaces          : List (Attributed Interface)
-  mixins              : List (Attributed Mixin)
-  namespaces          : List (Attributed Namespace)
-  partialDictionaries : List (Attributed PDictionary)
-  partialInterfaces   : List (Attributed PInterface)
-  partialMixins       : List (Attributed PMixin)
-  partialNamespaces   : List (Attributed PNamespace)
-  typedefs            : List (Attributed Typedef)
+  callbackInterfaces  : List CallbackInterface
+  callbacks           : List Callback
+  dictionaries        : List Dictionary
+  enums               : List Enum
+  includeStatements   : List Includes
+  interfaces          : List Interface
+  mixins              : List Mixin
+  namespaces          : List Namespace
+  partialDictionaries : List PDictionary
+  partialInterfaces   : List PInterface
+  partialMixins       : List PMixin
+  partialNamespaces   : List PNamespace
+  typedefs            : List Typedef
 
 %runElab derive "Definitions" [Generic,Meta,Eq,Show,Semigroup,Monoid]
 
@@ -277,8 +290,8 @@ Types Definitions where
           ++ types d.typedefs
 
 export
-toDefinitions : Attributed Definition -> Definitions
-toDefinitions (a,d) =
+toDefinitions : Definition -> Definitions
+toDefinitions d =
   collapseNS $ hliftA2 injDefn [ \d => record {callbacks = d} neutral
                                , \d => record {callbackInterfaces = d} neutral
                                , \d => record {dictionaries = d} neutral
@@ -294,6 +307,5 @@ toDefinitions (a,d) =
                                , \d => record {partialNamespaces = d} neutral
                                ] d
 
-  where injDefn :  forall a . (List $ Attributed a -> Definitions)
-                -> a -> Definitions
-        injDefn f x = f [(a, x)]
+  where injDefn :  forall a . (List a -> Definitions) -> a -> Definitions
+        injDefn f x = f [x]

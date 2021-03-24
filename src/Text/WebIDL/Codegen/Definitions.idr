@@ -44,8 +44,8 @@ extern ds = vsep [ section "Interfaces" (exts name ds.interfaces)
                      , indent 2 ("fromJS = believe_me")
                      ]
 
-        exts : (a -> Identifier) -> List (x,a) -> List (Doc ())
-        exts f = map ext . sort . map (value . f . snd)
+        exts : (a -> Identifier) -> List a -> List (Doc ())
+        exts f = map ext . sort . map (value . f)
 
 --------------------------------------------------------------------------------
 --          Casts
@@ -63,15 +63,15 @@ casts ds = section "Casts" (map toCast $ sort pairs)
 
         inheritance :  (a -> Inheritance)
                     -> (a -> Identifier)
-                    -> List (x,a)
+                    -> List a
                     -> List (String,String)
-        inheritance i n = mapMaybe \(_,v) =>
+        inheritance i n = mapMaybe \v =>
                             map (\to => (value (n v), value to)) (i v)
 
         pairs : List (String,String)
         pairs =  inheritance inherits name ds.interfaces
               ++ inheritance inherits name ds.dictionaries
-              ++ map (\(_,s) => (s.name.value,s.includes.value))
+              ++ map (\s => (s.name.value,s.includes.value))
                      ds.includeStatements
 
 --------------------------------------------------------------------------------
@@ -81,7 +81,7 @@ casts ds = section "Casts" (map toCast $ sort pairs)
 export
 typedefs : Codegen Definitions
 typedefs ds =
-  let ts = sortBy (comparing (value . name)) (map snd ds.typedefs)
+  let ts = sortBy (comparing (value . name)) ds.typedefs
       docs = map toTypedef ts
    in vsep [ "module Web.Types"
            , ""
@@ -146,7 +146,7 @@ types moduleName ds =
    in vsep [ "module Web." <+> pretty moduleName <+> "Types"
            , ""
            , imps
-           , enums $ map snd ds.enums
+           , enums ds.enums
            , extern ds
            ]
 

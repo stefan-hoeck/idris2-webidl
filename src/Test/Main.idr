@@ -65,8 +65,8 @@ parseFile f = do putStrLn $ "Parsing " ++ f
 -- indent : Nat -> String -> String
 -- indent n s = fastPack (replicate n ' ') ++ s
 
-nameList : (a -> Identifier) -> List (Attributed a) -> List String
-nameList f = sort . map (indent 4 . value . f . snd)
+nameList : (a -> Identifier) -> List a -> List String
+nameList f = sort . map (indent 4 . value . f)
 
 analyze : String -> IO ()
 analyze f = do putStrLn $ "\n\nParsing " ++ f ++ "\n"

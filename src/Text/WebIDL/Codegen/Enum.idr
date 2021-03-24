@@ -7,7 +7,7 @@ export
 data Foo : Type where [external]
 
 enum : Codegen Enum
-enum (MkEnum name vs) =
+enum (MkEnum _ name vs) =
   let (s ::: ss) = map value vs
       (c ::: cs) = map toDataConstructor (s ::: ss)
       pn         = pretty name.value

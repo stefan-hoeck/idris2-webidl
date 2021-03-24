@@ -256,17 +256,13 @@ optArgList as  = inParens argumentList as
 --          Members
 --------------------------------------------------------------------------------
 
-defn : (key : String) -> String -> String
-defn ""  s = s ++ ";"
-defn key s = spaced [key,s ++ ";"]
-
-member : (key : String) -> Encoder a -> Encoder a
-member k f = defn k . f
+member : (key : String) -> List String -> String
+member "" vs = spaced vs ++ ";"
+member k vs  = spaced (k :: vs) ++ ";"
 
 export
 const : Encoder Const
-const = member "const" \(MkConst t n v) =>
-        spaced [constType t,n.value,"=",constValue v]
+const (MkConst t n v) = member "const" [constType t,n.value,"=",constValue v]
 
 export
 special : Encoder Special
@@ -276,8 +272,8 @@ special Deleter = "deleter"
 
 export
 op : Encoder a -> Encoder (Op a)
-op f = member "" \(MkOp s t n a) =>
-       spaced [f s, idlType t, maybe "" value n, inParens argumentList a]
+op f (MkOp s t n a) =
+  member "" [f s, idlType t, maybe "" value n, inParens argumentList a]
 
 export
 regularOperation : Encoder RegularOperation
@@ -302,9 +298,9 @@ inheritance = maybe "" \i => " : " ++ i.value
 
 dictMemberRest : Encoder DictionaryMemberRest
 dictMemberRest (Required as t n) =
-  defn "required" $ spaced [extAttributes as,idlType t,n.value]
+  member "required" [extAttributes as,idlType t,n.value]
 dictMemberRest (Optional t n d) =
-  defn "" $ spaced [idlType t, n.value, defaultV d]
+  member "" [idlType t, n.value, defaultV d]
 
 dictMembers : Encoder DictionaryMembers
 dictMembers = sepList " " $ attributed dictMemberRest
@@ -317,7 +313,7 @@ inherit f = ("inherit " ++) . f . value
 
 attribute : Encoder Attribute
 attribute (MkAttribute as t n) =
-  defn "attribute" $ spaced [extAttributes as, idlType t, n.value]
+  member "attribute" [extAttributes as, idlType t, n.value]
 
 stringifier : Encoder Stringifier
 stringifier = ("stringifier " ++)
@@ -331,12 +327,10 @@ static = ("static " ++)
 
 maplike : Encoder Maplike
 maplike (MkMaplike l r) =
-  defn "maplike" $ fastConcat
-    ["<",attributed idlType l,",",attributed idlType r,">"]
+  member "maplike" ["<",attributed idlType l,",",attributed idlType r,">"]
 
 setlike : Encoder Setlike
-setlike (MkSetlike p) =
-  defn "setlike" $ fastConcat ["<",attributed idlType p,">"]
+setlike (MkSetlike p) = member "setlike" ["<",attributed idlType p,">"]
 
 namespaceMember : Encoder NamespaceMember
 namespaceMember = collapseNS 
@@ -347,7 +341,7 @@ namespaceMembers = sepList " " $ attributed namespaceMember
 
 constructor_ : Encoder Constructor
 constructor_ (MkConstructor args) =
-  defn "constructor" (inParens argumentList args)
+  member "constructor" [inParens argumentList args] 
 
 partialInterfaceMember : Encoder PartialInterfaceMember
 partialInterfaceMember (IConst x)       = const x
@@ -362,10 +356,10 @@ partialInterfaceMember (ISetRO x)       = readonly setlike x
 partialInterfaceMember (IStr x)         = stringifier x
 partialInterfaceMember (IStatic x)      = static x
 partialInterfaceMember (IIterable p o)  =
-  defn "iterable<" (attributed idlType p ++ optionalType o ++ ">")
+  member "iterable" ["<",attributed idlType p,optionalType o,">"]
 partialInterfaceMember (IAsync p o a)   =
-  defn "async iterable<"
-    (attributed idlType p ++ optionalType o ++ ">" ++ optArgList a)
+  member "async iterable"
+    ["<",attributed idlType p,optionalType o,">",optArgList a]
 
 mixinMember : Encoder MixinMember
 mixinMember (MConst x)       = const x
@@ -392,58 +386,62 @@ interfaceMembers = sepList " " $ attributed interfaceMember
 --          Definition
 --------------------------------------------------------------------------------
 
+def : ExtAttributeList -> (key : String) -> List String -> String
+def as ""  ss = extAttributes as ++ spaced ss ++ ";"
+def as key ss = extAttributes as ++ spaced (key :: ss) ++ ";"
+
 callback : Encoder Callback
-callback (MkCallback n t as) =
-  defn "callback" $
-  spaced [n.value, "=", idlType t, inParens argumentList as]
+callback (MkCallback as n t args) =
+  def as "callback" [n.value, "=", idlType t, inParens argumentList args]
 
 callbackInterface : Encoder CallbackInterface
-callbackInterface (MkCallbackInterface n ms) =
-  defn "callback interface" $
-  spaced [n.value, inBraces callbackInterfaceMembers ms]
+callbackInterface (MkCallbackInterface as n ms) =
+  def as "callback interface"
+  [n.value, inBraces callbackInterfaceMembers ms]
 
 dictionary : Encoder Dictionary
-dictionary (MkDictionary n i ms) =
-  defn "dictionary" $ spaced [n.value, inheritance i, inBraces dictMembers ms]
+dictionary (MkDictionary as n i ms) =
+  def as "dictionary"
+  [n.value, inheritance i, inBraces dictMembers ms]
 
 enum : Encoder Enum
-enum (MkEnum n vs) =
-  defn "enum" $ n.value ++ inBraces (sepList "," stringLit) (forget vs)
+enum (MkEnum as n vs) =
+  def as "enum" [n.value, inBraces (sepList "," stringLit) (forget vs)]
 
 iface : Encoder Interface
-iface (MkInterface n i ms) =
-  defn "interface" $ spaced [n.value, inheritance i, inBraces interfaceMembers ms]
+iface (MkInterface as n i ms) =
+  def as "interface" [n.value, inheritance i, inBraces interfaceMembers ms]
 
 includes : Encoder Includes
-includes (MkIncludes a b) = defn "" $ spaced [a.value,"includes",b.value]
+includes (MkIncludes as a b) = def as "" [a.value,"includes",b.value]
 
 mixin : Encoder Mixin
-mixin (MkMixin n ms) =
-  defn "interface mixin" $ spaced [n.value, inBraces mixinMembers ms]
+mixin (MkMixin as n ms) =
+  def as "interface mixin" [n.value, inBraces mixinMembers ms]
 
 nspace : Encoder Namespace
-nspace (MkNamespace n ms) =
-  defn "namespace" $ spaced [n.value, inBraces namespaceMembers ms]
+nspace (MkNamespace as n ms) =
+  def as "namespace" [n.value, inBraces namespaceMembers ms]
 
 pdictionary : Encoder PDictionary
-pdictionary (MkPDictionary n ms) =
-  defn "partial dictionary" $ spaced [n.value, inBraces dictMembers ms]
+pdictionary (MkPDictionary as n ms) =
+  def as "partial dictionary" [n.value, inBraces dictMembers ms]
 
 pinterface : Encoder PInterface
-pinterface (MkPInterface n ms) =
-  defn "partial interface" $ spaced [n.value, inBraces partialInterfaceMembers ms]
+pinterface (MkPInterface as n ms) =
+  def as "partial interface" [n.value, inBraces partialInterfaceMembers ms]
 
 pmixin : Encoder PMixin
-pmixin (MkPMixin n ms) =
-  defn "partial interface mixin" $ spaced [n.value, inBraces mixinMembers ms]
+pmixin (MkPMixin as n ms) =
+  def as "partial interface mixin" [n.value, inBraces mixinMembers ms]
 
 pnamespace : Encoder PNamespace
-pnamespace (MkPNamespace n ms) =
-  defn "partial namespace" $ spaced [n.value, inBraces namespaceMembers ms]
+pnamespace (MkPNamespace as n ms) =
+  def as "partial namespace" [n.value, inBraces namespaceMembers ms]
 
 typedef : Encoder Typedef
-typedef (MkTypedef as t n) =
-  defn "typedef" $ spaced [extAttributes as, idlType t, n.value]
+typedef (MkTypedef as tas t n) =
+  def as "typedef" [extAttributes tas, idlType t, n.value]
 
 export
 definition : Encoder Definition

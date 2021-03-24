@@ -1,9 +1,11 @@
 module Text.WebIDL.Codegen.Definitions
 
 import Data.List
-import Data.String
+import Data.List.Elem
+import Data.SOP
 import Data.SortedMap
 import Data.SortedSet
+import Data.String
 import Text.WebIDL.Codegen.Enum
 import Text.WebIDL.Codegen.Types
 import public Text.WebIDL.Codegen.Util
@@ -19,16 +21,16 @@ typeImports : Definitions -> SortedSet String
 typeImports ds = fromList ( "JS.Util" :: enumImports)
 
   where enumImports : List String
-        enumImports = guard (not $ null ds.enums) *> ["Data.Maybe"]
+        enumImports = guard (not $ null (get Enum ds)) *> ["Data.Maybe"]
 
 --------------------------------------------------------------------------------
 --          Data Declarations
 --------------------------------------------------------------------------------
 
 extern : Codegen Definitions 
-extern ds = vsep [ section "Interfaces" (exts name ds.interfaces)
-                 , section "Mixins" (exts name ds.mixins)
-                 , section "Dictionaries" (exts name ds.dictionaries)
+extern ds = vsep [ section "Interfaces" . exts name $ get Interface ds
+                 , section "Mixins" . exts name $ get Mixin ds
+                 , section "Dictionaries" . exts name $ get Dictionary ds
                  ]
   where ext : String -> Doc ()
         ext s = vsep [ ""
@@ -69,10 +71,10 @@ casts ds = section "Casts" (map toCast $ sort pairs)
                             map (\to => (value (n v), value to)) (i v)
 
         pairs : List (String,String)
-        pairs =  inheritance inherits name ds.interfaces
-              ++ inheritance inherits name ds.dictionaries
+        pairs =  inheritance inherits name (get Interface ds)
+              ++ inheritance inherits name (get Dictionary ds)
               ++ map (\s => (s.name.value,s.includes.value))
-                     ds.includeStatements
+                     (get Includes ds)
 
 --------------------------------------------------------------------------------
 --          Typedefs
@@ -81,8 +83,8 @@ casts ds = section "Casts" (map toCast $ sort pairs)
 export
 typedefs : Codegen Definitions
 typedefs ds =
-  let ts = sortBy (comparing (value . name)) ds.typedefs
-      docs = map toTypedef ts
+  let ts   = get Typedef ds
+      docs = map toTypedef $ sortBy (comparing (value . name)) ts
    in vsep [ "module Web.Types"
            , ""
            , "import Data.SOP"
@@ -115,9 +117,9 @@ typedefs ds =
 --------------------------------------------------------------------------------
 
 export
-typeTests : (moduleName : String) -> Codegen Definitions
-typeTests moduleName ds =
-  let ts = types ds
+typeTests : (moduleName : String) -> Parts -> Definitions -> Doc ()
+typeTests moduleName ds ps =
+  let ts = types ds ++ types ps
       ps = zip [1 .. length ts] ts
 
    in vsep [ "module Test." <+> pretty moduleName <+> "Types"
@@ -146,7 +148,7 @@ types moduleName ds =
    in vsep [ "module Web." <+> pretty moduleName <+> "Types"
            , ""
            , imps
-           , enums ds.enums
+           , enums $ get Enum ds
            , extern ds
            ]
 

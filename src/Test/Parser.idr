@@ -60,6 +60,9 @@ prop_interfaceMember = prp interfaceMember interfaceMember interfaceMember
 prop_definition : Property
 prop_definition = prp definition definition definition
 
+prop_part : Property
+prop_part = prp part part part
+
 export
 props : Group
 props = MkGroup "Parser Properties"
@@ -72,4 +75,5 @@ props = MkGroup "Parser Properties"
           , ("prop_operation", prop_operation)
           , ("prop_interfaceMember", prop_interfaceMember)
           , ("prop_definition", prop_definition)
+          , ("prop_part", prop_part)
           ]

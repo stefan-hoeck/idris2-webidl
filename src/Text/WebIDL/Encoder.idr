@@ -455,8 +455,8 @@ definition = collapseNS
                             , mixin
                             , nspace
                             , typedef
-                            , pdictionary
-                            , pinterface
-                            , pmixin
-                            , pnamespace
                             ]
+
+export
+part : Encoder Part
+part = collapseNS . hliftA2 runEnc [pdictionary,pinterface,pmixin,pnamespace]

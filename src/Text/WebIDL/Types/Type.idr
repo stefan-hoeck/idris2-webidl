@@ -254,5 +254,9 @@ Types a => Types (Attributed a) where
   types (_,a) = types a
 
 export
-NP Types ts => Types (NS I ts) where
-  types ns = collapseNS $ hcmap Types types ns
+NP (Types . f) ts => Types (NS f ts) where
+  types = hcconcatMap (Types . f) types
+
+export
+NP (Types . f) ts => Types (NP f ts) where
+  types = hcconcatMap (Types . f) types

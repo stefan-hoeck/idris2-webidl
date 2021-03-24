@@ -483,7 +483,12 @@ definition = ns
   , [| MkMixin  extAttributes identifier mixinMembers |]
   , [| MkNamespace extAttributes identifier namespaceMembers |]
   , [| MkTypedef extAttributes extAttributes idlType' identifier |]
-  , [| MkPDictionary extAttributes identifier dictMembers |]
+  ]
+
+export
+part : Gen Part
+part = ns
+  [ [| MkPDictionary extAttributes identifier dictMembers |]
   , [| MkPInterface extAttributes identifier partialInterfaceMembers |]
   , [| MkPMixin extAttributes identifier mixinMembers |]
   , [| MkPNamespace extAttributes identifier namespaceMembers |]

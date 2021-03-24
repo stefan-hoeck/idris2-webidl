@@ -1,6 +1,8 @@
 module Main
 
 import Control.Monad.Either
+import Data.List.Elem
+import Data.SOP
 import Data.String
 import System
 import System.Console.GetOpt
@@ -57,7 +59,7 @@ runProg (MkEitherT p) = do Right _ <- p
 writeDoc : String -> Doc () -> Prog ()
 writeDoc f doc = toProg $ writeFile f (show doc)
 
-loadDef : String -> Prog (String,Definitions)
+loadDef : String -> Prog (String,PartsAndDefs)
 loadDef f = let mn = moduleName
                    . head
                    . split ('.' ==)
@@ -65,7 +67,7 @@ loadDef f = let mn = moduleName
                    $ split ('/' ==) f
 
              in do s <- toProg (readFile f)
-                   d <- toProg (pure $ parseIdl definitions s)
+                   d <- toProg (pure $ parseIdl partsAndDefs s)
                    pure (mn,d)
 
 typesGen : Config -> Definitions -> Prog ()
@@ -73,15 +75,17 @@ typesGen c ds =
   let typesFile = c.outDir ++ "/Web/Types.idr"
    in writeDoc typesFile (typedefs ds)
 
-codegen : Config -> (String,Definitions) -> Prog ()
-codegen c (mod,ds) =
+codegen : Config -> (String,PartsAndDefs) -> Prog ()
+codegen c (mod,pds) =
   let typesFile = c.outDir ++ "/Web/" ++ mod ++ "Types.idr"
       modFile = c.outDir ++ "/Web/" ++ mod ++ ".idr"
       typesTestFile = c.outDir ++ "/Test/" ++ mod ++ "Types.idr"
+      ds = defs pds
+      ps = parts pds
 
    in do writeDoc typesFile (types mod ds)
          writeDoc modFile (definitions mod ds)
-         writeDoc typesTestFile (typeTests mod ds)
+         writeDoc typesTestFile (typeTests mod ps ds)
 
 --------------------------------------------------------------------------------
 --          Main Function
@@ -90,8 +94,9 @@ codegen c (mod,ds) =
 run : List String -> Prog ()
 run args = do config <- toProg (pure $ applyArgs args)
               ps     <- traverse loadDef config.files
+
               traverse_ (codegen config) ps
-              typesGen config (concatMap snd ps)
+              typesGen config (concatMap (defs . snd) ps)
               pure ()
 
 main : IO ()

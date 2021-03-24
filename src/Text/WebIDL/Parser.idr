@@ -538,16 +538,22 @@ definition =
   <|> map (\v => inject v) includes
   <|> map (\v => inject v) mixin
   <|> map (\v => inject v) nspace
-  <|> map (\v => inject v) pdictionary
-  <|> map (\v => inject v) pinterface
-  <|> map (\v => inject v) pmixin
-  <|> map (\v => inject v) pnamespace
   <|> map (\v => inject v) typedef
+
+export
+part : IdlGrammar Part
+part =   map (\v => inject v) pdictionary
+     <|> map (\v => inject v) pinterface
+     <|> map (\v => inject v) pmixin
+     <|> map (\v => inject v) pnamespace
 
 
 export
-definitions : IdlGrammar Definitions
-definitions = concatMap toDefinitions <$> some definition
+partsAndDefs : IdlGrammar PartsAndDefs
+partsAndDefs = accumNs . forget <$> some partOrDef
+  where partOrDef : IdlGrammar PartOrDef
+        partOrDef =   map Z part
+                  <|> map (S . Z) definition
 
 --------------------------------------------------------------------------------
 --          Parsing WebIDL

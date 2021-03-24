@@ -81,6 +81,10 @@ record Enum where
 
 %runElab derive "Enum" [Generic,Meta,Eq,Show]
 
+export
+Types Enum where
+  types = const Nil
+
 ||| IncludesStatement ::
 |||     identifier includes identifier ;
 public export
@@ -91,6 +95,10 @@ record Includes where
   includes   : Identifier
 
 %runElab derive "Includes" [Generic,Meta,Eq,Show]
+
+export
+Types Includes where
+  types = const Nil
 
 ||| InterfaceRest ::
 |||     identifier Inheritance { InterfaceMembers } ;
@@ -214,6 +222,23 @@ export
 Types PNamespace where
   types = types . members
 
+public export
+DefTypes : List Type
+DefTypes = [ Callback
+           , CallbackInterface
+           , Dictionary
+           , Enum
+           , Includes
+           , Interface
+           , Mixin
+           , Namespace
+           , Typedef
+           ]
+
+public export
+PartTypes : List Type
+PartTypes = [PDictionary, PInterface, PMixin, PNamespace]
+
 ||| Definition ::
 |||     CallbackOrInterfaceOrMixin
 |||     Namespace
@@ -229,7 +254,14 @@ Types PNamespace where
 ||| InterfaceOrMixin ::
 |||     InterfaceRest
 |||     MixinRest
-|||
+public export
+Definition : Type
+Definition = NS I DefTypes
+
+public export
+0 Definitions : Type
+Definitions = NP List DefTypes
+
 ||| PartialDefinition ::
 |||     interface PartialInterfaceOrPartialMixin
 |||     PartialDictionary
@@ -238,82 +270,30 @@ Types PNamespace where
 ||| PartialInterfaceOrPartialMixin ::
 |||     PartialInterfaceRest
 |||     MixinRest
-||| 
 public export
-0 Definition : Type
-Definition = NS I [ Callback
-                  , CallbackInterface
-                  , Dictionary
-                  , Enum
-                  , Includes
-                  , Interface
-                  , Mixin
-                  , Namespace
-                  , Typedef
-                  , PDictionary
-                  , PInterface
-                  , PMixin
-                  , PNamespace
-                  ]
+Part : Type
+Part = NS I PartTypes
 
 public export
-record Parts where
-  dictionaries : List PDictionary
-  interfaces   : List PInterface
-  mixins       : List PMixin
-  namespaces   : List PNamespace
-
-%runElab derive "Parts" [Generic,Meta,Eq,Show,Semigroup,Monoid]
-
-export
-Types Parts where
-  types d =  types d.dictionaries
-          ++ types d.interfaces
-          ++ types d.mixins
-          ++ types d.namespaces
+0 Parts : Type
+Parts = NP List PartTypes
 
 public export
-record Definitions where
-  constructor MkDefinitions
-  callbackInterfaces  : List CallbackInterface
-  callbacks           : List Callback
-  dictionaries        : List Dictionary
-  enums               : List Enum
-  includeStatements   : List Includes
-  interfaces          : List Interface
-  mixins              : List Mixin
-  namespaces          : List Namespace
-  typedefs            : List Typedef
+accumNs : {ts : _} -> List (NS I ts) -> NP List ts
+accumNs = foldl (\np,ns => hliftA2 (++) (toNP ns) np) hempty
 
-%runElab derive "Definitions" [Generic,Meta,Eq,Show,Semigroup,Monoid]
+public export
+0 PartOrDef : Type
+PartOrDef = NS I [Part,Definition]
 
-export
-Types Definitions where
-  types d =  types d.callbackInterfaces
-          ++ types d.callbacks
-          ++ types d.dictionaries
-          ++ types d.interfaces
-          ++ types d.mixins
-          ++ types d.namespaces
-          ++ types d.typedefs
+public export
+0 PartsAndDefs : Type
+PartsAndDefs = NP List [Part,Definition]
 
-export
-toDefinitions : Definition -> Definitions
-toDefinitions d =
-  collapseNS $ hliftA2 injDefn [ \d => record {callbacks = d} neutral
-                               , \d => record {callbackInterfaces = d} neutral
-                               , \d => record {dictionaries = d} neutral
-                               , \d => record {enums = d} neutral
-                               , \d => record {includeStatements = d} neutral
-                               , \d => record {interfaces = d} neutral
-                               , \d => record {mixins = d} neutral
-                               , \d => record {namespaces = d} neutral
-                               , \d => record {typedefs = d} neutral
-                               , \d => neutral
-                               , \d => neutral
-                               , \d => neutral
-                               , \d => neutral
-                               ] d
+public export
+parts : PartsAndDefs -> Parts
+parts = accumNs . get Part
 
-  where injDefn :  forall a . (List a -> Definitions) -> a -> Definitions
-        injDefn f x = f [x]
+public export
+defs : PartsAndDefs -> Definitions
+defs = accumNs . get Definition

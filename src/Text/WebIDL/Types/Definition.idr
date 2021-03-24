@@ -257,6 +257,22 @@ Definition = NS I [ Callback
                   ]
 
 public export
+record Parts where
+  dictionaries : List PDictionary
+  interfaces   : List PInterface
+  mixins       : List PMixin
+  namespaces   : List PNamespace
+
+%runElab derive "Parts" [Generic,Meta,Eq,Show,Semigroup,Monoid]
+
+export
+Types Parts where
+  types d =  types d.dictionaries
+          ++ types d.interfaces
+          ++ types d.mixins
+          ++ types d.namespaces
+
+public export
 record Definitions where
   constructor MkDefinitions
   callbackInterfaces  : List CallbackInterface
@@ -267,10 +283,6 @@ record Definitions where
   interfaces          : List Interface
   mixins              : List Mixin
   namespaces          : List Namespace
-  partialDictionaries : List PDictionary
-  partialInterfaces   : List PInterface
-  partialMixins       : List PMixin
-  partialNamespaces   : List PNamespace
   typedefs            : List Typedef
 
 %runElab derive "Definitions" [Generic,Meta,Eq,Show,Semigroup,Monoid]
@@ -283,10 +295,6 @@ Types Definitions where
           ++ types d.interfaces
           ++ types d.mixins
           ++ types d.namespaces
-          ++ types d.partialDictionaries
-          ++ types d.partialInterfaces
-          ++ types d.partialMixins
-          ++ types d.partialNamespaces
           ++ types d.typedefs
 
 export
@@ -301,10 +309,10 @@ toDefinitions d =
                                , \d => record {mixins = d} neutral
                                , \d => record {namespaces = d} neutral
                                , \d => record {typedefs = d} neutral
-                               , \d => record {partialDictionaries = d} neutral
-                               , \d => record {partialInterfaces = d} neutral
-                               , \d => record {partialMixins = d} neutral
-                               , \d => record {partialNamespaces = d} neutral
+                               , \d => neutral
+                               , \d => neutral
+                               , \d => neutral
+                               , \d => neutral
                                ] d
 
   where injDefn :  forall a . (List a -> Definitions) -> a -> Definitions

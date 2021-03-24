@@ -57,16 +57,13 @@ runProg (MkEitherT p) = do Right _ <- p
 writeDoc : String -> Doc () -> Prog ()
 writeDoc f doc = toProg $ writeFile f (show doc)
 
-moduleName : String -> String
-moduleName s = let (h ::: _) = split ('.' ==) . last $ split ('/' ==) s
-                in firstToUpper h
-  where firstToUpper : String -> String
-        firstToUpper s = case fastUnpack s of
-                              [] => ""
-                              (h :: t) => fastPack (toUpper h :: t)
-        
 loadDef : String -> Prog (String,Definitions)
-loadDef f = let mn = moduleName f
+loadDef f = let mn = moduleName
+                   . head
+                   . split ('.' ==)
+                   . last
+                   $ split ('/' ==) f
+
              in do s <- toProg (readFile f)
                    d <- toProg (pure $ parseIdl definitions s)
                    pure (mn,d)

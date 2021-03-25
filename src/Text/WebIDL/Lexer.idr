@@ -5,6 +5,8 @@ import Data.String
 import Text.Lexer
 import Text.WebIDL.Types
 
+%default total
+
 -- alias for `some`
 plus : Lexer -> Lexer
 plus = some
@@ -35,6 +37,7 @@ hex = (exact "0x" <|> exact "0X") <+> plus hexDigit
 oct : Lexer
 oct = is '0' <+> star octDigit
 
+-- any integer literal
 int : Lexer
 int = hex <|> oct <|> (opt (is '-') <+> plus digit)
 
@@ -65,6 +68,8 @@ identifier =   opt (oneOf "_-")
            <+> alpha
            <+> star (pred \c => isAlphaNum c || c == '_' || c == '-')
 
+-- Takes a valid identifier and converts it either
+-- to a FloatLit, a Keyword, or an Identifier
 ident : String -> IdlToken
 ident "Infinity"        = FLit Infinity
 ident "-Infinity"       = FLit NegativeInfinity
@@ -117,7 +122,7 @@ lexIdl s = case lex tokenMap s of
 
 ||| Generates a list of IdlTokens
 ||| from an input string, removing unnecessary tokens by
-||| means of `removeNoise`.
+||| means of `isNoise`.
 export
 lexIdlNoNoise : String -> Either String $ List (TokenData IdlToken)
 lexIdlNoNoise = map (filter (not . isNoise . tok)) . lexIdl

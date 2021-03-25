@@ -2654,3 +2654,11 @@ interface mixin ARIAMixin {
 dictionary FocusOptions {
   boolean preventScroll = false;
 };
+
+[LegacyTreatNonObjectAsNull]
+callback OnErrorEventHandlerNonNull = any ((Event or DOMString) event, optional DOMString source, optional unsigned long lineno, optional unsigned long colno, optional any error);
+typedef OnErrorEventHandlerNonNull? OnErrorEventHandler;
+
+[LegacyTreatNonObjectAsNull]
+callback OnBeforeUnloadEventHandlerNonNull = DOMString? (Event event);
+typedef OnBeforeUnloadEventHandlerNonNull? OnBeforeUnloadEventHandler;

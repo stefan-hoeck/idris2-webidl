@@ -77,6 +77,15 @@ section _ Nil = neutral
 section t ds = vsep $ (title t) :: ds
 
 --------------------------------------------------------------------------------
+--          Namespaces Implementations
+--------------------------------------------------------------------------------
+
+export
+namespaced : Identifier -> List $ Doc () -> List $ Doc ()
+namespaced _ [] = neutral
+namespaced n ds = "" :: ("namespace" <++> pretty n.value) :: map (indent 2) ds
+
+--------------------------------------------------------------------------------
 --          Generating Functions
 --------------------------------------------------------------------------------
 

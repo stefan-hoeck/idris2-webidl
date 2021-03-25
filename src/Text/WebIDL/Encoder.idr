@@ -67,6 +67,7 @@ toHexDigit 14 = 'E'
 toHexDigit 15 = 'F'
 toHexDigit _ = '_'
 
+export
 toDigits : (pre : String) -> (base : Integer) -> Nat -> String
 toDigits pre base n = pre ++ fastPack(run (natToInteger n) [])
   where run : Integer -> List Char -> List Char

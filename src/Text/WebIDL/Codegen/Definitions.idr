@@ -3,9 +3,9 @@ module Text.WebIDL.Codegen.Definitions
 import Data.List
 import Data.List.Elem
 import Data.SOP
-import Data.SortedMap
 import Data.String
 import Text.WebIDL.Codegen.Enum
+import Text.WebIDL.Codegen.Members
 import Text.WebIDL.Codegen.Types
 import public Text.WebIDL.Codegen.Util
 
@@ -76,16 +76,70 @@ casts d = section "Casts" (map toCast $ sort pairs)
                      d.includeStatements
 
 --------------------------------------------------------------------------------
+--          CallbackInterfaces
+--------------------------------------------------------------------------------
+
+callbackInterface : CallbackInterface -> List (Doc ())
+callbackInterface (MkCallbackInterface _ n ms) =
+   namespaced n $ constants (mapMaybe const ms)
+
+callbackInterfaces : Codegen Domain
+callbackInterfaces d =
+  section "Callback Interfaces"
+  (sortBy (comparing name) d.callbackInterfaces >>= callbackInterface)
+
+--------------------------------------------------------------------------------
 --          Interfaces
 --------------------------------------------------------------------------------
 
 iface : Interface -> List (Doc ())
 iface (MkInterface _ n _ ms) =
-  ("namespace" <++> pretty n.value) :: [
-  ]
+   namespaced n
+     $ constants (mapMaybe (part const) ms)
 
 interfaces : Codegen Domain
-interfaces d = section "Interfaces" (d.interfaces >>= iface)
+interfaces d =
+  section "Interfaces"
+  (sortBy (comparing name) d.interfaces >>= iface)
+
+--------------------------------------------------------------------------------
+--          Dictionaries
+--------------------------------------------------------------------------------
+
+dictionary : Dictionary -> List (Doc ())
+dictionary (MkDictionary _ n _ ms) = Nil
+
+dictionaries : Codegen Domain
+dictionaries d =
+  section "Dictionaries"
+  (sortBy (comparing name) d.dictionaries >>= dictionary)
+
+--------------------------------------------------------------------------------
+--          Mixins
+--------------------------------------------------------------------------------
+
+mixin : Mixin -> List (Doc ())
+mixin (MkMixin _ n ms) =
+   namespaced n
+     $ constants (mapMaybe const ms)
+
+mixins : Codegen Domain
+mixins d =
+  section "Mixins"
+  (sortBy (comparing name) d.mixins >>= mixin)
+
+--------------------------------------------------------------------------------
+--          Namespaces
+--------------------------------------------------------------------------------
+
+nspace : Namespace -> List (Doc ())
+nspace (MkNamespace _ n ms) =
+   namespaced n Nil
+
+namespaces : Codegen Domain
+namespaces d =
+  section "Namespaces"
+  (sortBy (comparing name) d.namespaces >>= nspace)
 
 --------------------------------------------------------------------------------
 --          Callbacks
@@ -218,5 +272,9 @@ definitions d =
            , ""
            , imps
            , interfaces d
+           , mixins d
+           , dictionaries d
+           , callbackInterfaces d
+           , namespaces d
            , casts d
            ]

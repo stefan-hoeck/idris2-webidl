@@ -415,3 +415,33 @@ InterfaceMembers = List (Attributed InterfaceMember)
 public export
 0 MixinMembers : Type
 MixinMembers = List (Attributed MixinMember)
+
+--------------------------------------------------------------------------------
+--          Extractors
+--------------------------------------------------------------------------------
+
+namespace CallbackInterfaceMember
+  export
+  const : Attributed CallbackInterfaceMember -> Maybe Const
+  const (_,Z x) = Just x
+  const _       = Nothing
+
+namespace MixinMember
+  export
+  const : Attributed MixinMember -> Maybe Const
+  const (_,MConst x) = Just x
+  const _            = Nothing
+
+namespace PartialInterfaceMember
+  export
+  const : PartialInterfaceMember -> Maybe Const
+  const (IConst x) = Just x
+  const _          = Nothing
+
+namespace InterfaceMember
+  export
+  part :  (PartialInterfaceMember -> Maybe a)
+       -> Attributed InterfaceMember
+       -> Maybe a
+  part f (_,(S $ Z $ p)) = f p
+  part _ _               = Nothing

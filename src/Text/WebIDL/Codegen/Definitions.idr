@@ -15,7 +15,7 @@ import public Text.WebIDL.Codegen.Util
 --------------------------------------------------------------------------------
 
 defImports : Domain -> SortedSet String
-defImports _ = fromList ["Web.Types"]
+defImports _ = fromList ["JS.Util","Web.Types"]
 
 typeImports : Domain -> SortedSet String
 typeImports d = fromList ( "JS.Util" :: enumImports)
@@ -135,6 +135,7 @@ typedefs ds =
            , "import public Web.GeometryTypes as Types"
            , "import public Web.HtmlTypes as Types"
            , "import public Web.MediasourceTypes as Types"
+           , "import public Web.MediastreamTypes as Types"
            , "import public Web.PermissionsTypes as Types"
            , "import public Web.ServiceworkerTypes as Types"
            , "import public Web.SvgTypes as Types"

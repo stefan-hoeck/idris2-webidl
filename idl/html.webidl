@@ -2669,3 +2669,10 @@ WorkerNavigator includes NavigatorID;
 WorkerNavigator includes NavigatorLanguage;
 WorkerNavigator includes NavigatorOnLine;
 WorkerNavigator includes NavigatorConcurrentHardware;
+
+enum SelectionMode {
+  "select",
+  "start",
+  "end",
+  "preserve" // default
+};

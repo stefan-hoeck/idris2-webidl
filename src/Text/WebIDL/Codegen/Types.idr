@@ -1,5 +1,6 @@
 module Text.WebIDL.Codegen.Types
 
+import Language.Reflection.Refined
 import Text.WebIDL.Codegen.Util
 import Text.WebIDL.Types
 
@@ -92,10 +93,10 @@ Pretty ConstType where
 
 export
 Pretty ArgumentRest where
-  pretty (Optional  (_,t) n _) = prettyArg n.value (pretty t)
-  pretty (Mandatory t     n)   = prettyArg n.value (pretty t)
+  pretty (Optional  (_,t) n _) = prettyArg (fromString n.value) (pretty t)
+  pretty (Mandatory t     n)   = prettyArg (fromString n.value) (pretty t)
   pretty (VarArg    t     n)   =
-    prettyArg n.value $ prettySingleCon Open "VarArg" t
+    prettyArg (fromString n.value) $ prettySingleCon Open "VarArg" t
 
 export
 returnType : IdlType -> Doc ()

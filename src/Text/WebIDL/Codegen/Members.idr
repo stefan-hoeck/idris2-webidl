@@ -41,31 +41,97 @@ constants = map const . sortBy (comparing name)
 --          Attributes
 --------------------------------------------------------------------------------
 
-primType : (name : String) -> Nat -> IdlType -> Doc ()
-primType name n x = typeDecl ("prim__" ++ name) (primReturnType x) $
+primType : (name : IdrisIdent) -> Nat -> IdlType -> Doc ()
+primType name n x = typeDecl (Prim $ show name) (primReturnType x) $
                       replicate n "AnyPtr"
 
-export
-readOnlyAttributes : List (Readonly Attribute) -> List (Doc ())
-readOnlyAttributes = map attr . sortBy (comparing name) . map value
-  where attr : Codegen Attribute
-        attr (MkAttribute _ t n) =
-          let primName = "prim__" ++ n.value
-           in vsep [ "" 
-                   , attrGet n
-                   , primType n.value 1 t
-                   ]
+-- Types coming as identifiers are treated as external JS types
+-- In order to support suptyping, these are converted to lowercase
+-- names and the necessary implicits are added as prerequisids.
+--
+-- We need to make sure that implicits are added only once, though.
+funType : (name : IdrisIdent) -> ArgumentList -> IdlType -> Doc ()
+funType n args t =
+  let implArgNames = sortedNubOn id $ mapMaybe (ident . argType . snd) args
+
+      implicits    = implArgNames >>= toImplicit
+
+      args2        = map (renameParams . snd) args
+
+   in typeDeclWithImplicits n (returnType t) implicits args2
+
+  where 
+
+        identAndType : IdlType -> Maybe (IdlType,String,String)
+        identAndType (D $ MaybeNull $ I $ MkIdent x) =
+          let x2 = mapFirstChar toLower x
+           in Just (D $ MaybeNull $ I $ MkIdent x2,x,x2)
+
+        identAndType (D $ NotNull   $ I $ MkIdent x) =
+          let x2 = mapFirstChar toLower x
+           in Just (D $ NotNull $ I $ MkIdent x2,x,x2)
+
+        identAndType _                               = Nothing
+
+        ident : IdlType -> Maybe (String,String)
+        ident = map (\(_,x,y) => (x,y)) . identAndType
+
+        toImplicit : (String,String) -> List (Doc ())
+        toImplicit (s,slower) = [ "Cast" <++> pretty slower <++> pretty s
+                                , "ToJS" <++> pretty s
+                                ]
+
+        renameParams : ArgumentRest -> Doc ()
+        renameParams (Optional (e,tpe) (MkArgName n) def) =
+          case identAndType tpe of
+               Just (t,_,l) => if l == n
+                                  then prettyArg (Underscore n) (pretty t)
+                                  else prettyArg (fromString n) (pretty t)
+               Nothing => prettyArg (fromString n) (pretty tpe)
+
+        renameParams (Mandatory tpe (MkArgName n)) =
+          case identAndType tpe of
+               Just (t,_,l) => if l == n
+                                  then prettyArg (Underscore n) (pretty t)
+                                  else prettyArg (fromString n) (pretty t)
+               Nothing => prettyArg (fromString n) (pretty tpe)
+
+        -- TODO: Properly support varargs
+        renameParams (VarArg tpe (MkArgName n)) =
+          case identAndType tpe of
+               Just (t,_,l) => if l == n
+                                  then prettyArg (Underscore n) (pretty t)
+                                  else prettyArg (fromString n) (pretty t)
+               Nothing => prettyArg (fromString n) (pretty tpe)
+
+
+readonly : Identifier -> Attribute -> List $ Doc ()
+readonly i (MkAttribute _ t (MkAttributeName n)) =
+  let ii = fromString n
+   in [ "" 
+      , attrGet n
+      , primType ii 1 t
+      , ""
+      , "export"
+      , funType ii [objArg i] t
+      ]
+
+readwrite : Identifier -> Attribute -> List $ Doc ()
+readwrite i a@(MkAttribute _ t (MkAttributeName n)) =
+  readonly i a ++ [ ""
+                  , attrSet n
+                  , primType (setter n) 2 t
+                  , ""
+                  , "export"
+                  , funType (setter n) [objArg i, valArg t] undefined
+                  ]
 
 export
-attributes : List Attribute -> List (Doc ())
-attributes = map attr . sortBy (comparing name)
-  where attr : Codegen Attribute
-        attr (MkAttribute _ t n) =
-          let primName = "prim__" ++ n.value
-           in vsep [ "" 
-                   , attrGet n
-                   , primType n.value 1 t
-                   , ""
-                   , attrSet n
-                   , primType (setter n.value) 2 t
-                   ]
+readOnlyAttributes :  Identifier
+                   -> List (Readonly Attribute)
+                   -> List (Doc ())
+readOnlyAttributes i = (>>= readonly i) . sortBy (comparing name) . map value
+
+export
+attributes : Identifier -> List Attribute -> List (Doc ())
+attributes i = (>>= readwrite i) . sortBy (comparing name)

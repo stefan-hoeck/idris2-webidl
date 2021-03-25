@@ -1,6 +1,7 @@
 module Text.WebIDL.Types.Argument
 
 import Text.WebIDL.Types.Attribute
+import Text.WebIDL.Types.Identifier
 import Text.WebIDL.Types.Numbers
 import Text.WebIDL.Types.StringLit
 import Text.WebIDL.Types.Type
@@ -49,6 +50,10 @@ record ArgumentName where
   constructor MkArgName
   value : String
 
+public export
+obj : ArgumentName
+obj = MkArgName "obj"
+
 %runElab derive "ArgumentName" [Generic,Meta,Eq,Show]
 
 ||| Ellipsis ::
@@ -69,6 +74,20 @@ data ArgumentRest : Type where
   VarArg    : (tpe : IdlType) -> (name : ArgumentName) -> ArgumentRest
 
 %runElab derive "ArgumentRest" [Generic,Meta,Eq,Show]
+
+public export
+objArg : Identifier -> Attributed ArgumentRest
+objArg i = (Nil, Mandatory (identToType i) obj)
+
+public export
+valArg : IdlType -> Attributed ArgumentRest
+valArg t = (Nil, Mandatory t (MkArgName "v"))
+
+public export
+argType : ArgumentRest -> IdlType
+argType (Optional tpe _ _) = snd tpe
+argType (Mandatory tpe _)  = tpe
+argType (VarArg tpe _)     = tpe
 
 export
 Types ArgumentRest where

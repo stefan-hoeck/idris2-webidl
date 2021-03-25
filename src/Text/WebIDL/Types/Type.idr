@@ -220,6 +220,14 @@ public export
 0 OptionalType : Type
 OptionalType = Maybe (Attributed IdlType)
 
+export
+identToType : Identifier -> IdlType
+identToType = D . NotNull . I
+
+export
+undefined : IdlType
+undefined = D $ NotNull $ P Undefined
+
 --------------------------------------------------------------------------------
 --          Types Interface
 --------------------------------------------------------------------------------

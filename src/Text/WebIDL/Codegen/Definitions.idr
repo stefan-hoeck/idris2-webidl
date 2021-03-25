@@ -14,7 +14,7 @@ import public Text.WebIDL.Codegen.Util
 --------------------------------------------------------------------------------
 
 defImports : Domain -> List String
-defImports _ = ["JS.Util","Web.Types"]
+defImports _ = ["Data.SOP","JS.Util","Web.Types"]
 
 typeImports : Domain -> List String
 typeImports d =  "JS.Util" :: enumImports
@@ -96,8 +96,8 @@ iface : Interface -> List (Doc ())
 iface (MkInterface _ n _ ms) =
    namespaced n
      $  constants (mapMaybe (part const) ms)
-     ++ readOnlyAttributes (mapMaybe (part attrRO) ms)
-     ++ attributes (mapMaybe (part attr) ms)
+     ++ readOnlyAttributes n (mapMaybe (part attrRO) ms)
+     ++ attributes n (mapMaybe (part attr) ms)
 
 interfaces : Codegen Domain
 interfaces d =
@@ -111,8 +111,8 @@ interfaces d =
 dictionary : Dictionary -> List (Doc ())
 dictionary (MkDictionary _ n _ ms) =
   namespaced n
-    $  attributes (mapMaybe required ms)
-    ++ attributes (mapMaybe optional ms)
+    $  attributes n (mapMaybe required ms)
+    ++ attributes n (mapMaybe optional ms)
 
 dictionaries : Codegen Domain
 dictionaries d =
@@ -127,8 +127,8 @@ mixin : Mixin -> List (Doc ())
 mixin (MkMixin _ n ms) =
    namespaced n
      $  constants (mapMaybe const ms)
-     ++ readOnlyAttributes (mapMaybe attrRO ms)
-     ++ attributes (mapMaybe attr ms)
+     ++ readOnlyAttributes n (mapMaybe attrRO ms)
+     ++ attributes n (mapMaybe attr ms)
 
 mixins : Codegen Domain
 mixins d =
@@ -174,14 +174,15 @@ callbacks ds =
 
         toCallback : Callback -> Doc ()
         toCallback (MkCallback _ n t args) =
-          vsep [ ""
-               , "public export"
-               , "0" <++> pretty n.value <++> ": Type"
-               , functionType n.value '=' (returnType t) $
-                   case args of
-                        [] => ["()"]
-                        _  => map (pretty . snd) args
-               ]
+          let ii = the IdrisIdent (fromString n.value)
+           in vsep [ ""
+                   , "public export"
+                   , "0" <++> pretty ii <++> ": Type"
+                   , functionType ii '=' (returnType t) $
+                       case args of
+                            [] => ["()"]
+                            _  => map (pretty . snd) args
+                   ]
 
 --------------------------------------------------------------------------------
 --          Typedefs

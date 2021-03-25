@@ -1,6 +1,7 @@
 module Text.WebIDL.Codegen.Util
 
 import Data.List
+import public Decidable.Equality
 import public Data.String
 import public Data.Vect
 import public Text.PrettyPrint.Prettyprinter
@@ -89,8 +90,52 @@ namespaced n ds = "" :: ("namespace" <++> pretty n.value) :: map (indent 2) ds
 --          Generating Functions
 --------------------------------------------------------------------------------
 
+public export
+isValidIdrisIdent : String -> Bool
+isValidIdrisIdent "covering"       = False
+isValidIdrisIdent "data"           = False
+isValidIdrisIdent "default"        = False
+isValidIdrisIdent "export"         = False
+isValidIdrisIdent "implementation" = False
+isValidIdrisIdent "interface"      = False
+isValidIdrisIdent "module"         = False
+isValidIdrisIdent "open"           = False
+isValidIdrisIdent "private"        = False
+isValidIdrisIdent "prefix"         = False
+isValidIdrisIdent "public"         = False
+isValidIdrisIdent "record"         = False
+isValidIdrisIdent "total"          = False
+isValidIdrisIdent _                = True
+
+||| Wrapper type making sure that no Idris2 keyword
+||| is used as a function's name
+public export
+data IdrisIdent : Type where
+  II         :  (v : String)
+             -> (0 _ : isValidIdrisIdent v = True)
+             -> IdrisIdent
+
+  Prim       : (v : String) -> IdrisIdent
+  Underscore : (v : String) -> IdrisIdent
+
 export
-functionTypeWithImplicits :  (name : String)
+Show IdrisIdent where
+  show (II v _) = v
+  show (Prim v) = "prim__" ++ v
+  show (Underscore v) = v ++ "_"
+
+export
+FromString IdrisIdent where
+  fromString s with (decEq (isValidIdrisIdent s) True)
+    fromString s | Yes refl = II s refl
+    fromString s | No _     = Underscore s
+
+export
+Pretty IdrisIdent where
+  pretty = pretty . show
+
+export
+functionTypeWithImplicits :  (name : IdrisIdent)
                           -> (sep : Char)
                           -> (res : Doc ())
                           -> (iargs : List $ Doc ())
@@ -117,7 +162,7 @@ functionTypeWithImplicits n c res (x :: xs) (y :: ys) =
    in pretty n <++> align (sep args)
 
 export
-functionType :  (name : String)
+functionType :  (name : IdrisIdent)
              -> (sep : Char)
              -> (res : Doc ())
              -> (args : List $ Doc ())
@@ -125,7 +170,7 @@ functionType :  (name : String)
 functionType n c res = functionTypeWithImplicits n c res []
 
 export
-typeDeclWithImplicits :  (name : String)
+typeDeclWithImplicits :  (name : IdrisIdent)
                       -> (res : Doc ())
                       -> (iargs : List $ Doc ())
                       -> (args : List $ Doc ())
@@ -133,7 +178,7 @@ typeDeclWithImplicits :  (name : String)
 typeDeclWithImplicits n = functionTypeWithImplicits n ':'
 
 export
-typeDecl : (name : String) -> (res : Doc ()) -> (args : List $ Doc ()) -> Doc ()
+typeDecl : (name : IdrisIdent) -> (res : Doc ()) -> (args : List $ Doc ()) -> Doc ()
 typeDecl n = functionType n ':'
 
 --------------------------------------------------------------------------------
@@ -161,22 +206,9 @@ export
 primIO : Pretty arg => Prec -> arg -> Doc ann
 primIO p = prettySingleCon p "PrimIO"
 
-renameArg : String -> String
-renameArg "covering"  = "covering_"
-renameArg "data"      = "data_"
-renameArg "export"    = "export_"
-renameArg "interface" = "interface_"
-renameArg "module"    = "module_"
-renameArg "private"   = "private_"
-renameArg "prefix"    = "prefix_"
-renameArg "public"    = "public_"
-renameArg "record"    = "record_"
-renameArg "total"     = "total_"
-renameArg x           = x
-
 export
-prettyArg : (name : String) -> Doc ann -> Doc ann
-prettyArg name tpe = parens $ hsep [pretty $ renameArg name,":",tpe]
+prettyArg : (name : IdrisIdent) -> Doc ann -> Doc ann
+prettyArg name tpe = parens $ hsep [pretty name,":",tpe]
 
 --------------------------------------------------------------------------------
 --          Foreign Function Implementations
@@ -192,13 +224,13 @@ foreignBrowser : String
 foreignBrowser ="%foreign \"browser:lambda:"
 
 export
-attrGet : AttributeName -> Doc ann
-attrGet n = pretty $ foreignBrowser ++ "x=>x." ++ n.value ++ "\""
+attrGet : String -> Doc ann
+attrGet n = pretty $ foreignBrowser ++ "x=>x." ++ n ++ "\""
 
 export
-attrSet : AttributeName -> Doc ann
-attrSet n = pretty $ foreignBrowser ++ "(x,v)=>{x." ++ n.value ++ " = v}\""
+attrSet : String -> Doc ann
+attrSet n = pretty $ foreignBrowser ++ "(x,v)=>{x." ++ n ++ " = v}\""
 
 export
-setter : String -> String
-setter = ("set" ++) . mapFirstChar toUpper
+setter : String -> IdrisIdent
+setter = fromString . ("set" ++) . mapFirstChar toUpper

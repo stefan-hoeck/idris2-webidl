@@ -2,6 +2,8 @@ module Text.WebIDL.Types.StringLit
 
 import Generics.Derive
 
+%default total
+
 %language ElabReflection
 
 ||| A quoted string literal

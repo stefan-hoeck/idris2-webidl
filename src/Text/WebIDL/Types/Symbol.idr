@@ -2,6 +2,8 @@ module Text.WebIDL.Types.Symbol
 
 import Generics.Derive
 
+%default total
+
 %language ElabReflection
 
 ||| A single non-alphanumeric character that is not

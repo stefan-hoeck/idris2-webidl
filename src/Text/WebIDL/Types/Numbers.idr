@@ -2,6 +2,8 @@ module Text.WebIDL.Types.Numbers
 
 import Generics.Derive
 
+%default total
+
 %language ElabReflection
 
 ||| The default Eq for Nat runs in O(n), which is too slow

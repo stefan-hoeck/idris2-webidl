@@ -7,6 +7,8 @@ import Text.WebIDL.Types.Symbol
 
 import Generics.Derive
 
+%default total
+
 %language ElabReflection
 
 ||| Text tokens in the WebIDL grammar. The `Invalid` token

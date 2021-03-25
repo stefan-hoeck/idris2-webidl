@@ -135,6 +135,7 @@ typedefs ds =
            , "import public Web.GeometryTypes as Types"
            , "import public Web.HtmlTypes as Types"
            , "import public Web.PermissionsTypes as Types"
+           , "import public Web.ServiceworkerTypes as Types"
            , "import public Web.SvgTypes as Types"
            , "import public Web.UrlTypes as Types"
            , "import public Web.WebglTypes as Types"

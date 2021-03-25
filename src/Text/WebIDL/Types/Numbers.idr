@@ -14,6 +14,9 @@ export
 --          IntLit
 --------------------------------------------------------------------------------
 
+||| An integer literal in hexadecimal, octal, or decimal representation.
+||| The code generator will use the same representation when
+||| generating code for constants and default values.
 public export
 data IntLit = Hex Nat | Oct Nat | I Integer
 
@@ -40,6 +43,7 @@ charsToPosInt base t = calc <$> traverse readDigit t
         calc : List Integer -> Integer
         calc = foldl (\a,e => a * base + e) 0
 
+||| Tries to read an integer literal from a `String`.
 export
 readInt : String -> Maybe IntLit
 readInt s = case fastUnpack s of
@@ -53,28 +57,54 @@ readInt s = case fastUnpack s of
 --          Floating Point Literals
 --------------------------------------------------------------------------------
 
+||| The sign of a floating point literal.
 public export
 data Signum = Plus | Minus
 
 %runElab derive "Signum" [Generic,Meta,Eq,Show]
 
+||| A parsed floating point literal.
+|||
+||| A floating point literal is either one of three
+||| special values (`NaN`, `Infinity`, or `-Infinity`)
+||| or a decimal floating point number (`NoExp`: dot is
+||| mandatory), or a float in scientific notation (`Exp`: 
+||| dot is optional).
+|||
+||| The main focus of this data type is one of
+||| preserving information. Encoding a `FloatLit` should
+||| yield (almost) exactly the same literal as the one
+||| encountered during parsin with two minor exceptions:
+||| a) The encoded literal will always use a lowercase 'e' as
+||| the delimiter for the exponent and b) in case of a
+||| positive exponent, there will not be a '+' in the
+||| encoded literal.
 public export
 data FloatLit : Type where
+  ||| Floating point number in scientific notation.
+  |||
+  ||| Example: `-12.10e10`
   Exp :  (signum    : Signum)
       -> (beforeDot : Nat)
       -> (afterDot  : Maybe Nat)
       -> (exp       : Integer)
       -> FloatLit
 
+  ||| Floating point number without exponent.
+  |||
+  ||| Example: `-12.1002`
   NoExp :  (signum    : Signum)
         -> (beforeDot : Nat)
         -> (afterDot  : Nat)
         -> FloatLit
 
+  ||| Corresponds to the WebIDL keyword `Infinity`
   Infinity         : FloatLit
 
+  ||| Corresponds to the WebIDL keyword `-Infinity`
   NegativeInfinity : FloatLit
 
+  ||| Corresponds to the WebIDL keyword `NaN`
   NaN              : FloatLit
 
 %runElab derive "FloatLit" [Generic,Meta,Show]
@@ -86,7 +116,6 @@ Eq FloatLit using FastNatEq where (==) = genEq
 --          Parsing Floats
 --------------------------------------------------------------------------------
 
-export
 charsToNat : List Char -> Maybe Nat
 charsToNat = map fromInteger . charsToPosInt 10
 
@@ -115,6 +144,8 @@ noExp bds ads =
          pure $ NoExp s bd ad
 
 
+||| Tries to read a floating point literal
+||| from a `String`.
 export
 readFloat : String -> Maybe FloatLit
 readFloat s =

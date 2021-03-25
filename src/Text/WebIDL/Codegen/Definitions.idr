@@ -142,6 +142,7 @@ typedefs ds =
            , "import public Web.UrlTypes as Types"
            , "import public Web.VisibilityTypes as Types"
            , "import public Web.WebglTypes as Types"
+           , "import public Web.WebidlTypes as Types"
            , "import public Web.XhrTypes as Types"
            , section "Typedefs and Callbacks" $
                ["", "mutual"] ++ map (indent 2) docs

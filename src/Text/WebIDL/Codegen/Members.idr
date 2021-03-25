@@ -55,3 +55,17 @@ readOnlyAttributes = map attr . sortBy (comparing name) . map value
                    , attrGet n
                    , primType n.value 1 t
                    ]
+
+export
+attributes : List Attribute -> List (Doc ())
+attributes = map attr . sortBy (comparing name)
+  where attr : Codegen Attribute
+        attr (MkAttribute _ t n) =
+          let primName = "prim__" ++ n.value
+           in vsep [ "" 
+                   , attrGet n
+                   , primType n.value 1 t
+                   , ""
+                   , attrSet n
+                   , primType (setter n.value) 2 t
+                   ]

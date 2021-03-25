@@ -427,6 +427,17 @@ namespace CallbackInterfaceMember
   const _       = Nothing
 
 namespace Dictionary
+  export
+  optional : DictionaryMember -> Maybe Attribute
+  optional (_, Required _ _ _) = Nothing
+  optional (_, Optional t n _) =
+    Just $ MkAttribute Nil t (MkAttributeName n.value)
+
+  export
+  required : DictionaryMember -> Maybe Attribute
+  required (_, Required _ t n) =
+    Just $ MkAttribute Nil t (MkAttributeName n.value)
+  required (_, Optional _ _ _) = Nothing
 
 namespace InterfaceMember
   export

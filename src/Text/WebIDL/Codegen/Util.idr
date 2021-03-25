@@ -182,9 +182,23 @@ prettyArg name tpe = parens $ hsep [pretty $ renameArg name,":",tpe]
 --          Foreign Function Implementations
 --------------------------------------------------------------------------------
 
+export
+mapFirstChar : (Char -> Char) -> String -> String
+mapFirstChar f x = case fastUnpack x of
+                        []       => ""
+                        (h :: t) => fastPack (f h :: t)
+
 foreignBrowser : String
 foreignBrowser ="%foreign \"browser:lambda:"
 
 export
 attrGet : AttributeName -> Doc ann
 attrGet n = pretty $ foreignBrowser ++ "x=>x." ++ n.value ++ "\""
+
+export
+attrSet : AttributeName -> Doc ann
+attrSet n = pretty $ foreignBrowser ++ "(x,v)=>{x." ++ n.value ++ " = v}\""
+
+export
+setter : String -> String
+setter = ("set" ++) . mapFirstChar toUpper

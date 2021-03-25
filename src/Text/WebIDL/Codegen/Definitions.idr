@@ -97,6 +97,7 @@ iface (MkInterface _ n _ ms) =
    namespaced n
      $  constants (mapMaybe (part const) ms)
      ++ readOnlyAttributes (mapMaybe (part attrRO) ms)
+     ++ attributes (mapMaybe (part attr) ms)
 
 interfaces : Codegen Domain
 interfaces d =
@@ -108,7 +109,10 @@ interfaces d =
 --------------------------------------------------------------------------------
 
 dictionary : Dictionary -> List (Doc ())
-dictionary (MkDictionary _ n _ ms) = Nil
+dictionary (MkDictionary _ n _ ms) =
+  namespaced n
+    $  attributes (mapMaybe required ms)
+    ++ attributes (mapMaybe optional ms)
 
 dictionaries : Codegen Domain
 dictionaries d =
@@ -124,6 +128,7 @@ mixin (MkMixin _ n ms) =
    namespaced n
      $  constants (mapMaybe const ms)
      ++ readOnlyAttributes (mapMaybe attrRO ms)
+     ++ attributes (mapMaybe attr ms)
 
 mixins : Codegen Domain
 mixins d =

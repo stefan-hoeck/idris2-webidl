@@ -10,4 +10,4 @@ record StringLit where
   constructor MkStrLit
   value : String
 
-%runElab derive "StringLit" [Generic,Meta,Eq,Show]
+%runElab derive "StringLit" [Generic,Meta,Eq,Ord,Show]

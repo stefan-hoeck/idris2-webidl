@@ -140,7 +140,7 @@ record Identifier where
   constructor MkIdent
   value : String
 
-%runElab derive "Identifier" [Generic,Meta,Eq,Show]
+%runElab derive "Identifier" [Generic,Meta,Eq,Ord,Show]
 
 ||| IdentifierList :: identifier Identifiers
 ||| Identifiers :: "," identifier Identifiers | ε

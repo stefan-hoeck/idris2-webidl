@@ -70,11 +70,19 @@ section t ds = vsep $ (title t) :: ds
 --------------------------------------------------------------------------------
 
 export
-function : (name : String) -> (res : Doc ()) -> (args : List $ Doc ()) -> Doc ()
-function n res []        = hsep [pretty n, ":", res]
-function n res (h :: t)  =
-  let h' = ":" <++> flatAlt (" "  <+> h) h
+functionType :  (name : String)
+             -> (sep : Char)
+             -> (res : Doc ())
+             -> (args : List $ Doc ())
+             -> Doc ()
+functionType n c res []        = hsep [pretty n, pretty c, res]
+functionType n c res (h :: t)  =
+  let h' = pretty c <++> flatAlt (" "  <+> h) h
    in pretty n <++> align (sep (h' :: map ("->" <++>) (t ++ [res])))
+
+export
+typeDecl : (name : String) -> (res : Doc ()) -> (args : List $ Doc ()) -> Doc ()
+typeDecl n = functionType n ':'
 
 --------------------------------------------------------------------------------
 --          Function Application
@@ -94,5 +102,21 @@ prettySingleCon : Pretty arg => Prec -> (con : Doc ann) -> arg -> Doc ann
 prettySingleCon p con arg = prettyCon p con [prettyPrec App arg]
 
 export
+io : Pretty arg => Prec -> arg -> Doc ann
+io p = prettySingleCon p "IO"
+
+renameArg : String -> String
+renameArg "covering"  = "covering_"
+renameArg "data"      = "data_"
+renameArg "export"    = "export_"
+renameArg "interface" = "interface_"
+renameArg "module"    = "module_"
+renameArg "private"   = "private_"
+renameArg "public"    = "public_"
+renameArg "record"    = "record_"
+renameArg "total"     = "total_"
+renameArg x           = x
+
+export
 prettyArg : (name : String) -> Doc ann -> Doc ann
-prettyArg name tpe = parens $ vsep [pretty name,":",tpe]
+prettyArg name tpe = parens $ hsep [pretty $ renameArg name,":",tpe]

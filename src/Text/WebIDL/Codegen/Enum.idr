@@ -28,7 +28,7 @@ enum (MkEnum _ name vs) =
                    , indent 2 $ "compare = compare `on` show"
                    , ""
                    , "public export"
-                   , function "read" 
+                   , typeDecl "read" 
                               ("Maybe" <++> pretty name.value)
                               [ pretty "String" ]
 
@@ -36,7 +36,7 @@ enum (MkEnum _ name vs) =
                    , "read _ = Nothing"
                    , ""
                    , "public export"
-                   , function "fromString" pn
+                   , typeDecl "fromString" pn
                        [ "(s : String)"
                        , "{auto 0 _ : IsJust (" <+> pn  <+> ".read s)}"
                        ]

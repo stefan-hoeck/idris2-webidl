@@ -84,11 +84,6 @@ Pretty ArgumentRest where
     prettyArg n.value $ prettySingleCon Open "VarArg" t
 
 export
-idlFunction :  (name : String)
-            -> (res : IdlType)
-            -> (args : ArgumentList)
-            -> Doc ()
-idlFunction n res args =
-  let ioRes = prettySingleCon {ann = ()} Open "IO" res
-   in ?bar
-
+returnType : IdlType -> Doc ()
+returnType (D (NotNull (P Undefined))) = io Open "()"
+returnType t                           = io Open t

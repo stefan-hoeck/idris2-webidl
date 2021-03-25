@@ -83,10 +83,18 @@ casts d = section "Casts" (map toCast $ sort pairs)
 callbacks : List Domain -> List (Doc ())
 callbacks ds =
   let cs = concatMap callbacks ds
-   in map toCallback $ sortBy (comparing (value . name)) cs
+   in map toCallback $ sortBy (comparing name) cs
 
   where toCallback : Callback -> Doc ()
-        toCallback (MkCallback _ name type args) = ?toCallback_rhs_1
+        toCallback (MkCallback _ n t args) =
+          vsep [ ""
+               , "public export"
+               , "0" <++> pretty n.value <++> ": Type"
+               , functionType n.value '=' (returnType t) $
+                   case args of
+                        [] => ["()"]
+                        _  => map (pretty . snd) args
+               ]
 
 --------------------------------------------------------------------------------
 --          Typedefs
@@ -96,8 +104,8 @@ export
 typedefs : Codegen (List Domain)
 typedefs ds =
   let ts   = concatMap typedefs ds
-      docs =  (map toTypedef $ sortBy (comparing (value . name)) ts)
-           ++ (callbacks ds)
+      docs =  map toTypedef (sortBy (comparing name) ts)
+           ++ callbacks ds
    in vsep [ "module Web.Types"
            , ""
            , "import Data.SOP"

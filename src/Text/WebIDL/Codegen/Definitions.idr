@@ -76,6 +76,18 @@ casts d = section "Casts" (map toCast $ sort pairs)
                      d.includeStatements
 
 --------------------------------------------------------------------------------
+--          Interfaces
+--------------------------------------------------------------------------------
+
+iface : Interface -> List (Doc ())
+iface (MkInterface _ n _ ms) =
+  ("namespace" <++> pretty n.value) :: [
+  ]
+
+interfaces : Codegen Domain
+interfaces d = section "Interfaces" (d.interfaces >>= iface)
+
+--------------------------------------------------------------------------------
 --          Callbacks
 --------------------------------------------------------------------------------
 
@@ -205,5 +217,6 @@ definitions d =
    in vsep [ "module Web." <+> pretty d.domain
            , ""
            , imps
+           , interfaces d
            , casts d
            ]

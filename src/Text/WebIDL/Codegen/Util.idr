@@ -1,7 +1,6 @@
 module Text.WebIDL.Codegen.Util
 
 import Data.List
-import public Decidable.Equality
 import public Data.String
 import public Data.Vect
 import public Text.PrettyPrint.Prettyprinter
@@ -89,50 +88,6 @@ namespaced n ds = "" :: ("namespace" <++> pretty n.value) :: map (indent 2) ds
 --------------------------------------------------------------------------------
 --          Generating Functions
 --------------------------------------------------------------------------------
-
-public export
-isValidIdrisIdent : String -> Bool
-isValidIdrisIdent "covering"       = False
-isValidIdrisIdent "data"           = False
-isValidIdrisIdent "default"        = False
-isValidIdrisIdent "export"         = False
-isValidIdrisIdent "implementation" = False
-isValidIdrisIdent "interface"      = False
-isValidIdrisIdent "module"         = False
-isValidIdrisIdent "open"           = False
-isValidIdrisIdent "private"        = False
-isValidIdrisIdent "prefix"         = False
-isValidIdrisIdent "public"         = False
-isValidIdrisIdent "record"         = False
-isValidIdrisIdent "total"          = False
-isValidIdrisIdent _                = True
-
-||| Wrapper type making sure that no Idris2 keyword
-||| is used as a function's name
-public export
-data IdrisIdent : Type where
-  II         :  (v : String)
-             -> (0 _ : isValidIdrisIdent v = True)
-             -> IdrisIdent
-
-  Prim       : (v : String) -> IdrisIdent
-  Underscore : (v : String) -> IdrisIdent
-
-export
-Show IdrisIdent where
-  show (II v _) = v
-  show (Prim v) = "prim__" ++ v
-  show (Underscore v) = v ++ "_"
-
-export
-FromString IdrisIdent where
-  fromString s with (decEq (isValidIdrisIdent s) True)
-    fromString s | Yes refl = II s refl
-    fromString s | No _     = Underscore s
-
-export
-Pretty IdrisIdent where
-  pretty = pretty . show
 
 export
 functionTypeWithImplicits :  (name : IdrisIdent)

@@ -2650,3 +2650,7 @@ interface mixin ARIAMixin {
 	attribute DOMString ariaValueNow;
 	attribute DOMString ariaValueText;
 };
+
+dictionary FocusOptions {
+  boolean preventScroll = false;
+};

@@ -1,4 +1,5 @@
 // Extracted from https://dom.spec.whatwg.org/ (16 March 2021)
+//            and https://w3c.github.io/hr-time/#idl-index
 
 [Exposed=(Window,Worker,AudioWorklet)]
 interface Event {
@@ -620,3 +621,16 @@ interface XPathEvaluator {
 };
 
 XPathEvaluator includes XPathEvaluatorBase;
+
+typedef double DOMHighResTimeStamp;
+
+[Exposed=(Window,Worker)]
+interface Performance : EventTarget {
+    DOMHighResTimeStamp now();
+    readonly attribute DOMHighResTimeStamp timeOrigin;
+    [Default] object toJSON();
+};
+
+partial interface mixin WindowOrWorkerGlobalScope {
+  [Replaceable] readonly attribute Performance performance;
+};

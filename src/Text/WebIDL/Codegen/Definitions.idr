@@ -138,6 +138,7 @@ typedefs ds =
            , "import public Web.MediastreamTypes as Types"
            , "import public Web.PermissionsTypes as Types"
            , "import public Web.ServiceworkerTypes as Types"
+           , "import public Web.StreamsTypes as Types"
            , "import public Web.SvgTypes as Types"
            , "import public Web.UrlTypes as Types"
            , "import public Web.VisibilityTypes as Types"

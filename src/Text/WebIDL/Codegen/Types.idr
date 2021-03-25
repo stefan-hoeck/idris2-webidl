@@ -8,6 +8,20 @@ prettyIdent (MkIdent "void") = "Undefined"
 prettyIdent (MkIdent value) = pretty value
 
 export
+Pretty BufferRelatedType where
+  prettyPrec p ArrayBuffer       = "ArrayBuffer"
+  prettyPrec p DataView          = "DataView"
+  prettyPrec p Int8Array         = prettySingleCon p "JSArray" "Int8"
+  prettyPrec p Int16Array        = prettySingleCon p "JSArray" "Int16"
+  prettyPrec p Int32Array        = prettySingleCon p "JSArray" "Int32"
+  prettyPrec p Uint8Array        = prettySingleCon p "JSArray" "UInt8"
+  prettyPrec p Uint16Array       = prettySingleCon p "JSArray" "UInt16"
+  prettyPrec p Uint32Array       = prettySingleCon p "JSArray" "UInt32"
+  prettyPrec p Uint8ClampedArray = prettySingleCon p "JSArray" "UInt8"
+  prettyPrec p Float32Array      = prettySingleCon p "JSArray" "Double"
+  prettyPrec p Float64Array      = prettySingleCon p "JSArray" "Double"
+
+export
 Pretty PrimitiveType where
   pretty (Unsigned Short)    = "UInt16"
   pretty (Unsigned Long)     = "UInt32"
@@ -47,7 +61,7 @@ mutual
     prettyPrec p (P x) = prettyPrec p x
     prettyPrec p (S x) = prettyPrec p x
     prettyPrec p (I x) = prettyIdent x
-    prettyPrec p (B x) = pretty (show x)
+    prettyPrec p (B x) = prettyPrec p x
     prettyPrec p (Sequence (_,x)) =
       prettyCon p "JSArray" [prettyPrec App x]
     prettyPrec p (FrozenArray (_,x)) =

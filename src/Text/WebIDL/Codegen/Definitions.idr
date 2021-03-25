@@ -82,10 +82,25 @@ casts d = section "Casts" (map toCast $ sort pairs)
 
 callbacks : List Domain -> List (Doc ())
 callbacks ds =
-  let cs = concatMap callbacks ds
+  let cs = concatMap allCallbacks ds
    in map toCallback $ sortBy (comparing name) cs
 
-  where toCallback : Callback -> Doc ()
+  where memberToCallback :  Identifier
+                         -> CallbackInterfaceMember
+                         -> Maybe Callback
+        memberToCallback n (Z _) = Nothing
+        memberToCallback n (S $ Z $ MkOp () t _ as) =
+           Just $ MkCallback [] n t as
+
+        interfaceCallbacks : CallbackInterface -> List Callback
+        interfaceCallbacks (MkCallbackInterface _ n ms) =
+          mapMaybe (memberToCallback n . snd) ms
+
+        allCallbacks : Domain -> List Callback
+        allCallbacks d = d.callbacks ++
+                         (d.callbackInterfaces >>= interfaceCallbacks)
+
+        toCallback : Callback -> Doc ()
         toCallback (MkCallback _ n t args) =
           vsep [ ""
                , "public export"

@@ -140,6 +140,7 @@ typedefs ds =
            , "import public Web.ServiceworkerTypes as Types"
            , "import public Web.SvgTypes as Types"
            , "import public Web.UrlTypes as Types"
+           , "import public Web.VisibilityTypes as Types"
            , "import public Web.WebglTypes as Types"
            , "import public Web.XhrTypes as Types"
            , section "Typedefs and Callbacks" $

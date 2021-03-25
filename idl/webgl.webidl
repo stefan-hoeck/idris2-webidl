@@ -1089,7 +1089,6 @@ interface mixin WebGLRenderingContextBase
     const GLenum BROWSER_DEFAULT_WEBGL          = 0x9244;
 
     [Exposed=Window] readonly attribute (HTMLCanvasElement or OffscreenCanvas) canvas;
-    [Exposed=Worker] readonly attribute OffscreenCanvas canvas;
     readonly attribute GLsizei drawingBufferWidth;
     readonly attribute GLsizei drawingBufferHeight;
 

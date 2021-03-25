@@ -207,7 +207,7 @@ record AttributeName where
   constructor MkAttributeName
   value : String
 
-%runElab derive "AttributeName" [Generic,Meta,Eq,Show]
+%runElab derive "AttributeName" [Generic,Meta,Eq,Ord,Show]
 
 ||| AttributeRest ::
 |||     attribute TypeWithExtendedAttributes AttributeName ;
@@ -426,17 +426,7 @@ namespace CallbackInterfaceMember
   const (_,Z x) = Just x
   const _       = Nothing
 
-namespace MixinMember
-  export
-  const : Attributed MixinMember -> Maybe Const
-  const (_,MConst x) = Just x
-  const _            = Nothing
-
-namespace PartialInterfaceMember
-  export
-  const : PartialInterfaceMember -> Maybe Const
-  const (IConst x) = Just x
-  const _          = Nothing
+namespace Dictionary
 
 namespace InterfaceMember
   export
@@ -445,3 +435,42 @@ namespace InterfaceMember
        -> Maybe a
   part f (_,(S $ Z $ p)) = f p
   part _ _               = Nothing
+
+namespace MixinMember
+  export
+  const : Attributed MixinMember -> Maybe Const
+  const (_,MConst x) = Just x
+  const _            = Nothing
+
+  export
+  attrRO : Attributed MixinMember -> Maybe (Readonly Attribute)
+  attrRO (_, (MAttrRO x)) = Just x
+  attrRO _                = Nothing
+
+  export
+  attr : Attributed MixinMember -> Maybe Attribute
+  attr (_, (MAttr x)) = Just x
+  attr _              = Nothing
+
+namespace NamespaceMember
+
+  export
+  attrRO : NamespaceMember -> Maybe (Readonly Attribute)
+  attrRO (S $ Z x) = Just x
+  attrRO (Z _)     = Nothing
+
+namespace PartialInterfaceMember
+  export
+  const : PartialInterfaceMember -> Maybe Const
+  const (IConst x) = Just x
+  const _          = Nothing
+
+  export
+  attrRO : PartialInterfaceMember -> Maybe (Readonly Attribute)
+  attrRO (IAttrRO x) = Just x
+  attrRO _           = Nothing
+
+  export
+  attr : PartialInterfaceMember -> Maybe Attribute
+  attr (IAttr x) = Just x
+  attr _         = Nothing

@@ -90,15 +90,47 @@ namespaced n ds = "" :: ("namespace" <++> pretty n.value) :: map (indent 2) ds
 --------------------------------------------------------------------------------
 
 export
+functionTypeWithImplicits :  (name : String)
+                          -> (sep : Char)
+                          -> (res : Doc ())
+                          -> (iargs : List $ Doc ())
+                          -> (args : List $ Doc ())
+                          -> Doc ()
+functionTypeWithImplicits n c res [] [] =
+  hsep [pretty n, pretty c, res]
+
+functionTypeWithImplicits n c res [] (h :: t) =
+  let h' = pretty c <++> flatAlt (" "  <+> h) h
+      args = h' :: map ("->" <++>) (t ++ [res])
+   in pretty n <++> align (sep args)
+
+functionTypeWithImplicits n c res (h :: t) [] =
+  let h' = pretty c <++> flatAlt (" "  <+> h) h
+      args = h' :: map ("=>" <++>) (t ++ [res])
+   in pretty n <++> align (sep args)
+
+functionTypeWithImplicits n c res (x :: xs) (y :: ys) =
+  let x' = pretty c <++> flatAlt (" "  <+> x) x
+      args = x' :: map ("=>" <++>) (xs ++ [y])
+                ++ map ("->" <++>) (ys ++ [res])
+
+   in pretty n <++> align (sep args)
+
+export
 functionType :  (name : String)
              -> (sep : Char)
              -> (res : Doc ())
              -> (args : List $ Doc ())
              -> Doc ()
-functionType n c res []        = hsep [pretty n, pretty c, res]
-functionType n c res (h :: t)  =
-  let h' = pretty c <++> flatAlt (" "  <+> h) h
-   in pretty n <++> align (sep (h' :: map ("->" <++>) (t ++ [res])))
+functionType n c res = functionTypeWithImplicits n c res []
+
+export
+typeDeclWithImplicits :  (name : String)
+                      -> (res : Doc ())
+                      -> (iargs : List $ Doc ())
+                      -> (args : List $ Doc ())
+                      -> Doc ()
+typeDeclWithImplicits n = functionTypeWithImplicits n ':'
 
 export
 typeDecl : (name : String) -> (res : Doc ()) -> (args : List $ Doc ()) -> Doc ()
@@ -125,6 +157,10 @@ export
 io : Pretty arg => Prec -> arg -> Doc ann
 io p = prettySingleCon p "IO"
 
+export
+primIO : Pretty arg => Prec -> arg -> Doc ann
+primIO p = prettySingleCon p "PrimIO"
+
 renameArg : String -> String
 renameArg "covering"  = "covering_"
 renameArg "data"      = "data_"
@@ -141,3 +177,14 @@ renameArg x           = x
 export
 prettyArg : (name : String) -> Doc ann -> Doc ann
 prettyArg name tpe = parens $ hsep [pretty $ renameArg name,":",tpe]
+
+--------------------------------------------------------------------------------
+--          Foreign Function Implementations
+--------------------------------------------------------------------------------
+
+foreignBrowser : String
+foreignBrowser ="%foreign \"browser:lambda:"
+
+export
+attrGet : AttributeName -> Doc ann
+attrGet n = pretty $ foreignBrowser ++ "x=>x." ++ n.value ++ "\""

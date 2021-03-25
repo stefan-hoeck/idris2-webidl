@@ -95,7 +95,8 @@ callbackInterfaces d =
 iface : Interface -> List (Doc ())
 iface (MkInterface _ n _ ms) =
    namespaced n
-     $ constants (mapMaybe (part const) ms)
+     $  constants (mapMaybe (part const) ms)
+     ++ readOnlyAttributes (mapMaybe (part attrRO) ms)
 
 interfaces : Codegen Domain
 interfaces d =
@@ -121,7 +122,8 @@ dictionaries d =
 mixin : Mixin -> List (Doc ())
 mixin (MkMixin _ n ms) =
    namespaced n
-     $ constants (mapMaybe const ms)
+     $  constants (mapMaybe const ms)
+     ++ readOnlyAttributes (mapMaybe attrRO ms)
 
 mixins : Codegen Domain
 mixins d =

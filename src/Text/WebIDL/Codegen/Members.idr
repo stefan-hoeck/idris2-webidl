@@ -36,3 +36,22 @@ constants = map const . sortBy (comparing name)
                , pretty n.value <++> ":" <++> pretty t
                , pretty n.value <++> "=" <++> pretty v
                ]
+
+--------------------------------------------------------------------------------
+--          Attributes
+--------------------------------------------------------------------------------
+
+primType : (name : String) -> Nat -> IdlType -> Doc ()
+primType name n x = typeDecl ("prim__" ++ name) (primReturnType x) $
+                      replicate n "AnyPtr"
+
+export
+readOnlyAttributes : List (Readonly Attribute) -> List (Doc ())
+readOnlyAttributes = map attr . sortBy (comparing name) . map value
+  where attr : Codegen Attribute
+        attr (MkAttribute _ t n) =
+          let primName = "prim__" ++ n.value
+           in vsep [ "" 
+                   , attrGet n
+                   , primType n.value 1 t
+                   ]

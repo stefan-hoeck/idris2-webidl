@@ -101,3 +101,8 @@ export
 returnType : IdlType -> Doc ()
 returnType (D (NotNull (P Undefined))) = io Open "()"
 returnType t                           = io Open t
+
+export
+primReturnType : IdlType -> Doc ()
+primReturnType (D (NotNull (P Undefined))) = primIO Open "()"
+primReturnType t                           = primIO Open "AnyPtr"

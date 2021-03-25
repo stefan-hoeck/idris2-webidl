@@ -4,7 +4,6 @@ import Data.List
 import Data.List.Elem
 import Data.SOP
 import Data.SortedMap
-import Data.SortedSet
 import Data.String
 import Text.WebIDL.Codegen.Enum
 import Text.WebIDL.Codegen.Types
@@ -14,11 +13,11 @@ import public Text.WebIDL.Codegen.Util
 --          Imports
 --------------------------------------------------------------------------------
 
-defImports : Domain -> SortedSet String
-defImports _ = fromList ["JS.Util","Web.Types"]
+defImports : Domain -> List String
+defImports _ = ["JS.Util","Web.Types"]
 
-typeImports : Domain -> SortedSet String
-typeImports d = fromList ( "JS.Util" :: enumImports)
+typeImports : Domain -> List String
+typeImports d =  "JS.Util" :: enumImports
 
   where enumImports : List String
         enumImports = guard (not $ null d.enums) *> ["Data.Maybe"]
@@ -187,7 +186,7 @@ types : Codegen Domain
 types d =
   let imps = vsep 
            . map (("import" <++>) . pretty) 
-           . SortedSet.toList $ typeImports d
+           . sortedNubOn id $ typeImports d
 
    in vsep [ "module Web." <+> pretty d.domain <+> "Types"
            , ""
@@ -201,7 +200,7 @@ definitions : Codegen Domain
 definitions d =
   let imps = vsep 
            . map (("import" <++>) . pretty) 
-           . SortedSet.toList $ defImports d
+           . sortedNubOn id $ defImports d
 
    in vsep [ "module Web." <+> pretty d.domain
            , ""

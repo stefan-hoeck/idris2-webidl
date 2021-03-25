@@ -70,11 +70,11 @@ section t ds = vsep $ (title t) :: ds
 --------------------------------------------------------------------------------
 
 export
-function : (name : String) -> (args : Vect (S n) $ Doc ()) -> Doc ()
-function n (h :: []) = hsep [pretty n, ":", h]
-function n (h :: t)  =
+function : (name : String) -> (res : Doc ()) -> (args : List $ Doc ()) -> Doc ()
+function n res []        = hsep [pretty n, ":", res]
+function n res (h :: t)  =
   let h' = ":" <++> flatAlt (" "  <+> h) h
-   in pretty n <++> align (sep (h' :: map ("->" <++>) (toList t)))
+   in pretty n <++> align (sep (h' :: map ("->" <++>) (t ++ [res])))
 
 --------------------------------------------------------------------------------
 --          Function Application
@@ -88,3 +88,11 @@ prettyParens False = id
 export
 prettyCon : Prec -> (con : Doc ann) -> (args : List (Doc ann)) -> Doc ann
 prettyCon p con args = prettyParens (p >= App) (con <++> align (sep args))
+
+export
+prettySingleCon : Pretty arg => Prec -> (con : Doc ann) -> arg -> Doc ann
+prettySingleCon p con arg = prettyCon p con [prettyPrec App arg]
+
+export
+prettyArg : (name : String) -> Doc ann -> Doc ann
+prettyArg name tpe = parens $ vsep [pretty name,":",tpe]

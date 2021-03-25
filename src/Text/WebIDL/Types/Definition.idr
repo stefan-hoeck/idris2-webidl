@@ -275,10 +275,6 @@ Part : Type
 Part = NS I PartTypes
 
 public export
-0 Parts : Type
-Parts = NP List PartTypes
-
-public export
 accumNs : {ts : _} -> List (NS I ts) -> NP List ts
 accumNs = foldl (\np,ns => hliftA2 (++) (toNP ns) np) hempty
 
@@ -291,10 +287,6 @@ public export
 PartsAndDefs = NP List [Part,Definition]
 
 public export
-parts : PartsAndDefs -> Parts
-parts = accumNs . get Part
-
-public export
 defs : PartsAndDefs -> Definitions
 defs = accumNs . get Definition
 
@@ -302,11 +294,8 @@ defs = accumNs . get Definition
 --          Domain
 --------------------------------------------------------------------------------
 
-update : Eq k =>
-         (a -> b -> b) -> (a -> k) -> (b -> k) -> a -> List b -> List b
-update f ak bk a =
-  let k = ak a
-   in map (\b => if bk b == k then f a b else b)
+update : Eq k => (b -> b) -> k -> (b -> k) -> List b -> List b
+update f k bk = map (\b => if bk b == k then f b else b)
 
 mergeDict : PDictionary -> Dictionary -> Dictionary
 mergeDict d = record { members $= (++ d.members) }
@@ -350,13 +339,13 @@ Types Domain where
 
 applyPart : Domain -> Part -> Domain
 applyPart d (Z v) =
-  record { dictionaries $= update mergeDict name name v } d
+  record { dictionaries $= update (mergeDict v) v.name name } d
 applyPart d (S $ Z v) =
-  record { interfaces $= update mergeIface name name v } d
+  record { interfaces $= update (mergeIface v) v.name name } d
 applyPart d (S $ S $ Z v) =
-  record { mixins $= update mergeMixin name name v } d
+  record { mixins $= update (mergeMixin v) v.name name } d
 applyPart d (S $ S $ S $ Z v) =
-  record { namespaces $= update mergeNamespace name name v } d
+  record { namespaces $= update (mergeNamespace v) v.name name } d
 
 export
 toDomains : List (String,PartsAndDefs) -> List Domain

@@ -75,3 +75,20 @@ export
 Pretty ConstType where
   prettyPrec p (CP x) = prettyPrec p x
   prettyPrec p (CI x) = prettyIdent x
+
+export
+Pretty ArgumentRest where
+  pretty (Optional  (_,t) n _) = prettyArg n.value (pretty t)
+  pretty (Mandatory t     n)   = prettyArg n.value (pretty t)
+  pretty (VarArg    t     n)   =
+    prettyArg n.value $ prettySingleCon Open "VarArg" t
+
+export
+idlFunction :  (name : String)
+            -> (res : IdlType)
+            -> (args : ArgumentList)
+            -> Doc ()
+idlFunction n res args =
+  let ioRes = prettySingleCon {ann = ()} Open "IO" res
+   in ?bar
+

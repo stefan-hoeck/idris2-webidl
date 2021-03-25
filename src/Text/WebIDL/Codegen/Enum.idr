@@ -28,16 +28,17 @@ enum (MkEnum _ name vs) =
                    , indent 2 $ "compare = compare `on` show"
                    , ""
                    , "public export"
-                   , function "read" [ pretty "String"
-                                     , "Maybe" <++> pretty name.value]
+                   , function "read" 
+                              ("Maybe" <++> pretty name.value)
+                              [ pretty "String" ]
+
                    , vsep $ zipWith readImpl (s :: ss) (c :: cs)
                    , "read _ = Nothing"
                    , ""
                    , "public export"
-                   , function "fromString"
+                   , function "fromString" pn
                        [ "(s : String)"
                        , "{auto 0 _ : IsJust (" <+> pn  <+> ".read s)}"
-                       , pn
                        ]
                    , "fromString s = fromJust $ read s"
                    , ""

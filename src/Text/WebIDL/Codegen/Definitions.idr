@@ -77,6 +77,18 @@ casts d = section "Casts" (map toCast $ sort pairs)
                      d.includeStatements
 
 --------------------------------------------------------------------------------
+--          Callbacks
+--------------------------------------------------------------------------------
+
+callbacks : List Domain -> List (Doc ())
+callbacks ds =
+  let cs = concatMap callbacks ds
+   in map toCallback $ sortBy (comparing (value . name)) cs
+
+  where toCallback : Callback -> Doc ()
+        toCallback (MkCallback _ name type args) = ?toCallback_rhs_1
+
+--------------------------------------------------------------------------------
 --          Typedefs
 --------------------------------------------------------------------------------
 
@@ -84,7 +96,8 @@ export
 typedefs : Codegen (List Domain)
 typedefs ds =
   let ts   = concatMap typedefs ds
-      docs = map toTypedef $ sortBy (comparing (value . name)) ts
+      docs =  (map toTypedef $ sortBy (comparing (value . name)) ts)
+           ++ (callbacks ds)
    in vsep [ "module Web.Types"
            , ""
            , "import Data.SOP"
@@ -102,7 +115,8 @@ typedefs ds =
            , "import public Web.SvgTypes as Types"
            , "import public Web.UrlTypes as Types"
            , "import public Web.XhrTypes as Types"
-           , section "Typedefs" $ ["", "mutual"] ++ map (indent 2) docs
+           , section "Typedefs and Callbacks" $
+               ["", "mutual"] ++ map (indent 2) docs
            ]
 
   where toTypedef : Typedef -> Doc ()

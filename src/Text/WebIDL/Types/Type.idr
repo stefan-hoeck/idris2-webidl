@@ -192,10 +192,12 @@ public export
 0 OptionalType : Type
 OptionalType = Maybe (Attributed IdlType)
 
+||| Wraps and `Indentifier` as a non-nullable type.
 export
 identToType : Identifier -> IdlType
 identToType = D . NotNull . I
 
+||| The `Undefined` type
 export
 undefined : IdlType
 undefined = D $ NotNull $ P Undefined
@@ -204,6 +206,11 @@ undefined = D $ NotNull $ P Undefined
 --          Types Interface
 --------------------------------------------------------------------------------
 
+||| Interface used to extract all types from a WebIDL expression.
+|||
+||| This was necessary during early tests to make sure no
+||| types where missing from the spec. I'll leave it here for some time,
+||| but eventually, this should be no longer needed.
 public export
 interface Types a where
   types : a -> List IdlType

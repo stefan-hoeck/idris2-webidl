@@ -28,9 +28,7 @@ enum (MkEnum _ name vs) =
                    , indent 2 $ "compare = compare `on` show"
                    , ""
                    , "public export"
-                   , typeDecl "read" 
-                              ("Maybe" <++> pretty name.value)
-                              [ pretty "String" ]
+                   , typeDecl "read" ("Maybe" <++> pn) [ pretty "String" ]
 
                    , vsep $ zipWith readImpl (s :: ss) (c :: cs)
                    , "read _ = Nothing"
@@ -43,12 +41,14 @@ enum (MkEnum _ name vs) =
                    , "fromString s = fromJust $ read s"
                    , ""
                    , "export"
-                   , "ToJS" <++> pretty name.value <++> "where"
+                   , "ToJS" <++> pn <++> "where"
                    , indent 2 ("toJS = toJS . show")
                    , ""
                    , "export"
-                   , "FromJS" <++> pretty name.value <++> "where"
-                   , indent 2 ("fromJS = fromMaybe" <++> pretty c <++> ". read . fromJS")
+                   , "FromJS" <++> pn <++> "where"
+                   , indent 2 ("fromJS = fromMaybe" <++>
+                               pretty c             <++>
+                               ". read . fromJS")
                    ]
 
    in vsep ["", "namespace" <++> pn, indent 2 code]
@@ -60,5 +60,5 @@ enum (MkEnum _ name vs) =
         readImpl x y = hsep ["read",pretty x,"=","Just", pretty y]
 
 export
-enums : Codegen (List Enum)
-enums es = section "Enums" (map enum es)
+enums : List Enum -> String
+enums = section "Enums" . map (show . enum)

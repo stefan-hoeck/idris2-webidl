@@ -27,15 +27,15 @@ Pretty ConstValue where
 --------------------------------------------------------------------------------
 
 export
-constants : List Const -> List (Doc ())
-constants = map const . sortBy (comparing name)
-  where const : Codegen Const
+constants : List Const -> List String
+constants = map (show . const) . sortBy (comparing name)
+  where const : Const -> Doc ()
         const (MkConst t n v) =
-          vsep [ ""
-               , "public export"
-               , pretty n.value <++> ":" <++> pretty t
-               , pretty n.value <++> "=" <++> pretty v
-               ]
+          indent 2 $ vsep [ ""
+                          , "public export"
+                          , pretty n.value <++> ":" <++> pretty t
+                          , pretty n.value <++> "=" <++> pretty v
+                          ]
 
 --------------------------------------------------------------------------------
 --          Attributes
@@ -105,33 +105,40 @@ funType n args t =
                Nothing => prettyArg (fromString n) (pretty tpe)
 
 
-readonly : Identifier -> Attribute -> List $ Doc ()
+readonly : Identifier -> Attribute -> String
 readonly i (MkAttribute _ t (MkAttributeName n)) =
   let ii = fromString n
-   in [ "" 
-      , attrGet n
-      , primType ii 1 t
-      , ""
-      , "export"
-      , funType ii [objArg i] t
-      ]
+   in #""" 
 
-readwrite : Identifier -> Attribute -> List $ Doc ()
+        \#{attrGetFFI n}
+      \#{show $ indent 2 $ primType ii 1 t}
+      
+        export
+      \#{show $ indent 2 $ funType ii [objArg i] t }
+      """#
+
+readwrite : Identifier -> Attribute -> String
 readwrite i a@(MkAttribute _ t (MkAttributeName n)) =
-  readonly i a ++ [ ""
-                  , attrSet n
-                  , primType (setter n) 2 t
-                  , ""
-                  , "export"
-                  , funType (setter n) [objArg i, valArg t] undefined
-                  ]
+  #"""
+  \#{readonly i a}
 
+    \#{attrSetFFI n}
+  \#{show $ indent 2 $ primType (setter n) 2 t}
+ 
+    export
+  \#{show $ indent 2 $ funType (setter n) [objArg i, valArg t] undefined}
+  """#
+
+-- TODO: Change Identifier to IdrisIdent here
 export
 readOnlyAttributes :  Identifier
                    -> List (Readonly Attribute)
-                   -> List (Doc ())
-readOnlyAttributes i = (>>= readonly i) . sortBy (comparing name) . map value
+                   -> List String
+readOnlyAttributes i = map (readonly i) 
+                     . sortBy (comparing name) 
+                     . map value
 
+-- TODO: Change Identifier to IdrisIdent here
 export
-attributes : Identifier -> List Attribute -> List (Doc ())
-attributes i = (>>= readwrite i) . sortBy (comparing name)
+attributes : Identifier -> List Attribute -> List String
+attributes i = map (readwrite i) . sortBy (comparing name)

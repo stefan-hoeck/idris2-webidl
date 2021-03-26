@@ -10,6 +10,12 @@ public export
 0 Codegen : Type -> Type
 Codegen a = a -> Doc ()
 
+export
+mapFirstChar : (Char -> Char) -> String -> String
+mapFirstChar f x = case fastUnpack x of
+                        []       => ""
+                        (h :: t) => fastPack (f h :: t)
+
 --------------------------------------------------------------------------------
 --          Sorted Lists
 --------------------------------------------------------------------------------
@@ -27,9 +33,7 @@ sortedNubOn f = nub . sortBy (comparing f)
 
 export
 moduleName : String -> String
-moduleName s = case fastUnpack s of
-                    []       => ""
-                    (h :: t) => fastPack (toUpper h :: t)
+moduleName = mapFirstChar toUpper
 
 --------------------------------------------------------------------------------
 --          String Literals
@@ -67,23 +71,31 @@ toDataConstructor s =
 --------------------------------------------------------------------------------
 
 export
-title : String -> Doc ()
-title n = let ln = pretty $ fastPack (replicate 80 '-')
-           in vsep ["", ln, pretty ("--          " ++ n), ln]
+title : String -> String
+title n = #"""
+
+          --------------------------------------------------------------------------------
+          --          \#{n}
+          --------------------------------------------------------------------------------
+          """#
 
 export
-section : String -> List (Doc ()) -> Doc ()
-section _ Nil = neutral
-section t ds = vsep $ (title t) :: ds
+section : String -> List String -> String
+section _ Nil = ""
+section t ds = fastUnlines (title t :: ds)
 
 --------------------------------------------------------------------------------
 --          Namespaces Implementations
 --------------------------------------------------------------------------------
 
 export
-namespaced : Identifier -> List $ Doc () -> List $ Doc ()
-namespaced _ [] = neutral
-namespaced n ds = "" :: ("namespace" <++> pretty n.value) :: map (indent 2) ds
+namespaced : Identifier -> List String -> String
+namespaced _ [] = ""
+namespaced n ds = #"""
+ 
+                  namespace \#{n.value}
+                  \#{fastUnlines ds}
+                  """#
 
 --------------------------------------------------------------------------------
 --          Generating Functions
@@ -170,22 +182,16 @@ prettyArg name tpe = parens $ hsep [pretty name,":",tpe]
 --------------------------------------------------------------------------------
 
 export
-mapFirstChar : (Char -> Char) -> String -> String
-mapFirstChar f x = case fastUnpack x of
-                        []       => ""
-                        (h :: t) => fastPack (f h :: t)
+setter : String -> IdrisIdent
+setter = fromString . ("set" ++) . mapFirstChar toUpper
 
 foreignBrowser : String
 foreignBrowser ="%foreign \"browser:lambda:"
 
 export
-attrGet : String -> Doc ann
-attrGet n = pretty $ foreignBrowser ++ "x=>x." ++ n ++ "\""
+attrGetFFI : String -> String
+attrGetFFI n = #"\#{foreignBrowser}x=>x.\#{n}""#
 
 export
-attrSet : String -> Doc ann
-attrSet n = pretty $ foreignBrowser ++ "(x,v)=>{x." ++ n ++ " = v}\""
-
-export
-setter : String -> IdrisIdent
-setter = fromString . ("set" ++) . mapFirstChar toUpper
+attrSetFFI : String -> String
+attrSetFFI n = #"\#{foreignBrowser}(x,v)=>{x.\#{n}  = v}""#

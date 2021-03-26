@@ -13,54 +13,56 @@ import public Text.WebIDL.Codegen.Util
 --          Imports
 --------------------------------------------------------------------------------
 
-defImports : Domain -> List String
-defImports _ = ["Data.SOP","JS.Util","Web.Types"]
+defImports : String
+defImports = #"""
+             import JS.Util
+             import Web.Types
+             """#
 
-typeImports : Domain -> List String
-typeImports d =  "JS.Util" :: enumImports
-
-  where enumImports : List String
-        enumImports = guard (not $ null d.enums) *> ["Data.Maybe"]
+typeImports : String
+typeImports = "import JS.Util"
 
 --------------------------------------------------------------------------------
 --          Data Declarations
 --------------------------------------------------------------------------------
 
-extern : Codegen Domain 
-extern d = vsep [ section "Interfaces" $ exts name d.interfaces
-                , section "Mixins" $ exts name d.mixins
-                , section "Dictionaries" $ exts name d.dictionaries
-                ]
-  where ext : String -> Doc ()
-        ext s = vsep [ ""
-                     , "export"
-                     , "data" <++> pretty s <++> ": Type where [external]"
-                     , ""
-                     , "export"
-                     , "ToJS" <++> pretty s <++> "where"
-                     , indent 2 ("toJS = believe_me")
-                     , ""
-                     , "export"
-                     , "FromJS" <++> pretty s <++> "where"
-                     , indent 2 ("fromJS = believe_me")
-                     ]
+extern : Domain -> String
+extern d = fastUnlines [ section "Interfaces" $ exts name d.interfaces
+                       , section "Mixins" $ exts name d.mixins
+                       , section "Dictionaries" $ exts name d.dictionaries
+                       ]
+  where ext : String -> String
+        ext s = #"""
 
-        exts : (a -> Identifier) -> List a -> List (Doc ())
+                export
+                data \#{s}  : Type where [external]
+                
+                export
+                ToJS \#{s} where
+                  toJS = believe_me
+                
+                export
+                FromJS \#{s} where
+                  fromJS = believe_me
+                """#
+
+        exts : (a -> Identifier) -> List a -> List String
         exts f = map ext . sort . map (value . f)
 
 --------------------------------------------------------------------------------
 --          Casts
 --------------------------------------------------------------------------------
 
-casts : Codegen Domain
+casts : Domain -> String
 casts d = section "Casts" (map toCast $ sort pairs)
-  where toCast : (String,String) -> Doc ()
+  where toCast : (String,String) -> String
         toCast (from,to) =
-          vsep [ ""
-               , "export"
-               , "Cast" <++> pretty from <++> pretty to <++> "where"
-               , indent 2 ("cast = believe_me")
-               ]
+          #"""
+
+          export
+          Cast \#{from} \#{to} where
+            cast = believe_me
+          """#
 
         inheritance :  (a -> Inheritance)
                     -> (a -> Identifier)
@@ -79,83 +81,89 @@ casts d = section "Casts" (map toCast $ sort pairs)
 --          CallbackInterfaces
 --------------------------------------------------------------------------------
 
-callbackInterface : CallbackInterface -> List (Doc ())
+callbackInterface : CallbackInterface -> String
 callbackInterface (MkCallbackInterface _ n ms) =
    namespaced n $ constants (mapMaybe const ms)
 
-callbackInterfaces : Codegen Domain
-callbackInterfaces d =
-  section "Callback Interfaces"
-  (sortBy (comparing name) d.callbackInterfaces >>= callbackInterface)
+callbackInterfaces : Domain -> String
+callbackInterfaces = section "Callback Interfaces"
+                   . map callbackInterface 
+                   . sortBy (comparing name) 
+                   . callbackInterfaces
 
 --------------------------------------------------------------------------------
 --          Interfaces
 --------------------------------------------------------------------------------
 
-iface : Interface -> List (Doc ())
+iface : Interface -> String
 iface (MkInterface _ n _ ms) =
    namespaced n
      $  constants (mapMaybe (part const) ms)
      ++ readOnlyAttributes n (mapMaybe (part attrRO) ms)
      ++ attributes n (mapMaybe (part attr) ms)
 
-interfaces : Codegen Domain
-interfaces d =
-  section "Interfaces"
-  (sortBy (comparing name) d.interfaces >>= iface)
+interfaces : Domain -> String
+interfaces = section "Interfaces"
+           . map iface
+           . sortBy (comparing name)
+           . interfaces
 
 --------------------------------------------------------------------------------
 --          Dictionaries
 --------------------------------------------------------------------------------
 
-dictionary : Dictionary -> List (Doc ())
+dictionary : Dictionary -> String
 dictionary (MkDictionary _ n _ ms) =
   namespaced n
     $  attributes n (mapMaybe required ms)
     ++ attributes n (mapMaybe optional ms)
 
-dictionaries : Codegen Domain
-dictionaries d =
-  section "Dictionaries"
-  (sortBy (comparing name) d.dictionaries >>= dictionary)
+dictionaries : Domain -> String
+dictionaries = section "Dictionaries"
+             . map dictionary
+             . sortBy (comparing name)
+             . dictionaries
 
 --------------------------------------------------------------------------------
 --          Mixins
 --------------------------------------------------------------------------------
 
-mixin : Mixin -> List (Doc ())
+mixin : Mixin -> String
 mixin (MkMixin _ n ms) =
    namespaced n
      $  constants (mapMaybe const ms)
      ++ readOnlyAttributes n (mapMaybe attrRO ms)
      ++ attributes n (mapMaybe attr ms)
 
-mixins : Codegen Domain
-mixins d =
-  section "Mixins"
-  (sortBy (comparing name) d.mixins >>= mixin)
+mixins : Domain -> String
+mixins = section "Mixins"
+       . map mixin
+       . sortBy (comparing name)
+       . mixins
 
 --------------------------------------------------------------------------------
 --          Namespaces
 --------------------------------------------------------------------------------
 
-nspace : Namespace -> List (Doc ())
+nspace : Namespace -> String
 nspace (MkNamespace _ n ms) =
    namespaced n Nil
 
-namespaces : Codegen Domain
-namespaces d =
-  section "Namespaces"
-  (sortBy (comparing name) d.namespaces >>= nspace)
+namespaces : Domain -> String
+namespaces = section "Namespaces"
+           . map nspace
+           . sortBy (comparing name)
+           . namespaces
 
 --------------------------------------------------------------------------------
 --          Callbacks
 --------------------------------------------------------------------------------
 
-callbacks : List Domain -> List (Doc ())
-callbacks ds =
-  let cs = concatMap allCallbacks ds
-   in map toCallback $ sortBy (comparing name) cs
+callbacks : List Domain -> String
+callbacks = fastUnlines
+          . map (show . indent 2 . toCallback)
+          . sortBy (comparing name)
+          . concatMap allCallbacks
 
   where memberToCallback :  Identifier
                          -> CallbackInterfaceMember
@@ -189,39 +197,42 @@ callbacks ds =
 --------------------------------------------------------------------------------
 
 export
-typedefs : Codegen (List Domain)
+typedefs : List Domain -> String
 typedefs ds =
   let ts   = concatMap typedefs ds
       docs =  map toTypedef (sortBy (comparing name) ts)
-           ++ callbacks ds
-   in vsep [ "module Web.Types"
-           , ""
-           , "import Data.SOP"
-           , "import JS.Util"
-           , "import public Web.AnimationTypes as Types"
-           , "import public Web.ClipboardTypes as Types"
-           , "import public Web.CssTypes as Types"
-           , "import public Web.DomTypes as Types"
-           , "import public Web.EventTypes as Types"
-           , "import public Web.FetchTypes as Types"
-           , "import public Web.FileTypes as Types"
-           , "import public Web.GeometryTypes as Types"
-           , "import public Web.HtmlTypes as Types"
-           , "import public Web.MediasourceTypes as Types"
-           , "import public Web.MediastreamTypes as Types"
-           , "import public Web.PermissionsTypes as Types"
-           , "import public Web.ServiceworkerTypes as Types"
-           , "import public Web.StreamsTypes as Types"
-           , "import public Web.SvgTypes as Types"
-           , "import public Web.UrlTypes as Types"
-           , "import public Web.VisibilityTypes as Types"
-           , "import public Web.WebglTypes as Types"
-           , "import public Web.WebidlTypes as Types"
-           , "import public Web.XhrTypes as Types"
-           , section "Typedefs and Callbacks" $
-               ["", "mutual"] ++ map (indent 2) docs
-           ]
 
+      sect = section "Typedefs and Callbacks" $
+               ["", "mutual", callbacks ds] ++
+               map (show . indent 2) docs
+   in #"""
+      module Web.Types
+      
+      import Data.SOP
+      import JS.Util
+      import public Web.AnimationTypes as Types
+      import public Web.ClipboardTypes as Types
+      import public Web.CssTypes as Types
+      import public Web.DomTypes as Types
+      import public Web.EventTypes as Types
+      import public Web.FetchTypes as Types
+      import public Web.FileTypes as Types
+      import public Web.GeometryTypes as Types
+      import public Web.HtmlTypes as Types
+      import public Web.MediasourceTypes as Types
+      import public Web.MediastreamTypes as Types
+      import public Web.PermissionsTypes as Types
+      import public Web.ServiceworkerTypes as Types
+      import public Web.StreamsTypes as Types
+      import public Web.SvgTypes as Types
+      import public Web.UrlTypes as Types
+      import public Web.VisibilityTypes as Types
+      import public Web.WebglTypes as Types
+      import public Web.WebidlTypes as Types
+      import public Web.XhrTypes as Types
+      \#{sect}
+      """#
+      
   where toTypedef : Typedef -> Doc ()
         toTypedef t = vsep [ ""
                            , "public export"
@@ -234,55 +245,27 @@ typedefs ds =
 --------------------------------------------------------------------------------
 
 export
-typeTests : Codegen Domain
-typeTests d =
-  let ts = types d
-      ps = zip [1 .. length ts] ts
-
-   in vsep [ "module Test." <+> pretty d.domain <+> "Types"
-           , ""
-           , "import Data.SOP"
-           , "import Web.Types"
-           , "import JS.Util"
-           , vsep (map mkTest ps)
-           ]
-
-  where mkTest : (Nat,IdlType) -> Doc ()
-        mkTest (n,t) =
-          let nm = pretty ("test" ++ show n)
-           in vsep [ ""
-                   , nm <++> ":" <++> pretty t <++> "-> ()"
-                   , nm <++> "_ = ()"
-                   ]
-
-export
-types : Codegen Domain
+types : Domain -> String
 types d =
-  let imps = vsep 
-           . map (("import" <++>) . pretty) 
-           . sortedNubOn id $ typeImports d
+  #"""
+  module Web.\#{d.domain}Types
 
-   in vsep [ "module Web." <+> pretty d.domain <+> "Types"
-           , ""
-           , imps
-           , enums d.enums
-           , extern d
-           ]
+  \#{typeImports}
+  \#{enums d.enums}
+  \#{extern d}
+  """#
 
 export
-definitions : Codegen Domain
+definitions : Domain -> String
 definitions d =
-  let imps = vsep 
-           . map (("import" <++>) . pretty) 
-           . sortedNubOn id $ defImports d
+  #"""
+  module Web.\#{d.domain}
 
-   in vsep [ "module Web." <+> pretty d.domain
-           , ""
-           , imps
-           , interfaces d
-           , mixins d
-           , dictionaries d
-           , callbackInterfaces d
-           , namespaces d
-           , casts d
-           ]
+  \#{defImports}
+  \#{interfaces d}
+  \#{mixins d}
+  \#{dictionaries d}
+  \#{callbackInterfaces d}
+  \#{namespaces d}
+  \#{casts d}
+  """#

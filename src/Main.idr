@@ -56,8 +56,8 @@ runProg (MkEitherT p) = do Right _ <- p
                              | Left e => putStrLn ("Error: " ++ e)
                            pure ()
 
-writeDoc : String -> Doc () -> Prog ()
-writeDoc f doc = toProg $ writeFile f (show doc)
+writeDoc : String -> String -> Prog ()
+writeDoc f doc = toProg $ writeFile f doc
 
 loadDef : String -> Prog (String,PartsAndDefs)
 loadDef f = let mn = moduleName
@@ -79,11 +79,9 @@ codegen : Config -> Domain -> Prog ()
 codegen c d =
   let typesFile = c.outDir ++ "/Web/" ++ d.domain ++ "Types.idr"
       modFile = c.outDir ++ "/Web/" ++ d.domain ++ ".idr"
-      typesTestFile = c.outDir ++ "/Test/" ++ d.domain ++ "Types.idr"
 
    in do writeDoc typesFile (types d)
          writeDoc modFile (definitions d)
-         writeDoc typesTestFile (typeTests d)
 
 --------------------------------------------------------------------------------
 --          Main Function

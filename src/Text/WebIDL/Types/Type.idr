@@ -130,13 +130,6 @@ mutual
                | U (Nullable UnionType)
                | Promise IdlType
 
-  export
-  sizeIdl : IdlType -> Nat
-  sizeIdl Any         = 1
-  sizeIdl (D x)       = 1 + sizeDT (nullVal x)
-  sizeIdl (U x)       = 1 + sizeUT (nullVal x)
-  sizeIdl (Promise x) = 1 + sizeIdl x
-
   ||| UnionType ::
   |||     ( UnionMemberType or UnionMemberType UnionMemberTypes )
   ||| 
@@ -150,11 +143,6 @@ mutual
     snd  : UnionMemberType
     rest : List UnionMemberType
 
-  sizeUT : UnionType -> Nat
-  sizeUT (UT fst snd rest) = 1 + foldl (\n,t => n + sizeUMT t)
-                                       (sizeUMT fst + sizeUMT snd)
-                                       rest
-
   ||| UnionMemberType ::
   |||     ExtendedAttributeList DistinguishableType
   |||     UnionType Null
@@ -162,10 +150,6 @@ mutual
   data UnionMemberType =
       UD (Attributed $ Nullable Distinguishable)
     | UU (Nullable UnionType)
-
-  sizeUMT : UnionMemberType -> Nat
-  sizeUMT (UD (x, y)) = 1 + sizeDT (nullVal y)
-  sizeUMT (UU x)      = 1 + sizeUT (nullVal x)
 
   
   ||| DistinguishableType ::
@@ -194,18 +178,6 @@ mutual
     | Record StringType (Attributed IdlType)
     | Object
     | Symbol
-
-  sizeDT : Distinguishable -> Nat
-  sizeDT (P x) = 1
-  sizeDT (S x) = 1
-  sizeDT (I x) = 1
-  sizeDT (B x) = 1
-  sizeDT (Sequence x) = 1 + sizeIdl (snd x)
-  sizeDT (FrozenArray x) = 1 + sizeIdl (snd x)
-  sizeDT (ObservableArray x) = 1 + sizeIdl (snd x)
-  sizeDT (Record x y) = 2 + sizeIdl (snd y)
-  sizeDT Object = 1
-  sizeDT Symbol = 1
 
 %runElab deriveMutual [ ("Distinguishable", [Generic,Meta,Show,Eq])
                       , ("UnionMemberType", [Generic,Meta,Show,Eq])

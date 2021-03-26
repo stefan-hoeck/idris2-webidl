@@ -73,7 +73,6 @@ toDataConstructor s =
 export
 title : String -> String
 title n = #"""
-
           --------------------------------------------------------------------------------
           --          \#{n}
           --------------------------------------------------------------------------------
@@ -82,7 +81,7 @@ title n = #"""
 export
 section : String -> List String -> String
 section _ Nil = ""
-section t ds = fastUnlines (title t :: ds)
+section t ds = fastUnlines ("" :: title t :: ds)
 
 --------------------------------------------------------------------------------
 --          Namespaces Implementations
@@ -91,11 +90,7 @@ section t ds = fastUnlines (title t :: ds)
 export
 namespaced : Identifier -> List String -> String
 namespaced _ [] = ""
-namespaced n ds = #"""
- 
-                  namespace \#{n.value}
-                  \#{fastUnlines ds}
-                  """#
+namespaced n ds = fastUnlines $ "" :: #"namespace \#{n.value}"# :: ds
 
 --------------------------------------------------------------------------------
 --          Generating Functions

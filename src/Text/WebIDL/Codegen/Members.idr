@@ -105,40 +105,38 @@ funType n args t =
                Nothing => prettyArg (fromString n) (pretty tpe)
 
 
-readonly : Identifier -> Attribute -> String
+readonly : Identifier -> Attribute -> List (Doc ())
 readonly i (MkAttribute _ t (MkAttributeName n)) =
   let ii = fromString n
-   in #""" 
+   in [ ""
+      , pretty $ attrGetFFI n
+      , primType ii 1 t
+      , ""
+      , "export"
+      , funType ii [objArg i] t
+      ]
 
-        \#{attrGetFFI n}
-      \#{show $ indent 2 $ primType ii 1 t}
-      
-        export
-      \#{show $ indent 2 $ funType ii [objArg i] t }
-      """#
-
-readwrite : Identifier -> Attribute -> String
+readwrite : Identifier -> Attribute -> List (Doc ())
 readwrite i a@(MkAttribute _ t (MkAttributeName n)) =
-  #"""
-  \#{readonly i a}
-
-    \#{attrSetFFI n}
-  \#{show $ indent 2 $ primType (setter n) 2 t}
- 
-    export
-  \#{show $ indent 2 $ funType (setter n) [objArg i, valArg t] undefined}
-  """#
+  readonly i a ++ [ ""
+                  , pretty $ attrSetFFI n
+                  , primType (setter n) 2 t
+                  , ""
+                  , "export"
+                  , funType (setter n) [objArg i, valArg t] undefined
+                  ]
 
 -- TODO: Change Identifier to IdrisIdent here
 export
 readOnlyAttributes :  Identifier
                    -> List (Readonly Attribute)
                    -> List String
-readOnlyAttributes i = map (readonly i) 
+readOnlyAttributes i = map (show . indent 2 . vsep . readonly i) 
                      . sortBy (comparing name) 
                      . map value
 
 -- TODO: Change Identifier to IdrisIdent here
 export
 attributes : Identifier -> List Attribute -> List String
-attributes i = map (readwrite i) . sortBy (comparing name)
+attributes i = map (show . indent 2 . vsep . readwrite i) 
+             . sortBy (comparing name)

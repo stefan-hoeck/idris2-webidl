@@ -16,12 +16,12 @@ import public Text.WebIDL.Codegen.Util
 
 defImports : String
 defImports = #"""
-             import JS.Util
+             import JS
              import Web.Types
              """#
 
 typeImports : String
-typeImports = "import JS.Util"
+typeImports = "import JS"
 
 --------------------------------------------------------------------------------
 --          Data Declarations
@@ -183,8 +183,7 @@ typedefs ds =
    in #"""
       module Web.Types
       
-      import Data.SOP
-      import JS.Util
+      import JS
       import public Web.AnimationTypes as Types
       import public Web.ClipboardTypes as Types
       import public Web.CssTypes as Types

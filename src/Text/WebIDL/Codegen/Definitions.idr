@@ -5,6 +5,7 @@ import Data.List.Elem
 import Data.SOP
 import Data.String
 import Text.WebIDL.Codegen.Enum
+import Text.WebIDL.Codegen.Inheritance
 import Text.WebIDL.Codegen.Members
 import Text.WebIDL.Codegen.Types
 import public Text.WebIDL.Codegen.Util
@@ -50,34 +51,6 @@ extern d = fastUnlines [ section "Interfaces" $ exts name d.interfaces
         exts f = map ext . sort . map (value . f)
 
 --------------------------------------------------------------------------------
---          Casts
---------------------------------------------------------------------------------
-
-casts : Domain -> String
-casts d = section "Casts" (map toCast $ sort pairs)
-  where toCast : (String,String) -> String
-        toCast (from,to) =
-          #"""
-
-          export
-          Cast \#{from} \#{to} where
-            cast = believe_me
-          """#
-
-        inheritance :  (a -> Inheritance)
-                    -> (a -> Identifier)
-                    -> List a
-                    -> List (String,String)
-        inheritance i n = mapMaybe \v =>
-                            map (\to => (value (n v), value to)) (i v)
-
-        pairs : List (String,String)
-        pairs =  inheritance inherits name d.interfaces
-              ++ inheritance inherits name d.dictionaries
-              ++ map (\s => (s.name.value,s.includes.value))
-                     d.includeStatements
-
---------------------------------------------------------------------------------
 --          CallbackInterfaces
 --------------------------------------------------------------------------------
 
@@ -95,34 +68,36 @@ callbackInterfaces = section "Callback Interfaces"
 --          Interfaces
 --------------------------------------------------------------------------------
 
-iface : Interface -> String
-iface (MkInterface _ n _ ms) =
-   namespaced n
-     $  constants (mapMaybe (part const) ms)
-     ++ readOnlyAttributes n (mapMaybe (part attrRO) ms)
-     ++ attributes n (mapMaybe (part attr) ms)
+interfaces : JSTypes -> (maxIterations : Nat) -> Domain -> String
+interfaces ts mi = section "Interfaces"
+                 . map iface
+                 . sortBy (comparing name)
+                 . interfaces
 
-interfaces : Domain -> String
-interfaces = section "Interfaces"
-           . map iface
-           . sortBy (comparing name)
-           . interfaces
+  where iface : Interface -> String
+        iface (MkInterface _ n _ ms) =
+          namespaced n
+            $  jsType ts mi n
+            :: constants (mapMaybe (part const) ms)
+            ++ readOnlyAttributes n (mapMaybe (part attrRO) ms)
+            ++ attributes n (mapMaybe (part attr) ms)
 
 --------------------------------------------------------------------------------
 --          Dictionaries
 --------------------------------------------------------------------------------
 
-dictionary : Dictionary -> String
-dictionary (MkDictionary _ n _ ms) =
-  namespaced n
-    $  attributes n (mapMaybe required ms)
-    ++ attributes n (mapMaybe optional ms)
+dictionaries : JSTypes -> (maxIterations : Nat) -> Domain -> String
+dictionaries ts mi = section "Dictionaries"
+                   . map dictionary
+                   . sortBy (comparing name)
+                   . dictionaries
 
-dictionaries : Domain -> String
-dictionaries = section "Dictionaries"
-             . map dictionary
-             . sortBy (comparing name)
-             . dictionaries
+  where dictionary : Dictionary -> String
+        dictionary (MkDictionary _ n _ ms) =
+          namespaced n
+            $  jsType ts mi n
+            :: attributes n (mapMaybe required ms)
+            ++ attributes n (mapMaybe optional ms)
 
 --------------------------------------------------------------------------------
 --          Mixins
@@ -256,16 +231,15 @@ types d =
   """#
 
 export
-definitions : Domain -> String
-definitions d =
+definitions : JSTypes -> (maxIterations : Nat) -> Domain -> String
+definitions ts mi d =
   #"""
   module Web.\#{d.domain}
 
   \#{defImports}
-  \#{interfaces d}
+  \#{interfaces ts mi d}
   \#{mixins d}
-  \#{dictionaries d}
+  \#{dictionaries ts mi d}
   \#{callbackInterfaces d}
   \#{namespaces d}
-  \#{casts d}
   """#

@@ -77,9 +77,8 @@ mutual
   export
   Pretty UnionType where
     prettyPrec p (UT fst snd rest) =
-      prettyParens (p >= App) $ "NS I" <++> align (sep $
-        ("[" <++> pretty fst) ::
-        map (\v => "," <++> pretty v) (snd :: rest) ++ ["]"])
+      prettyParens (p >= App) $
+        "NS I" <++> prettyList (map pretty $ fst :: snd :: rest)
 
   export
   Pretty UnionMemberType where

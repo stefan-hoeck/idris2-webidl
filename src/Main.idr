@@ -18,11 +18,12 @@ import Text.PrettyPrint.Prettyprinter
 
 record Config where
   constructor MkConfig
-  outDir : String
-  files  : List String
+  outDir         : String
+  maxInheritance : Nat
+  files          : List String
 
 init : List String -> Config
-init = MkConfig "../dom/src"
+init = MkConfig "../dom/src" 100
 
 setOutDir : String -> Config -> Either (List String) Config
 setOutDir s = Right . record { outDir = s }
@@ -75,13 +76,13 @@ typesGen c ds =
   let typesFile = c.outDir ++ "/Web/Types.idr"
    in writeDoc typesFile (typedefs ds)
 
-codegen : Config -> Domain -> Prog ()
-codegen c d =
+codegen : Config -> JSTypes -> Domain -> Prog ()
+codegen c ts d =
   let typesFile = c.outDir ++ "/Web/" ++ d.domain ++ "Types.idr"
       modFile = c.outDir ++ "/Web/" ++ d.domain ++ ".idr"
 
    in do writeDoc typesFile (types d)
-         writeDoc modFile (definitions d)
+         writeDoc modFile (definitions ts c.maxInheritance d)
 
 --------------------------------------------------------------------------------
 --          Main Function
@@ -91,7 +92,9 @@ run : List String -> Prog ()
 run args = do config <- toProg (pure $ applyArgs args)
               ds     <- toDomains <$> traverse loadDef config.files
 
-              traverse_ (codegen config) ds
+              let ts = jsTypes ds
+
+              traverse_ (codegen config ts) ds
               typesGen config ds
               pure ()
 

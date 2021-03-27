@@ -1,6 +1,7 @@
 module Text.WebIDL.Codegen.Members
 
 import Data.List
+import Text.WebIDL.Codegen.Inheritance
 import Text.WebIDL.Codegen.Types
 import Text.WebIDL.Codegen.Util
 import Text.WebIDL.Types
@@ -21,6 +22,29 @@ Pretty ConstValue where
   pretty (B x) = pretty x
   pretty (F x) = pretty x
   pretty (I x) = pretty x
+
+--------------------------------------------------------------------------------
+--          Subtyping
+--------------------------------------------------------------------------------
+
+export
+jsType : JSTypes -> (maxIterations : Nat) -> Identifier -> String
+jsType ts mi n =
+  let MkSupertypes parents ms = supertypes ts mi n
+
+      mixins = sortedNubOn id ms
+
+      doc = indent {ann = ()} 2 $
+              vsep [ ""
+                   , "public export"
+                   , "JSVal" <++> pretty n.value <++> "where"
+                   , "  parents = " <++>
+                       prettyList (map (pretty . value) parents)
+                   , ""
+                   , "  mixins = " <++>
+                       prettyList (map (pretty . value) mixins)
+                   ]
+   in show doc
 
 --------------------------------------------------------------------------------
 --          Constants
@@ -45,64 +69,23 @@ primType : (name : IdrisIdent) -> Nat -> IdlType -> Doc ()
 primType name n x = typeDecl (Prim $ show name) (primReturnType x) $
                       replicate n "AnyPtr"
 
--- Types coming as identifiers are treated as external JS types
--- In order to support suptyping, these are converted to lowercase
--- names and the necessary implicits are added as prerequisids.
---
 -- We need to make sure that implicits are added only once, though.
 funType : (name : IdrisIdent) -> ArgumentList -> IdlType -> Doc ()
 funType n args t =
-  let implArgNames = sortedNubOn id $ mapMaybe (ident . argType . snd) args
+  let args2 = map (toPrettyParam . snd) args
 
-      implicits    = implArgNames >>= toImplicit
+   in typeDeclWithImplicits n (returnType t) [] args2
 
-      args2        = map (renameParams . snd) args
+  where toPrettyParam : ArgumentRest -> Doc ()
+        toPrettyParam (Optional (e,tpe) (MkArgName n) def) =
+          prettyArg (fromString n) (pretty tpe)
 
-   in typeDeclWithImplicits n (returnType t) implicits args2
-
-  where 
-
-        identAndType : IdlType -> Maybe (IdlType,String,String)
-        identAndType (D $ MaybeNull $ I $ MkIdent x) =
-          let x2 = mapFirstChar toLower x
-           in Just (D $ MaybeNull $ I $ MkIdent x2,x,x2)
-
-        identAndType (D $ NotNull   $ I $ MkIdent x) =
-          let x2 = mapFirstChar toLower x
-           in Just (D $ NotNull $ I $ MkIdent x2,x,x2)
-
-        identAndType _                               = Nothing
-
-        ident : IdlType -> Maybe (String,String)
-        ident = map (\(_,x,y) => (x,y)) . identAndType
-
-        toImplicit : (String,String) -> List (Doc ())
-        toImplicit (s,slower) = [ "Cast" <++> pretty slower <++> pretty s
-                                , "ToJS" <++> pretty s
-                                ]
-
-        renameParams : ArgumentRest -> Doc ()
-        renameParams (Optional (e,tpe) (MkArgName n) def) =
-          case identAndType tpe of
-               Just (t,_,l) => if l == n
-                                  then prettyArg (Underscore n) (pretty t)
-                                  else prettyArg (fromString n) (pretty t)
-               Nothing => prettyArg (fromString n) (pretty tpe)
-
-        renameParams (Mandatory tpe (MkArgName n)) =
-          case identAndType tpe of
-               Just (t,_,l) => if l == n
-                                  then prettyArg (Underscore n) (pretty t)
-                                  else prettyArg (fromString n) (pretty t)
-               Nothing => prettyArg (fromString n) (pretty tpe)
+        toPrettyParam (Mandatory tpe (MkArgName n)) =
+          prettyArg (fromString n) (pretty tpe)
 
         -- TODO: Properly support varargs
-        renameParams (VarArg tpe (MkArgName n)) =
-          case identAndType tpe of
-               Just (t,_,l) => if l == n
-                                  then prettyArg (Underscore n) (pretty t)
-                                  else prettyArg (fromString n) (pretty t)
-               Nothing => prettyArg (fromString n) (pretty tpe)
+        toPrettyParam (VarArg tpe (MkArgName n)) =
+          prettyArg (fromString n) (pretty tpe)
 
 
 readonly : Identifier -> Attribute -> List (Doc ())

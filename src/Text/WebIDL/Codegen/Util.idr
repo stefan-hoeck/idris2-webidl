@@ -27,6 +27,13 @@ sortedNubOn f = nub . sortBy (comparing f)
         nub (x :: t@(y :: ys)) = if f x == f y then nub t else x :: nub t
         nub xs                 = xs
 
+export
+prettyList : List (Doc ann) -> Doc ann
+prettyList []        = "[]"
+prettyList (x :: xs) = align $ sep $  ("[" <++> x) 
+                                   :: map ("," <++>) xs
+                                   ++ ["]"]
+
 --------------------------------------------------------------------------------
 --          Modules
 --------------------------------------------------------------------------------

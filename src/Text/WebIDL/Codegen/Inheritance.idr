@@ -47,7 +47,7 @@ record Supertypes where
   mixins  : List Identifier
 
 objectOnly : Supertypes
-objectOnly = MkSupertypes [MkIdent "Object"] []
+objectOnly = MkSupertypes [MkIdent "JSObject"] []
 
 ||| Calculates the supertypes and mixins for a given
 ||| identifier.

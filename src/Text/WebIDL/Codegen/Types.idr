@@ -52,7 +52,7 @@ Pretty a => Pretty (Nullable a) where
 mutual
   export
   Pretty IdlType where
-    prettyPrec _ Any         = "JSAny"
+    prettyPrec _ Any         = "Any"
     prettyPrec p (D x)       = prettyPrec p x
     prettyPrec p (U x)       = prettyPrec p x
     prettyPrec p (Promise x) = prettyCon p "JSPromise" [prettyPrec App x]

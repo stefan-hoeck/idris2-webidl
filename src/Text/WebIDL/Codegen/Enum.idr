@@ -46,9 +46,7 @@ enum (MkEnum _ name vs) =
                    , ""
                    , "export"
                    , "FromJS" <++> pn <++> "where"
-                   , indent 2 ("fromJS = fromMaybe" <++>
-                               pretty c             <++>
-                               ". read . fromJS")
+                   , "  fromJS ptr = fromJS ptr >>= read"
                    ]
 
    in vsep ["", "namespace" <++> pn, indent 2 code]

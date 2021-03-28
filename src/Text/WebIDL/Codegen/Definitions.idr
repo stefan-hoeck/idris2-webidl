@@ -35,16 +35,15 @@ extern d = fastUnlines [ section "Interfaces" $ exts name d.interfaces
   where ext : String -> String
         ext s = #"""
 
-                export
-                data \#{s}  : Type where [external]
+                export data \#{s} : Type where [external]
                 
                 export
-                ToJS \#{s} where
-                  toJS = believe_me
+                SafeCast \#{s} where
+                  safeCast = unsafeCastOnPrototypeName "\#{s}"
                 
-                export
-                FromJS \#{s} where
-                  fromJS = believe_me
+                export ToJS \#{s} where toJS = believe_me
+
+                export FromJS \#{s} where fromJS = safeCast
                 """#
 
         exts : (a -> Identifier) -> List a -> List String

@@ -37,7 +37,7 @@ jsType ts mi n =
       doc = indent {ann = ()} 2 $
               vsep [ ""
                    , "public export"
-                   , "JSVal" <++> pretty n.value <++> "where"
+                   , "JSType" <++> pretty n.value <++> "where"
                    , "  parents = " <++>
                        prettyList (map (pretty . value) parents)
                    , ""

@@ -169,7 +169,7 @@ prettySingleCon p con arg = prettyCon p con [prettyPrec App arg]
 
 export
 io : Pretty arg => Prec -> arg -> Doc ann
-io p = prettySingleCon p "IO"
+io p = prettySingleCon p "JSIO"
 
 export
 primIO : Pretty arg => Prec -> arg -> Doc ann

@@ -28,13 +28,12 @@ typeImports = "import JS"
 --------------------------------------------------------------------------------
 
 extern : Domain -> String
-extern d = fastUnlines [ section "Interfaces" $ exts name d.interfaces
-                       , section "Mixins" $ exts name d.mixins
-                       , section "Dictionaries" $ exts name d.dictionaries
+extern d = fastUnlines [ section "Interfaces" $ exts ext name d.interfaces
+                       , section "Mixins" $ exts extMixin name d.mixins
+                       , section "Dictionaries" $ exts ext name d.dictionaries
                        ]
   where ext : String -> String
         ext s = #"""
-
                 export data \#{s} : Type where [external]
                 
                 export
@@ -46,8 +45,20 @@ extern d = fastUnlines [ section "Interfaces" $ exts name d.interfaces
                 export FromJS \#{s} where fromJS = safeCast
                 """#
 
-        exts : (a -> Identifier) -> List a -> List String
-        exts f = map ext . sort . map (value . f)
+        extMixin : String -> String
+        extMixin s = #"""
+                export data \#{s} : Type where [external]
+                
+                export ToJS \#{s} where toJS = believe_me
+
+                export FromJS \#{s} where fromJS ptr = Just (believe_me ptr)
+                """#
+
+        exts :  (f : String -> String)
+             -> (a -> Identifier)
+             -> List a
+             -> List String
+        exts f g = map (("\n" ++) . f) . sort . map (value . g)
 
 --------------------------------------------------------------------------------
 --          CallbackInterfaces

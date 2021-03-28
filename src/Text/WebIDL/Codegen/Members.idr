@@ -65,11 +65,17 @@ constants = map (show . const) . sortBy (comparing name)
 --          Attributes
 --------------------------------------------------------------------------------
 
+argNames : Stream IdrisIdent
+argNames = map fromString $ "a" :: "b" :: "c" :: "d" :: "e" :: "f" :: "g" ::
+                            "h" :: "i" :: "j" :: "k" :: "l" :: "m" :: "n" :: 
+                            "o" :: "p" :: "q" :: "r" :: "s" :: "t" :: "u" :: 
+                            "v" :: "w" :: "x" :: "y" :: "z" :: 
+                            map (\v => "x" ++ show v) [the Integer 1 ..]
+
 primType : (name : IdrisIdent) -> Nat -> IdlType -> Doc ()
 primType name n x = typeDecl (Prim $ show name) (primReturnType x) $
                       replicate n "AnyPtr"
 
--- We need to make sure that implicits are added only once, though.
 funType : (name : IdrisIdent) -> ArgumentList -> IdlType -> Doc ()
 funType n args t =
   let args2 = map (toPrettyParam . snd) args
@@ -87,6 +93,25 @@ funType n args t =
         toPrettyParam (VarArg tpe (MkArgName n)) =
           prettyArg (fromString n) (pretty tpe)
 
+funImpl : (name : IdrisIdent) -> Nat -> Doc ()
+funImpl name n =
+  let pn   = pretty name
+      vals = map pretty $ take n argNames
+      lhs  = hsep (pn :: vals ++ ["="])
+      rhs  = hsep ["primToJSIO" 
+                  , "\"" <+> pn <+> "\""
+                  , "$"
+                  , pretty (Prim $ show name)
+                  , align $ sep $ map (\v => parens ("toJS" <++> v)) vals
+                  ]
+
+   in sep [lhs, indent 2 rhs]
+
+fun : IdrisIdent -> ArgumentList -> IdlType -> Doc ()
+fun ii args t = vsep [ "export"
+                     , funType ii args t
+                     , funImpl ii (length args)
+                     ] 
 
 readonly : Identifier -> Attribute -> List (Doc ())
 readonly i (MkAttribute _ t (MkAttributeName n)) =
@@ -95,8 +120,7 @@ readonly i (MkAttribute _ t (MkAttributeName n)) =
       , pretty $ attrGetFFI n
       , primType ii 1 t
       , ""
-      , "export"
-      , funType ii [objArg i] t
+      , fun ii [objArg i] t
       ]
 
 readwrite : Identifier -> Attribute -> List (Doc ())
@@ -105,8 +129,7 @@ readwrite i a@(MkAttribute _ t (MkAttributeName n)) =
                   , pretty $ attrSetFFI n
                   , primType (setter n) 2 t
                   , ""
-                  , "export"
-                  , funType (setter n) [objArg i, valArg t] undefined
+                  , fun (setter n) [objArg i, valArg t] undefined
                   ]
 
 -- TODO: Change Identifier to IdrisIdent here

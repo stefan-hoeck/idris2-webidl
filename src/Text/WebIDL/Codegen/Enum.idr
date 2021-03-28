@@ -3,7 +3,7 @@ module Text.WebIDL.Codegen.Enum
 import Data.List
 import Text.WebIDL.Codegen.Util
 
-enum : Codegen Enum
+enum : Enum -> Doc ()
 enum (MkEnum _ name vs) =
   let (s ::: ss) = map value vs
       (c ::: cs) = map toDataConstructor (s ::: ss)

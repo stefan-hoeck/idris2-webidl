@@ -28,8 +28,8 @@ Pretty ConstValue where
 --------------------------------------------------------------------------------
 
 export
-jsType : JSTypes -> (maxIterations : Nat) -> Identifier -> String
-jsType ts mi n =
+jsType : Settings -> Identifier -> String
+jsType (MkSettings ts mi _)  n =
   let MkSupertypes parents ms = supertypes ts mi n
 
       mixins = sortedNubOn id ms
@@ -123,26 +123,40 @@ readonly i (MkAttribute _ t (MkAttributeName n)) =
       , fun ii [objArg i] t
       ]
 
-readwrite : Identifier -> Attribute -> List (Doc ())
-readwrite i a@(MkAttribute _ t (MkAttributeName n)) =
-  readonly i a ++ [ ""
-                  , pretty $ attrSetFFI n
-                  , primType (setter n) 2 t
-                  , ""
-                  , fun (setter n) [objArg i, valArg t] undefined
-                  ]
+writeonly : Identifier -> Attribute -> List (Doc ())
+writeonly i a@(MkAttribute _ t (MkAttributeName n)) =
+  [ ""
+  , pretty $ attrSetFFI n
+  , primType (setter n) 2 t
+  , ""
+  , fun (setter n) [objArg i, valArg t] undefined
+  ]
+
+codegenForReading : Settings -> Attribute -> Bool
+codegenForReading (MkSettings _ _ cbs) = not . isCallback cbs . type
+
+readwrite : Settings -> Identifier -> Attribute -> List (Doc ())
+readwrite ss i a =
+  if codegenForReading ss a
+     then readonly i a ++ writeonly i a
+     else writeonly i a
 
 -- TODO: Change Identifier to IdrisIdent here
 export
-readOnlyAttributes :  Identifier
+readOnlyAttributes :  Settings
+                   -> Identifier
                    -> List (Readonly Attribute)
                    -> List String
-readOnlyAttributes i = map (show . indent 2 . vsep . readonly i) 
-                     . sortBy (comparing name) 
-                     . map value
+readOnlyAttributes ss i = map (show . indent 2 . vsep . readonly i) 
+                        . sortBy (comparing name)
+                        . filter (codegenForReading ss)
+                        . map value
 
 -- TODO: Change Identifier to IdrisIdent here
 export
-attributes : Identifier -> List Attribute -> List String
-attributes i = map (show . indent 2 . vsep . readwrite i) 
-             . sortBy (comparing name)
+attributes :  Settings
+           -> Identifier
+           -> List Attribute
+           -> List String
+attributes ss i = map (show . indent 2 . vsep . readwrite ss i) 
+                . sortBy (comparing name)

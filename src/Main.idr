@@ -76,13 +76,13 @@ typesGen c ds =
   let typesFile = c.outDir ++ "/Web/Types.idr"
    in writeDoc typesFile (typedefs ds)
 
-codegen : Config -> JSTypes -> Domain -> Prog ()
-codegen c ts d =
+codegen : Config -> Settings -> Domain -> Prog ()
+codegen c ss d =
   let typesFile = c.outDir ++ "/Web/" ++ d.domain ++ "Types.idr"
       modFile = c.outDir ++ "/Web/" ++ d.domain ++ ".idr"
 
    in do writeDoc typesFile (types d)
-         writeDoc modFile (definitions ts c.maxInheritance d)
+         writeDoc modFile (definitions ss d)
 
 --------------------------------------------------------------------------------
 --          Main Function
@@ -92,9 +92,9 @@ run : List String -> Prog ()
 run args = do config <- toProg (pure $ applyArgs args)
               ds     <- toDomains <$> traverse loadDef config.files
 
-              let ts = jsTypes ds
+              let ss = settings config.maxInheritance ds
 
-              traverse_ (codegen config ts) ds
+              traverse_ (codegen config ss) ds
               typesGen config ds
               pure ()
 

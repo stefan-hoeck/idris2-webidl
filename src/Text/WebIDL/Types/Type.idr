@@ -130,6 +130,13 @@ mutual
                | U (Nullable UnionType)
                | Promise IdlType
 
+  export
+  typeIdentifiers : IdlType -> List Identifier
+  typeIdentifiers Any         = Nil
+  typeIdentifiers (D x)       = distinguishableIdentifiers (nullVal x)
+  typeIdentifiers (U x)       = unionIdentifiers (nullVal x)
+  typeIdentifiers (Promise x) = typeIdentifiers x
+
   ||| UnionType ::
   |||     ( UnionMemberType or UnionMemberType UnionMemberTypes )
   ||| 
@@ -143,6 +150,10 @@ mutual
     snd  : UnionMemberType
     rest : List UnionMemberType
 
+  unionIdentifiers : UnionType -> List Identifier
+  unionIdentifiers (UT fst snd rest) =
+    (fst :: snd :: rest) >>= unionMemberIdentifiers
+
   ||| UnionMemberType ::
   |||     ExtendedAttributeList DistinguishableType
   |||     UnionType Null
@@ -150,6 +161,10 @@ mutual
   data UnionMemberType =
       UD (Attributed $ Nullable Distinguishable)
     | UU (Nullable UnionType)
+
+  unionMemberIdentifiers : UnionMemberType -> List Identifier
+  unionMemberIdentifiers (UD x) = distinguishableIdentifiers (nullVal $ snd x)
+  unionMemberIdentifiers (UU x) = unionIdentifiers (nullVal x)
 
   
   ||| DistinguishableType ::
@@ -178,6 +193,14 @@ mutual
     | Record StringType (Attributed IdlType)
     | Object
     | Symbol
+
+  distinguishableIdentifiers : Distinguishable -> List Identifier
+  distinguishableIdentifiers (I x)               = [x]
+  distinguishableIdentifiers (Sequence x)        = typeIdentifiers (snd x)
+  distinguishableIdentifiers (FrozenArray x)     = typeIdentifiers (snd x)
+  distinguishableIdentifiers (ObservableArray x) = typeIdentifiers (snd x)
+  distinguishableIdentifiers (Record x y)        = typeIdentifiers (snd y)
+  distinguishableIdentifiers _                   = Nil
 
 %runElab deriveMutual [ ("Distinguishable", [Generic,Meta,Show,Eq])
                       , ("UnionMemberType", [Generic,Meta,Show,Eq])

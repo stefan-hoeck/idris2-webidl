@@ -1,5 +1,6 @@
 module Text.WebIDL.Codegen.Inheritance
 
+import Data.List
 import Data.SortedMap
 import Text.WebIDL.Types
 
@@ -15,7 +16,13 @@ public export
 JSTypes : Type
 JSTypes = SortedMap Identifier JSType
 
-export
+public export
+record Settings where
+  constructor MkSettings
+  types         : JSTypes
+  maxIterations : Nat
+  callbacks     : List Identifier
+
 jsTypes : List Domain -> JSTypes
 jsTypes ds =
   let types =  (ds >>= map dictToType . dictionaries)
@@ -39,6 +46,25 @@ jsTypes ds =
                Nothing => ts
                Just js => let js2 = record {mixins $= (incl ::)} js
                            in insert n js2 ts
+
+covering export
+isCallback : List Identifier -> IdlType -> Bool
+isCallback cbs = any (`elem` cbs) . typeIdentifiers
+
+covering
+callbacks : List Domain -> List Identifier
+callbacks ds = let cs =  (ds >>= map name . callbacks)
+                      ++ (ds >>= map name . callbackInterfaces)
+
+                   ts = map name
+                      . filter (isCallback cs . type)
+                      $ ds >>= typedefs
+
+                in cs ++ ts
+
+covering export
+settings : (maxInheritance : Nat) -> List Domain -> Settings
+settings mi ds = MkSettings (jsTypes ds) mi (callbacks ds)
 
 public export
 record Supertypes where

@@ -6,10 +6,6 @@ import public Data.Vect
 import public Text.PrettyPrint.Prettyprinter
 import public Text.WebIDL.Types
 
-public export
-0 Codegen : Type -> Type
-Codegen a = a -> Doc ()
-
 export
 mapFirstChar : (Char -> Char) -> String -> String
 mapFirstChar f x = case fastUnpack x of
@@ -169,7 +165,11 @@ prettySingleCon p con arg = prettyCon p con [prettyPrec App arg]
 
 export
 io : Pretty arg => Prec -> arg -> Doc ann
-io p = prettySingleCon p "JSIO"
+io p = prettySingleCon p "IO"
+
+export
+jsio : Pretty arg => Prec -> arg -> Doc ann
+jsio p = prettySingleCon p "JSIO"
 
 export
 primIO : Pretty arg => Prec -> arg -> Doc ann

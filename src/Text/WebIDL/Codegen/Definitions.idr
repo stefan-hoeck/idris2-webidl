@@ -78,53 +78,53 @@ callbackInterfaces = section "Callback Interfaces"
 --          Interfaces
 --------------------------------------------------------------------------------
 
-interfaces : JSTypes -> (maxIterations : Nat) -> Domain -> String
-interfaces ts mi = section "Interfaces"
-                 . map iface
-                 . sortBy (comparing name)
-                 . interfaces
+interfaces : Settings -> Domain -> String
+interfaces ss = section "Interfaces"
+              . map iface
+              . sortBy (comparing name)
+              . interfaces
 
   where iface : Interface -> String
         iface (MkInterface _ n _ ms) =
           namespaced n
-            $  jsType ts mi n
+            $  jsType ss n
             :: constants (mapMaybe (part const) ms)
-            ++ readOnlyAttributes n (mapMaybe (part attrRO) ms)
-            ++ attributes n (mapMaybe (part attr) ms)
+            ++ readOnlyAttributes ss n (mapMaybe (part attrRO) ms)
+            ++ attributes ss n (mapMaybe (part attr) ms)
 
 --------------------------------------------------------------------------------
 --          Dictionaries
 --------------------------------------------------------------------------------
 
-dictionaries : JSTypes -> (maxIterations : Nat) -> Domain -> String
-dictionaries ts mi = section "Dictionaries"
-                   . map dictionary
-                   . sortBy (comparing name)
-                   . dictionaries
+dictionaries : Settings -> Domain -> String
+dictionaries ss = section "Dictionaries"
+                . map dictionary
+                . sortBy (comparing name)
+                . dictionaries
 
   where dictionary : Dictionary -> String
         dictionary (MkDictionary _ n _ ms) =
           namespaced n
-            $  jsType ts mi n
-            :: attributes n (mapMaybe required ms)
-            ++ attributes n (mapMaybe optional ms)
+            $  jsType ss n
+            :: attributes ss n (mapMaybe required ms)
+            ++ attributes ss n (mapMaybe optional ms)
 
 --------------------------------------------------------------------------------
 --          Mixins
 --------------------------------------------------------------------------------
 
-mixin : Mixin -> String
-mixin (MkMixin _ n ms) =
-   namespaced n
-     $  constants (mapMaybe const ms)
-     ++ readOnlyAttributes n (mapMaybe attrRO ms)
-     ++ attributes n (mapMaybe attr ms)
+mixins : Settings -> Domain -> String
+mixins ss = section "Mixins"
+          . map mixin
+          . sortBy (comparing name)
+          . mixins
 
-mixins : Domain -> String
-mixins = section "Mixins"
-       . map mixin
-       . sortBy (comparing name)
-       . mixins
+  where mixin : Mixin -> String
+        mixin (MkMixin _ n ms) =
+           namespaced n
+             $  constants (mapMaybe const ms)
+             ++ readOnlyAttributes ss n (mapMaybe attrRO ms)
+             ++ attributes ss n (mapMaybe attr ms)
 
 --------------------------------------------------------------------------------
 --          Namespaces
@@ -171,7 +171,7 @@ callbacks = fastUnlines
            in vsep [ ""
                    , "public export"
                    , "0" <++> pretty ii <++> ": Type"
-                   , functionType ii '=' (returnType t) $
+                   , functionType ii '=' (callbackReturnType t) $
                        case args of
                             [] => ["()"]
                             _  => map (pretty . snd) args
@@ -240,15 +240,15 @@ types d =
   """#
 
 export
-definitions : JSTypes -> (maxIterations : Nat) -> Domain -> String
-definitions ts mi d =
+definitions : Settings -> Domain -> String
+definitions ss d =
   #"""
   module Web.\#{d.domain}
 
   \#{defImports}
-  \#{interfaces ts mi d}
-  \#{mixins d}
-  \#{dictionaries ts mi d}
+  \#{interfaces ss d}
+  \#{mixins ss d}
+  \#{dictionaries ss d}
   \#{callbackInterfaces d}
   \#{namespaces d}
   """#

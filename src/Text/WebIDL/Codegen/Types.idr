@@ -99,8 +99,13 @@ Pretty ArgumentRest where
 
 export
 returnType : IdlType -> Doc ()
-returnType (D (NotNull (P Undefined))) = io Open "()"
-returnType t                           = io Open t
+returnType (D (NotNull (P Undefined))) = jsio Open "()"
+returnType t                           = jsio Open t
+
+export
+callbackReturnType : IdlType -> Doc ()
+callbackReturnType (D (NotNull (P Undefined))) = io Open "()"
+callbackReturnType t                           = io Open t
 
 export
 primReturnType : IdlType -> Doc ()

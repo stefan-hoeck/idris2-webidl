@@ -1,7 +1,7 @@
 module Text.WebIDL.Codegen.Members
 
 import Data.List
-import Text.WebIDL.Codegen.Inheritance
+import Text.WebIDL.Codegen.Rules
 import Text.WebIDL.Codegen.Types
 import Text.WebIDL.Codegen.Util
 import Text.WebIDL.Types

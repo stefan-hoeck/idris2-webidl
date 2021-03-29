@@ -1,4 +1,4 @@
-module Text.WebIDL.Codegen.Inheritance
+module Text.WebIDL.Codegen.Rules
 
 import Data.List
 import Data.SortedMap

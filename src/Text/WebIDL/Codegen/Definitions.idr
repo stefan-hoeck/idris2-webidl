@@ -5,8 +5,8 @@ import Data.List.Elem
 import Data.SOP
 import Data.String
 import Text.WebIDL.Codegen.Enum
-import Text.WebIDL.Codegen.Inheritance
 import Text.WebIDL.Codegen.Members
+import Text.WebIDL.Codegen.Rules
 import Text.WebIDL.Codegen.Types
 import public Text.WebIDL.Codegen.Util
 

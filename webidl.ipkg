@@ -14,8 +14,8 @@ executable = generateDomBindings
 modules = Text.WebIDL.Codegen
         , Text.WebIDL.Codegen.Definitions
         , Text.WebIDL.Codegen.Enum
-        , Text.WebIDL.Codegen.Inheritance
         , Text.WebIDL.Codegen.Members
+        , Text.WebIDL.Codegen.Rules
         , Text.WebIDL.Codegen.Types
         , Text.WebIDL.Codegen.Util
 

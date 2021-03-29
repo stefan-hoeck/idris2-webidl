@@ -6,16 +6,26 @@ import Text.WebIDL.Types
 
 %default total
 
+||| An external, un-parameterized Javascript type, represented
+||| by an identifier. Such a type comes with a parent
+||| type (given as an `inheritance` value in the spec)
+||| and a number of mixed in types.
+|||
+||| The actual name of the type is not included, as the set
+||| of types is given in `Settings` as as `SortedMap`.
 public export
 record JSType where
   constructor MkJSType
   parent : Maybe Identifier
   mixins : List Identifier
 
+||| The set of external un-parameterized types from the
+||| whole spec.
 public export
 JSTypes : Type
 JSTypes = SortedMap Identifier JSType
 
+||| Settings
 public export
 record Settings where
   constructor MkSettings
@@ -66,6 +76,9 @@ covering export
 settings : (maxInheritance : Nat) -> List Domain -> Settings
 settings mi ds = MkSettings (jsTypes ds) mi (callbacks ds)
 
+||| The parent types and mixins of a type. This is
+||| used by the code generator to implement the
+||| `JS.Inheritance.JSType` instances.
 public export
 record Supertypes where
   constructor MkSupertypes
@@ -80,7 +93,8 @@ objectOnly = MkSupertypes [MkIdent "JSObject"] []
 |||
 |||  @maxIterations : Maximal number of iterations. Without this,
 |||                   the algorithm might loop forever in case of
-|||                   cyclic dependencies.
+|||                   cyclic dependencies. This value corresponds
+|||                   to the maximal length of the inheritance chain.
 export
 supertypes : JSTypes -> (maxIterations : Nat) -> Identifier -> Supertypes
 supertypes _   0    i = objectOnly

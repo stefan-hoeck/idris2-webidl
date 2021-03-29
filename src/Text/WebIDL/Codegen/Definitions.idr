@@ -14,11 +14,12 @@ import public Text.WebIDL.Codegen.Util
 --          Imports
 --------------------------------------------------------------------------------
 
-defImports : String
-defImports = #"""
-             import JS
-             import Web.Types
-             """#
+defImports : Domain -> String
+defImports d = #"""
+               import JS
+               import Web.Internal.\#{d.domain}Prim
+               import Web.Types
+               """#
 
 typeImports : String
 typeImports = "import JS"
@@ -78,12 +79,20 @@ callbackInterfaces = section "Callback Interfaces"
 --          Interfaces
 --------------------------------------------------------------------------------
 
-interfaces : Env -> Domain -> String
-interfaces e = section "Interfaces"
-             . map iface
-             . sortBy (comparing name)
-             . interfaces
+interfaces_ : (Interface -> String) -> Domain -> String
+interfaces_ f =
+  section "Interfaces" . map f . sortBy (comparing name) . interfaces
 
+primInterfaces : Env -> Domain -> String
+primInterfaces e = interfaces_ iface
+  where iface : Interface -> String
+        iface (MkInterface _ n _ ms) =
+          namespaced n
+            $  readOnlyAttributesPrim e n (mapMaybe (part attrRO) ms)
+            ++ attributesPrim e n (mapMaybe (part attr) ms)
+
+interfaces : Env -> Domain -> String
+interfaces e = interfaces_ iface
   where iface : Interface -> String
         iface (MkInterface _ n _ ms) =
           namespaced n
@@ -96,12 +105,20 @@ interfaces e = section "Interfaces"
 --          Dictionaries
 --------------------------------------------------------------------------------
 
-dictionaries : Env -> Domain -> String
-dictionaries e = section "Dictionaries"
-               . map dictionary
-               . sortBy (comparing name)
-               . dictionaries
+dictionaries_ : (Dictionary -> String) -> Domain -> String
+dictionaries_ f =
+  section "Dictionaries" . map f . sortBy (comparing name) . dictionaries
 
+primDictionaries : Env -> Domain -> String
+primDictionaries e = dictionaries_ dictionary
+  where dictionary : Dictionary -> String
+        dictionary (MkDictionary _ n _ ms) =
+          namespaced n
+            $  attributesPrim e n (mapMaybe required ms)
+            ++ attributesPrim e n (mapMaybe optional ms)
+
+dictionaries : Env -> Domain -> String
+dictionaries e = dictionaries_ dictionary
   where dictionary : Dictionary -> String
         dictionary (MkDictionary _ n _ ms) =
           namespaced n
@@ -113,12 +130,19 @@ dictionaries e = section "Dictionaries"
 --          Mixins
 --------------------------------------------------------------------------------
 
-mixins : Env -> Domain -> String
-mixins e = section "Mixins"
-         . map mixin
-         . sortBy (comparing name)
-         . mixins
+mixins_ : (Mixin -> String) -> Domain -> String
+mixins_ f = section "Mixins" . map f . sortBy (comparing name) . mixins
 
+primMixins : Env -> Domain -> String
+primMixins e = mixins_ mixin
+  where mixin : Mixin -> String
+        mixin (MkMixin _ n ms) =
+           namespaced n
+             $  readOnlyAttributes e n (mapMaybe attrRO ms)
+             ++ attributes e n (mapMaybe attr ms)
+
+mixins : Env -> Domain -> String
+mixins e = mixins_ mixin
   where mixin : Mixin -> String
         mixin (MkMixin _ n ms) =
            namespaced n
@@ -240,12 +264,23 @@ types d =
   """#
 
 export
+primitives : Env -> Domain -> String
+primitives e d =
+  #"""
+  module Web.Internal.\#{d.domain}Prim
+
+  \#{primInterfaces e d}
+  \#{primMixins e d}
+  \#{primDictionaries e d}
+  """#
+
+export
 definitions : Env -> Domain -> String
 definitions e d =
   #"""
   module Web.\#{d.domain}
 
-  \#{defImports}
+  \#{defImports d}
   \#{interfaces e d}
   \#{mixins e d}
   \#{dictionaries e d}

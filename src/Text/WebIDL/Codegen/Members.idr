@@ -160,3 +160,19 @@ attributes :  Env
            -> List String
 attributes e i = map (show . indent 2 . vsep . readwrite e i) 
                . sortBy (comparing name)
+
+-- TODO: Change Identifier to IdrisIdent here
+export
+readOnlyAttributesPrim :  Env
+                       -> Identifier
+                       -> List (Readonly Attribute)
+                       -> List String
+readOnlyAttributesPrim = ?roprim
+
+-- TODO: Change Identifier to IdrisIdent here
+export
+attributesPrim :  Env
+               -> Identifier
+               -> List Attribute
+               -> List String
+attributesPrim = ?rwPrim

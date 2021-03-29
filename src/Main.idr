@@ -78,11 +78,13 @@ typesGen c ds =
 
 codegen : Config -> Env -> Domain -> Prog ()
 codegen c e d =
-  let typesFile = c.outDir ++ "/Web/" ++ d.domain ++ "Types.idr"
-      modFile = c.outDir ++ "/Web/" ++ d.domain ++ ".idr"
+  let typesFile = c.outDir ++ "/Web/Internal/" ++ d.domain ++ "Types.idr"
+      primFile  = c.outDir ++ "/Web/Internal/" ++ d.domain ++ "Prim.idr"
+      apiFile   = c.outDir ++ "/Web/" ++ d.domain ++ ".idr"
 
    in do writeDoc typesFile (types d)
-         writeDoc modFile (definitions e d)
+         writeDoc primFile (primitives e d)
+         writeDoc apiFile  (definitions e d)
 
 --------------------------------------------------------------------------------
 --          Main Function

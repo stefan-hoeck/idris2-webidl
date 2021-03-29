@@ -28,8 +28,8 @@ Pretty ConstValue where
 --------------------------------------------------------------------------------
 
 export
-jsType : Settings -> Identifier -> String
-jsType (MkSettings ts mi _)  n =
+jsType : Env -> Identifier -> String
+jsType (MkEnv ts mi _)  n =
   let MkSupertypes parents ms = supertypes ts mi n
 
       mixins = sortedNubOn id ms
@@ -132,31 +132,31 @@ writeonly i a@(MkAttribute _ t (MkAttributeName n)) =
   , fun (setter n) [objArg i, valArg t] undefined
   ]
 
-codegenForReading : Settings -> Attribute -> Bool
-codegenForReading (MkSettings _ _ cbs) = not . isCallback cbs . type
+codegenForReading : Env -> Attribute -> Bool
+codegenForReading (MkEnv _ _ cbs) = not . isCallback cbs . type
 
-readwrite : Settings -> Identifier -> Attribute -> List (Doc ())
-readwrite ss i a =
-  if codegenForReading ss a
+readwrite : Env -> Identifier -> Attribute -> List (Doc ())
+readwrite e i a =
+  if codegenForReading e a
      then readonly i a ++ writeonly i a
      else writeonly i a
 
 -- TODO: Change Identifier to IdrisIdent here
 export
-readOnlyAttributes :  Settings
+readOnlyAttributes :  Env
                    -> Identifier
                    -> List (Readonly Attribute)
                    -> List String
-readOnlyAttributes ss i = map (show . indent 2 . vsep . readonly i) 
-                        . sortBy (comparing name)
-                        . filter (codegenForReading ss)
-                        . map value
+readOnlyAttributes e i = map (show . indent 2 . vsep . readonly i) 
+                       . sortBy (comparing name)
+                       . filter (codegenForReading e)
+                       . map value
 
 -- TODO: Change Identifier to IdrisIdent here
 export
-attributes :  Settings
+attributes :  Env
            -> Identifier
            -> List Attribute
            -> List String
-attributes ss i = map (show . indent 2 . vsep . readwrite ss i) 
-                . sortBy (comparing name)
+attributes e i = map (show . indent 2 . vsep . readwrite e i) 
+               . sortBy (comparing name)

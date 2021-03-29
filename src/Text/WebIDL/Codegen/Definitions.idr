@@ -78,53 +78,53 @@ callbackInterfaces = section "Callback Interfaces"
 --          Interfaces
 --------------------------------------------------------------------------------
 
-interfaces : Settings -> Domain -> String
-interfaces ss = section "Interfaces"
-              . map iface
-              . sortBy (comparing name)
-              . interfaces
+interfaces : Env -> Domain -> String
+interfaces e = section "Interfaces"
+             . map iface
+             . sortBy (comparing name)
+             . interfaces
 
   where iface : Interface -> String
         iface (MkInterface _ n _ ms) =
           namespaced n
-            $  jsType ss n
+            $  jsType e n
             :: constants (mapMaybe (part const) ms)
-            ++ readOnlyAttributes ss n (mapMaybe (part attrRO) ms)
-            ++ attributes ss n (mapMaybe (part attr) ms)
+            ++ readOnlyAttributes e n (mapMaybe (part attrRO) ms)
+            ++ attributes e n (mapMaybe (part attr) ms)
 
 --------------------------------------------------------------------------------
 --          Dictionaries
 --------------------------------------------------------------------------------
 
-dictionaries : Settings -> Domain -> String
-dictionaries ss = section "Dictionaries"
-                . map dictionary
-                . sortBy (comparing name)
-                . dictionaries
+dictionaries : Env -> Domain -> String
+dictionaries e = section "Dictionaries"
+               . map dictionary
+               . sortBy (comparing name)
+               . dictionaries
 
   where dictionary : Dictionary -> String
         dictionary (MkDictionary _ n _ ms) =
           namespaced n
-            $  jsType ss n
-            :: attributes ss n (mapMaybe required ms)
-            ++ attributes ss n (mapMaybe optional ms)
+            $  jsType e n
+            :: attributes e n (mapMaybe required ms)
+            ++ attributes e n (mapMaybe optional ms)
 
 --------------------------------------------------------------------------------
 --          Mixins
 --------------------------------------------------------------------------------
 
-mixins : Settings -> Domain -> String
-mixins ss = section "Mixins"
-          . map mixin
-          . sortBy (comparing name)
-          . mixins
+mixins : Env -> Domain -> String
+mixins e = section "Mixins"
+         . map mixin
+         . sortBy (comparing name)
+         . mixins
 
   where mixin : Mixin -> String
         mixin (MkMixin _ n ms) =
            namespaced n
              $  constants (mapMaybe const ms)
-             ++ readOnlyAttributes ss n (mapMaybe attrRO ms)
-             ++ attributes ss n (mapMaybe attr ms)
+             ++ readOnlyAttributes e n (mapMaybe attrRO ms)
+             ++ attributes e n (mapMaybe attr ms)
 
 --------------------------------------------------------------------------------
 --          Namespaces
@@ -240,15 +240,15 @@ types d =
   """#
 
 export
-definitions : Settings -> Domain -> String
-definitions ss d =
+definitions : Env -> Domain -> String
+definitions e d =
   #"""
   module Web.\#{d.domain}
 
   \#{defImports}
-  \#{interfaces ss d}
-  \#{mixins ss d}
-  \#{dictionaries ss d}
+  \#{interfaces e d}
+  \#{mixins e d}
+  \#{dictionaries e d}
   \#{callbackInterfaces d}
   \#{namespaces d}
   """#

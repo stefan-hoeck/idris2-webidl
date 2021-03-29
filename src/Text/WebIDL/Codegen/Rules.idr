@@ -12,7 +12,7 @@ import Text.WebIDL.Types
 ||| and a number of mixed in types.
 |||
 ||| The actual name of the type is not included, as the set
-||| of types is given in `Settings` as as `SortedMap`.
+||| of types is given in `Env` as as `SortedMap`.
 public export
 record JSType where
   constructor MkJSType
@@ -25,10 +25,10 @@ public export
 JSTypes : Type
 JSTypes = SortedMap Identifier JSType
 
-||| Settings
+||| Env
 public export
-record Settings where
-  constructor MkSettings
+record Env where
+  constructor MkEnv
   types         : JSTypes
   maxIterations : Nat
   callbacks     : List Identifier
@@ -73,8 +73,8 @@ callbacks ds = let cs =  (ds >>= map name . callbacks)
                 in cs ++ ts
 
 covering export
-settings : (maxInheritance : Nat) -> List Domain -> Settings
-settings mi ds = MkSettings (jsTypes ds) mi (callbacks ds)
+env : (maxInheritance : Nat) -> List Domain -> Env
+env mi ds = MkEnv (jsTypes ds) mi (callbacks ds)
 
 ||| The parent types and mixins of a type. This is
 ||| used by the code generator to implement the

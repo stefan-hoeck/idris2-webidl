@@ -96,18 +96,3 @@ Pretty ArgumentRest where
   pretty (Mandatory t     n)   = prettyArg (fromString n.value) (pretty t)
   pretty (VarArg    t     n)   =
     prettyArg (fromString n.value) $ prettySingleCon Open "VarArg" t
-
-export
-returnType : IdlType -> Doc ()
-returnType (D (NotNull (P Undefined))) = jsio Open "()"
-returnType t                           = jsio Open t
-
-export
-callbackReturnType : IdlType -> Doc ()
-callbackReturnType (D (NotNull (P Undefined))) = io Open "()"
-callbackReturnType t                           = io Open t
-
-export
-primReturnType : IdlType -> Doc ()
-primReturnType (D (NotNull (P Undefined))) = primIO Open "()"
-primReturnType t                           = primIO Open "AnyPtr"

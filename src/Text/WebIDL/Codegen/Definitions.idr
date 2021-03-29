@@ -14,10 +14,10 @@ import public Text.WebIDL.Codegen.Util
 --          Imports
 --------------------------------------------------------------------------------
 
-defImports : Domain -> String
+defImports : CGDomain -> String
 defImports d = #"""
                import JS
-               import Web.Internal.\#{d.domain}Prim
+               import Web.Internal.\#{d.name}Prim
                import Web.Types
                """#
 
@@ -28,10 +28,11 @@ typeImports = "import JS"
 --          Data Declarations
 --------------------------------------------------------------------------------
 
-extern : Domain -> String
-extern d = fastUnlines [ section "Interfaces" $ exts ext name d.interfaces
+extern : CGDomain -> String
+extern d = fastUnlines [ section "Interfaces" $ exts ext name d.ifaces
                        , section "Mixins" $ exts extMixin name d.mixins
-                       , section "Dictionaries" $ exts ext name d.dictionaries
+                       , section "Dictionaries" $ exts ext name d.dicts
+                       , section "Callbacks" $ exts ext name d.callbacks
                        ]
   where ext : String -> String
         ext s = #"""
@@ -55,6 +56,15 @@ extern d = fastUnlines [ section "Interfaces" $ exts ext name d.interfaces
                 export FromJS \#{s} where fromJS ptr = Just (believe_me ptr)
                 """#
 
+        extCallback : String -> String
+        extCallback s = #"""
+                export data \#{s} : Type where [external]
+                
+                export ToJS \#{s} where toJS = believe_me
+
+                export FromJS \#{s} where fromJS ptr = Just (believe_me ptr)
+                """#
+
         exts :  (f : String -> String)
              -> (a -> Identifier)
              -> List a
@@ -65,145 +75,49 @@ extern d = fastUnlines [ section "Interfaces" $ exts ext name d.interfaces
 --          CallbackInterfaces
 --------------------------------------------------------------------------------
 
-callbackInterface : CallbackInterface -> String
-callbackInterface (MkCallbackInterface _ n ms) =
-   namespaced n $ constants (mapMaybe const ms)
+callback : CGCallback -> String
+callback (MkCallback n cs _ _) =
+   namespaced n $ constants cs
 
-callbackInterfaces : Domain -> String
-callbackInterfaces = section "Callback Interfaces"
-                   . map callbackInterface 
-                   . sortBy (comparing name) 
-                   . callbackInterfaces
+callbacks : CGDomain -> String
+callbacks = section "Callbacks"
+          . map callback
+          . sortBy (comparing name) 
+          . callbacks
 
 --------------------------------------------------------------------------------
 --          Interfaces
 --------------------------------------------------------------------------------
 
-interfaces_ : (Interface -> String) -> Domain -> String
-interfaces_ f =
-  section "Interfaces" . map f . sortBy (comparing name) . interfaces
-
-primInterfaces : Env -> Domain -> String
-primInterfaces e = interfaces_ iface
-  where iface : Interface -> String
-        iface (MkInterface _ n _ ms) =
-          namespaced n
-            $  readOnlyAttributesPrim e n (mapMaybe (part attrRO) ms)
-            ++ attributesPrim e n (mapMaybe (part attr) ms)
-
-interfaces : Env -> Domain -> String
-interfaces e = interfaces_ iface
-  where iface : Interface -> String
-        iface (MkInterface _ n _ ms) =
-          namespaced n
-            $  jsType e n
-            :: constants (mapMaybe (part const) ms)
-            ++ readOnlyAttributes e n (mapMaybe (part attrRO) ms)
-            ++ attributes e n (mapMaybe (part attr) ms)
+ifaces : CGDomain -> String
+ifaces = section "Interfaces" . map iface . sortBy (comparing name) . ifaces
+  where iface : CGIface -> String
+        iface (MkIface n s cs fs) =
+          namespaced n $ jsType n s :: constants cs ++ functions fs
 
 --------------------------------------------------------------------------------
 --          Dictionaries
 --------------------------------------------------------------------------------
 
-dictionaries_ : (Dictionary -> String) -> Domain -> String
-dictionaries_ f =
-  section "Dictionaries" . map f . sortBy (comparing name) . dictionaries
-
-primDictionaries : Env -> Domain -> String
-primDictionaries e = dictionaries_ dictionary
-  where dictionary : Dictionary -> String
-        dictionary (MkDictionary _ n _ ms) =
-          namespaced n
-            $  attributesPrim e n (mapMaybe required ms)
-            ++ attributesPrim e n (mapMaybe optional ms)
-
-dictionaries : Env -> Domain -> String
-dictionaries e = dictionaries_ dictionary
-  where dictionary : Dictionary -> String
-        dictionary (MkDictionary _ n _ ms) =
-          namespaced n
-            $  jsType e n
-            :: attributes e n (mapMaybe required ms)
-            ++ attributes e n (mapMaybe optional ms)
+dicts : CGDomain -> String
+dicts = section "Dictionaries" . map dict . sortBy (comparing name) . dicts
+  where dict : CGDict -> String
+        dict (MkDict n s fs) =
+          namespaced n $ jsType n s :: functions fs
 
 --------------------------------------------------------------------------------
 --          Mixins
 --------------------------------------------------------------------------------
 
-mixins_ : (Mixin -> String) -> Domain -> String
-mixins_ f = section "Mixins" . map f . sortBy (comparing name) . mixins
+mixins : CGDomain -> String
+mixins = section "Mixins" . map mixin . sortBy (comparing name) . mixins
+  where mixin : CGMixin -> String
+        mixin (MkMixin n cs fs) =
+           namespaced n $ constants cs ++ functions fs
 
-primMixins : Env -> Domain -> String
-primMixins e = mixins_ mixin
-  where mixin : Mixin -> String
-        mixin (MkMixin _ n ms) =
-           namespaced n
-             $  readOnlyAttributes e n (mapMaybe attrRO ms)
-             ++ attributes e n (mapMaybe attr ms)
-
-mixins : Env -> Domain -> String
-mixins e = mixins_ mixin
-  where mixin : Mixin -> String
-        mixin (MkMixin _ n ms) =
-           namespaced n
-             $  constants (mapMaybe const ms)
-             ++ readOnlyAttributes e n (mapMaybe attrRO ms)
-             ++ attributes e n (mapMaybe attr ms)
-
---------------------------------------------------------------------------------
---          Namespaces
---------------------------------------------------------------------------------
-
-nspace : Namespace -> String
-nspace (MkNamespace _ n ms) =
-   namespaced n Nil
-
-namespaces : Domain -> String
-namespaces = section "Namespaces"
-           . map nspace
-           . sortBy (comparing name)
-           . namespaces
-
---------------------------------------------------------------------------------
---          Callbacks
---------------------------------------------------------------------------------
-
-callbacks : List Domain -> String
-callbacks = fastUnlines
-          . map (show . indent 2 . toCallback)
-          . sortBy (comparing name)
-          . concatMap allCallbacks
-
-  where memberToCallback :  Identifier
-                         -> CallbackInterfaceMember
-                         -> Maybe Callback
-        memberToCallback n (Z _) = Nothing
-        memberToCallback n (S $ Z $ MkOp () t _ as) =
-           Just $ MkCallback [] n t as
-
-        interfaceCallbacks : CallbackInterface -> List Callback
-        interfaceCallbacks (MkCallbackInterface _ n ms) =
-          mapMaybe (memberToCallback n . snd) ms
-
-        allCallbacks : Domain -> List Callback
-        allCallbacks d = d.callbacks ++
-                         (d.callbackInterfaces >>= interfaceCallbacks)
-
-        toCallback : Callback -> Doc ()
-        toCallback (MkCallback _ n t args) =
-          let ii = the IdrisIdent (fromString n.value)
-           in vsep [ ""
-                   , "public export"
-                   , "0" <++> pretty ii <++> ": Type"
-                   , functionType ii '=' (callbackReturnType t) $
-                       case args of
-                            [] => ["()"]
-                            _  => map (pretty . snd) args
-                   ]
-
---------------------------------------------------------------------------------
---          Typedefs
---------------------------------------------------------------------------------
+-- --------------------------------------------------------------------------------
+-- --          Typedefs
+-- --------------------------------------------------------------------------------
 
 export
 typedefs : List Domain -> String
@@ -211,9 +125,8 @@ typedefs ds =
   let ts   = concatMap typedefs ds
       docs =  map toTypedef (sortBy (comparing name) ts)
 
-      sect = section "Typedefs and Callbacks" $
-               ["", "mutual", callbacks ds] ++
-               map (show . indent 2) docs
+      sect = section "Typedefs" $
+               ["", "mutual"] ++ map (show . indent 2) docs
    in #"""
       module Web.Types
       
@@ -251,12 +164,12 @@ typedefs ds =
 --------------------------------------------------------------------------------
 --          Codegen
 --------------------------------------------------------------------------------
-
+-- 
 export
-types : Domain -> String
+types : CGDomain -> String
 types d =
   #"""
-  module Web.\#{d.domain}Types
+  module Web.\#{d.name}Types
 
   \#{typeImports}
   \#{enums d.enums}
@@ -264,26 +177,23 @@ types d =
   """#
 
 export
-primitives : Env -> Domain -> String
-primitives e d =
+primitives : CGDomain -> String
+primitives d =
   #"""
-  module Web.Internal.\#{d.domain}Prim
+  module Web.Internal.\#{d.name}Prim
 
-  \#{primInterfaces e d}
-  \#{primMixins e d}
-  \#{primDictionaries e d}
+  \#{fastConcat . primFunctions $ domainFunctions d}
   """#
 
 export
-definitions : Env -> Domain -> String
-definitions e d =
+definitions : CGDomain -> String
+definitions d =
   #"""
-  module Web.\#{d.domain}
+  module Web.\#{d.name}
 
   \#{defImports d}
-  \#{interfaces e d}
-  \#{mixins e d}
-  \#{dictionaries e d}
-  \#{callbackInterfaces d}
-  \#{namespaces d}
+  \#{ifaces d}
+  \#{mixins d}
+  \#{dicts d}
+  \#{callbacks d}
   """#

@@ -184,16 +184,16 @@ prettyArg name tpe = parens $ hsep [pretty name,":",tpe]
 --------------------------------------------------------------------------------
 
 export
-setter : String -> IdrisIdent
-setter = fromString . ("set" ++) . mapFirstChar toUpper
+setter : AttributeName -> IdrisIdent
+setter = fromString . ("set" ++) . mapFirstChar toUpper . value
 
 foreignBrowser : String
 foreignBrowser ="%foreign \"browser:lambda:"
 
 export
-attrGetFFI : String -> String
-attrGetFFI n = #"\#{foreignBrowser}x=>x.\#{n}""#
+attrGetFFI : AttributeName -> String
+attrGetFFI n = #"\#{foreignBrowser}x=>x.\#{n.value}""#
 
 export
-attrSetFFI : String -> String
-attrSetFFI n = #"\#{foreignBrowser}(x,v)=>{x.\#{n}  = v}""#
+attrSetFFI : AttributeName -> String
+attrSetFFI n = #"\#{foreignBrowser}(x,v)=>{x.\#{n.value} = v}""#

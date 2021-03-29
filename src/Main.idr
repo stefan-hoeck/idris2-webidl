@@ -4,6 +4,7 @@ import Control.Monad.Either
 import Data.List.Elem
 import Data.SOP
 import Data.String
+import Data.Validated
 import System
 import System.Console.GetOpt
 import System.File
@@ -49,13 +50,37 @@ applyArgs args =
 0 Prog : Type -> Type
 Prog = EitherT String IO
 
+toProgWith : (a -> String) ->  IO (Either a b) -> Prog b
+toProgWith f io = MkEitherT $ map (mapFst f) io
+
 toProg : Show a => IO (Either a b) -> Prog b
-toProg io = MkEitherT $ map (mapFst show) io
+toProg = toProgWith show
 
 runProg : Prog () -> IO ()
 runProg (MkEitherT p) = do Right _ <- p
                              | Left e => putStrLn ("Error: " ++ e)
                            pure ()
+
+fromCodegen : CodegenV a -> Prog a
+fromCodegen = toProgWith (fastUnlines . map err) . pure . toEither
+  where err : CodegenErr -> String
+        err (CallbackVarArg x y) =
+          #"Callback with vararg in \#{x.domain}: \#{y.value}"#
+        err (CBInterfaceInvalidOps x y k) =
+          #"Invalid number of callback operations in \#{x.domain}: \#{y.value} (\#{show k} operations)"#
+        err (MandatoryAfterOptional x i op) =
+          #"Mandatory argument after optional arg in \#{x.domain}: \#{i.value}.\#{show op}"#
+        err (OptionalCallbackArg x y) =
+          #"Callback with optional argument in \#{x.domain}: \#{y.value}"#
+        err (RegularOpWithoutName x y) =
+          #"Unnamed regular operation in \#{x.domain}: \#{y.value}"#
+        err (VarArgAndOptionalArgs x i op) =
+          #"Vararg and optional args in \#{x.domain}: \#{i.value}.\#{show op}"#
+        err (VarArgConstructor x i) =
+          #"Vararg constructor in \#{x.domain}: \#{i.value}.new"#
+        err (VarArgNotLastArg x i op) =
+          #"Vararg not last argument in \#{x.domain}: \#{i.value}.\#{show op}"#
+
 
 writeDoc : String -> String -> Prog ()
 writeDoc f doc = toProg $ writeFile f doc
@@ -76,15 +101,15 @@ typesGen c ds =
   let typesFile = c.outDir ++ "/Web/Types.idr"
    in writeDoc typesFile (typedefs ds)
 
-codegen : Config -> Env -> Domain -> Prog ()
-codegen c e d =
-  let typesFile = c.outDir ++ "/Web/Internal/" ++ d.domain ++ "Types.idr"
-      primFile  = c.outDir ++ "/Web/Internal/" ++ d.domain ++ "Prim.idr"
-      apiFile   = c.outDir ++ "/Web/" ++ d.domain ++ ".idr"
+codegen : Config -> CGDomain -> Prog ()
+codegen c d =
+  let typesFile = c.outDir ++ "/Web/Internal/" ++ d.name ++ "Types.idr"
+      primFile  = c.outDir ++ "/Web/Internal/" ++ d.name ++ "Prim.idr"
+      apiFile   = c.outDir ++ "/Web/" ++ d.name ++ ".idr"
 
    in do writeDoc typesFile (types d)
-         writeDoc primFile (primitives e d)
-         writeDoc apiFile  (definitions e d)
+         writeDoc primFile (primitives d)
+         writeDoc apiFile  (definitions d)
 
 --------------------------------------------------------------------------------
 --          Main Function
@@ -93,10 +118,9 @@ codegen c e d =
 run : List String -> Prog ()
 run args = do config <- toProg (pure $ applyArgs args)
               ds     <- toDomains <$> traverse loadDef config.files
+              doms   <- fromCodegen (domains config.maxInheritance ds)
 
-              let e  = env config.maxInheritance ds
-
-              traverse_ (codegen config e) ds
+              traverse_ (codegen config) doms
               typesGen config ds
               pure ()
 

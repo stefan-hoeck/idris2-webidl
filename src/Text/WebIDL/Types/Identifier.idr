@@ -217,3 +217,7 @@ FromString IdrisIdent where
 export
 Pretty IdrisIdent where
   pretty = pretty . show
+
+export
+fromIdent : Identifier -> IdrisIdent
+fromIdent = fromString . value

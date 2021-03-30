@@ -32,7 +32,7 @@ export
 Pretty StringType where
   pretty ByteString = "ByteString"
   pretty DOMString  = "String"
-  pretty USVString  = "USVString"
+  pretty USVString  = "String"
 
 export
 Pretty a => Pretty (Nullable a) where
@@ -42,7 +42,7 @@ Pretty a => Pretty (Nullable a) where
 mutual
   export
   Pretty IdlType where
-    prettyPrec _ Any         = "Any"
+    prettyPrec _ Any         = "AnyPtr"
     prettyPrec p (D x)       = prettyPrec p x
     prettyPrec p (U x)       = prettyPrec p x
     prettyPrec p (Promise x) = prettyCon p "Promise" [prettyPrec App x]

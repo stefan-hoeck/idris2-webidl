@@ -14,6 +14,7 @@ Pretty FloatLit where
 export
 Pretty IntLit where
   pretty (Hex k) = pretty $ E.toDigits "0x" 16 k
+  pretty (Oct 0) = pretty "0"
   pretty (Oct k) = pretty $ E.toDigits "0o" 8 k
   pretty (I x)   = pretty x
 

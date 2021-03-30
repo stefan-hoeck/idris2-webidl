@@ -130,13 +130,6 @@ mutual
                | U (Nullable UnionType)
                | Promise IdlType
 
-  export
-  typeIdentifiers : IdlType -> List Identifier
-  typeIdentifiers Any         = Nil
-  typeIdentifiers (D x)       = distinguishableIdentifiers (nullVal x)
-  typeIdentifiers (U x)       = unionIdentifiers (nullVal x)
-  typeIdentifiers (Promise x) = typeIdentifiers x
-
   ||| UnionType ::
   |||     ( UnionMemberType or UnionMemberType UnionMemberTypes )
   ||| 
@@ -150,10 +143,6 @@ mutual
     snd  : UnionMemberType
     rest : List UnionMemberType
 
-  unionIdentifiers : UnionType -> List Identifier
-  unionIdentifiers (UT fst snd rest) =
-    (fst :: snd :: rest) >>= unionMemberIdentifiers
-
   ||| UnionMemberType ::
   |||     ExtendedAttributeList DistinguishableType
   |||     UnionType Null
@@ -161,10 +150,6 @@ mutual
   data UnionMemberType =
       UD (Attributed $ Nullable Distinguishable)
     | UU (Nullable UnionType)
-
-  unionMemberIdentifiers : UnionMemberType -> List Identifier
-  unionMemberIdentifiers (UD x) = distinguishableIdentifiers (nullVal $ snd x)
-  unionMemberIdentifiers (UU x) = unionIdentifiers (nullVal x)
 
   
   ||| DistinguishableType ::
@@ -194,14 +179,6 @@ mutual
     | Object
     | Symbol
 
-  distinguishableIdentifiers : Distinguishable -> List Identifier
-  distinguishableIdentifiers (I x)               = [x]
-  distinguishableIdentifiers (Sequence x)        = typeIdentifiers (snd x)
-  distinguishableIdentifiers (FrozenArray x)     = typeIdentifiers (snd x)
-  distinguishableIdentifiers (ObservableArray x) = typeIdentifiers (snd x)
-  distinguishableIdentifiers (Record x y)        = typeIdentifiers (snd y)
-  distinguishableIdentifiers _                   = Nil
-
 %runElab deriveMutual [ ("Distinguishable", [Generic,Meta,Show,Eq])
                       , ("UnionMemberType", [Generic,Meta,Show,Eq])
                       , ("UnionType",       [Generic,Meta,Show,Eq])
@@ -224,49 +201,3 @@ identToType = D . NotNull . I
 export
 undefined : IdlType
 undefined = D $ NotNull $ P Undefined
-
---------------------------------------------------------------------------------
---          Types Interface
---------------------------------------------------------------------------------
-
-||| Interface used to extract all types from a WebIDL expression.
-|||
-||| This was necessary during early tests to make sure no
-||| types where missing from the spec. I'll leave it here for some time,
-||| but eventually, this should be no longer needed.
-public export
-interface Types a where
-  types : a -> List IdlType
-
-export
-Types () where
-  types () = []
-
-export
-Types IdlType where
-  types t = [t]
-
-export
-Types ConstType where
-  types (CP x) = types (D . NotNull $ P x)
-  types (CI x) = types (D . NotNull $ I x)
-
-export
-Types a => Types (List a) where
-  types = (>>= types)
-
-export
-Types a => Types (Maybe a) where
-  types = maybe Nil types
-
-export
-Types a => Types (Attributed a) where
-  types (_,a) = types a
-
-export
-NP (Types . f) ts => Types (NS f ts) where
-  types = hcconcatMap (Types . f) types
-
-export
-NP (Types . f) ts => Types (NP f ts) where
-  types = hcconcatMap (Types . f) types

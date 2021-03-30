@@ -23,10 +23,6 @@ record Callback where
 
 %runElab derive "Callback" [Generic,Meta,Eq,Show]
 
-export
-Types Callback where
-  types c = types c.type ++ types c.args
-
 ||| CallbackRestOrInterface ::
 |||     CallbackRest
 |||     interface identifier { CallbackInterfaceMembers } ;
@@ -39,10 +35,6 @@ record CallbackInterface where
 
 %runElab derive "CallbackInterface" [Generic,Meta,Eq,Show]
 
-export
-Types CallbackInterface where
-  types = types . members
-
 ||| Dictionary ::
 |||     dictionary identifier Inheritance { DictionaryMembers } ;
 public export
@@ -54,10 +46,6 @@ record Dictionary where
   members    : DictionaryMembers
 
 %runElab derive "Dictionary" [Generic,Meta,Eq,Show]
-
-export
-Types Dictionary where
-  types = types . members
 
 ||| Enum ::
 |||     enum identifier { EnumValueList } ;
@@ -81,10 +69,6 @@ record Enum where
 
 %runElab derive "Enum" [Generic,Meta,Eq,Show]
 
-export
-Types Enum where
-  types = const Nil
-
 ||| IncludesStatement ::
 |||     identifier includes identifier ;
 public export
@@ -95,10 +79,6 @@ record Includes where
   includes   : Identifier
 
 %runElab derive "Includes" [Generic,Meta,Eq,Show]
-
-export
-Types Includes where
-  types = const Nil
 
 ||| InterfaceRest ::
 |||     identifier Inheritance { InterfaceMembers } ;
@@ -112,10 +92,6 @@ record Interface where
 
 %runElab derive "Interface" [Generic,Meta,Eq,Show]
 
-export
-Types Interface where
-  types = types . members
-
 ||| MixinRest ::
 |||     mixin identifier { MixinMembers } ;
 public export
@@ -127,10 +103,6 @@ record Mixin where
 
 %runElab derive "Mixin" [Generic,Meta,Eq,Show]
 
-export
-Types Mixin where
-  types = types . members
-
 ||| Namespace ::
 |||     namespace identifier { NamespaceMembers } ;
 public export
@@ -141,10 +113,6 @@ record Namespace where
   members    : NamespaceMembers
 
 %runElab derive "Namespace" [Generic,Meta,Eq,Show]
-
-export
-Types Namespace where
-  types = types . members
 
 ||| Typedef ::
 |||     typedef TypeWithExtendedAttributes identifier ;
@@ -158,10 +126,6 @@ record Typedef where
 
 %runElab derive "Typedef" [Generic,Meta,Eq,Show]
 
-export
-Types Typedef where
-  types = types . type
-
 ||| PartialDictionary ::
 |||     dictionary identifier { DictionaryMembers } ;
 public export
@@ -172,10 +136,6 @@ record PDictionary where
   members    : DictionaryMembers
 
 %runElab derive "PDictionary" [Generic,Meta,Eq,Show]
-
-export
-Types PDictionary where
-  types = types . members
 
 ||| PartialInterfaceRest ::
 |||     identifier { PartialInterfaceMembers } ;
@@ -188,10 +148,6 @@ record PInterface where
 
 %runElab derive "PInterface" [Generic,Meta,Eq,Show]
 
-export
-Types PInterface where
-  types = types . members
-
 ||| MixinRest ::
 |||     mixin identifier { MixinMembers } ;
 public export
@@ -203,10 +159,6 @@ record PMixin where
 
 %runElab derive "PMixin" [Generic,Meta,Eq,Show]
 
-export
-Types PMixin where
-  types = types . members
-
 ||| Namespace ::
 |||     namespace identifier { NamespaceMembers } ;
 public export
@@ -217,10 +169,6 @@ record PNamespace where
   members    : NamespaceMembers
 
 %runElab derive "PNamespace" [Generic,Meta,Eq,Show]
-
-export
-Types PNamespace where
-  types = types . members
 
 public export
 DefTypes : List Type
@@ -324,18 +272,6 @@ record Domain where
   mixins              : List Mixin
   namespaces          : List Namespace
   typedefs            : List Typedef
-
-export
-Types Domain where
-  types d =  types d.callbacks
-          ++ types d.callbackInterfaces
-          ++ types d.dictionaries
-          ++ types d.enums
-          ++ types d.includeStatements
-          ++ types d.interfaces
-          ++ types d.mixins
-          ++ types d.namespaces
-          ++ types d.typedefs
 
 applyPart : Domain -> Part -> Domain
 applyPart d (Z v) =

@@ -71,18 +71,6 @@ data ArgumentRest : Type where
 
 %runElab derive "ArgumentRest" [Generic,Meta,Eq,Show]
 
-public export
-argType : ArgumentRest -> IdlType
-argType (Optional tpe _ _) = snd tpe
-argType (Mandatory tpe _)  = tpe
-argType (VarArg tpe _)     = tpe
-
-export
-Types ArgumentRest where
-  types (Optional tpe name def) = types tpe
-  types (Mandatory tpe name)    = types tpe
-  types (VarArg tpe name)       = types tpe
-
 ||| ArgumentList ::
 |||     Argument Arguments
 |||     ε

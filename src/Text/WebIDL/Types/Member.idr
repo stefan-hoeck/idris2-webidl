@@ -25,9 +25,6 @@ record Const where
 
 %runElab derive "Const" [Generic,Meta,Eq,Show]
 
-export
-Types Const where types = types . type
-
 --------------------------------------------------------------------------------
 --          Operation
 --------------------------------------------------------------------------------
@@ -79,10 +76,6 @@ record Op a where
   args    : ArgumentList
 
 %runElab derive "Op" [Generic,Meta,Eq,Show]
-
-export
-Types (Op a) where
-  types o = types o.type ++ types o.args
 
 public export
 0 RegularOperation : Type
@@ -151,11 +144,6 @@ data DictionaryMemberRest : Type where
 
 %runElab derive "DictionaryMemberRest" [Generic,Meta,Eq,Show]
 
-export
-Types DictionaryMemberRest where
-  types (Required _ t _) = types t
-  types (Optional t _ _) = types t
-
 ||| DictionaryMember ::
 |||     ExtendedAttributeList DictionaryMemberRest
 public export
@@ -180,20 +168,12 @@ record Readonly a where
 
 %runElab derive "Readonly" [Generic,Meta,Eq,Show]
 
-export
-Types a => Types (Readonly a) where
-  types = types . value
-
 public export
 record Inherit a where
   constructor MkI
   value : a
 
 %runElab derive "Inherit" [Generic,Meta,Eq,Show]
-
-export
-Types a => Types (Inherit a) where
-  types = types . value
 
 ||| AttributeName ::
 |||     AttributeNameKeyword
@@ -220,10 +200,6 @@ record Attribute where
 
 %runElab derive "Attribute" [Generic,Meta,Eq,Show]
 
-export
-Types Attribute where
-  types = types . type
-
 ||| ReadWriteMaplike ::
 |||     MaplikeRest
 ||| 
@@ -237,10 +213,6 @@ record Maplike where
 
 %runElab derive "Maplike" [Generic,Meta,Eq,Show]
 
-export
-Types Maplike where
-  types m = types m.fstTpe ++ types m.sndTpe
-
 ||| ReadWriteSetlike ::
 |||     SetlikeRest
 ||| 
@@ -252,10 +224,6 @@ record Setlike where
   type : Attributed IdlType
 
 %runElab derive "Setlike" [Generic,Meta,Eq,Show]
-
-export
-Types Setlike where
-  types = types . type
 
 ||| StringifierRest ::
 |||     OptionalReadOnly AttributeRest
@@ -309,10 +277,6 @@ record Constructor where
 
 %runElab derive "Constructor" [Generic,Meta,Eq,Show]
 
-export
-Types Constructor where
-  types = types . args
-
 ||| PartialInterfaceMember ::
 |||     Const
 |||     Operation
@@ -346,22 +310,6 @@ data PartialInterfaceMember =
 
 %runElab derive "PartialInterfaceMember" [Generic,Meta,Eq,Show]
 
-export
-Types PartialInterfaceMember where
-  types (IConst x)      = types x
-  types (IOp x)         = types x
-  types (IStr x)        = types x
-  types (IStatic x)     = types x
-  types (IAttr x)       = types x
-  types (IMap x)        = types x
-  types (ISet x)        = types x
-  types (IAttrRO x)     = types x
-  types (IMapRO x)      = types x
-  types (ISetRO x)      = types x
-  types (IAttrInh x)    = types x
-  types (IIterable x y) = types x ++ types y
-  types (IAsync x y xs) = types x ++ types y ++ types xs
-
 
 ||| MixinMember ::
 |||     Const
@@ -377,14 +325,6 @@ data MixinMember =
   | MAttrRO  (Readonly Attribute)
 
 %runElab derive "MixinMember" [Generic,Meta,Eq,Show]
-
-export
-Types MixinMember where
-  types (MConst x)  = types x
-  types (MOp x)     = types x
-  types (MStr x)    = types x
-  types (MAttr x)   = types x
-  types (MAttrRO x) = types x
 
 
 ||| PartialInterfaceMembers ::

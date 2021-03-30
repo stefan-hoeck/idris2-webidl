@@ -137,3 +137,17 @@ required from these bindings, but in a first step
    for these and define rules for the code generator, where to
    replace the primitive types by these Idris2 types. This is future work,
    however.
+
+### Inheritance and Mixins
+
+WebIDL specifies inheritance relations for interfaces and dictionaries.
+The code generator generates implementations for a `JSType` interface,
+listing a type's parent types and included mixins. The API supports
+then safe upcasting from a type to one of its parent types or mixins.
+
+Downcasting is trickier, as it requires a way to inspect the
+type of a value at runtime. The web API should provide a `SafeCast` interface
+for types, which can be checked at runtime. This includes
+all Idris2 primitives, the external numeric types, `String`, `Object`,
+`Symbol`, `Undefine`, `Boolean`, and all interfaces and dictionary types,
+whose type can be inspected by traversing a value's prototype chain.

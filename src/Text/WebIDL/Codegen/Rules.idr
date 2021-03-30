@@ -138,45 +138,6 @@ CodegenV : Type -> Type
 CodegenV = Validated (List CodegenErr)
 
 --------------------------------------------------------------------------------
---          Types
---------------------------------------------------------------------------------
-
-public export
-data CGType : Type where
-  Ident     : Identifier -> CGType
-  Undefined : CGType
-  UndefOr   : CGType-> CGType
-  Idl       : IdlType -> CGType
-
-export
-fromIdl : IdlType -> CGType
-fromIdl (D (NotNull (P (Unrestricted x)))) = Ident $ MkIdent "Double"
-fromIdl (D (NotNull (P (Restricted x))))   = Ident $ MkIdent "Double"
-fromIdl (D (NotNull (P Undefined)))        = Undefined
-fromIdl (D (NotNull (S ByteString)))       = Ident $ MkIdent "ByteString"
-fromIdl (D (NotNull (S DOMString)))        = Ident $ MkIdent "String"
-fromIdl (D (NotNull (S USVString)))        = Ident $ MkIdent "String"
-fromIdl (D (NotNull (I $ MkIdent "void"))) = Undefined
-fromIdl (D (NotNull (I x)))                = Ident x
-fromIdl (D (NotNull Object))               = Ident $ MkIdent "Object"
-fromIdl (D (NotNull Symbol))               = Ident $ MkIdent "Symbol"
-fromIdl t                                  = Idl t
-
-export
-returnType : CGType -> Doc ()
-
--- returnType (D (NotNull (P Undefined))) = jsio Open "()"
--- returnType t                           = jsio Open t
-
-export
-primReturnType : CGType -> Doc ()
-primReturnType Undefined = primIO Open "()"
-primReturnType _         = primIO Open "AnyPtr"
-
--- primReturnType (D (NotNull (P Undefined))) = primIO Open "()"
--- primReturnType t                           = primIO Open "AnyPtr"
-
---------------------------------------------------------------------------------
 --          Functions
 --------------------------------------------------------------------------------
 
@@ -375,7 +336,7 @@ dictFuns d = d.members >>= fromMember . snd
 
         fromMember (Optional t n def) =
           let an = MkAttributeName n.value
-              cgt = UndefOr $ fromIdl t
+              cgt = UndefOr t
            in [ OptionalAttributeGet an d.name cgt def
               , OptionalAttributeSet an d.name cgt
               ]

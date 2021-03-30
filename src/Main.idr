@@ -114,7 +114,10 @@ codegen c d =
 run : List String -> Prog ()
 run args = do config <- toProg (pure $ applyArgs args)
               ds     <- toDomains <$> traverse loadDef config.files
-              doms   <- fromCodegen (domains config.maxInheritance ds)
+
+              let e = env config.maxInheritance ds
+
+              doms   <- fromCodegen (traverse (domain e) ds)
 
               traverse_ (codegen config) doms
               typesGen config ds

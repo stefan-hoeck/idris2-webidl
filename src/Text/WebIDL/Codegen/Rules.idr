@@ -4,6 +4,7 @@ import Data.List
 import Data.List.Elem
 import Data.Validated
 import Data.SortedMap
+import Data.SortedSet
 import Text.WebIDL.Types
 import Text.WebIDL.Codegen.Types
 import Text.WebIDL.Codegen.Util
@@ -54,6 +55,19 @@ jsTypes ds =
                Just js => let js2 = record {mixins $= (incl ::)} js
                            in insert n js2 ts
 
+public export
+record Env where
+  constructor MkEnv
+  maxInheritance : Nat
+  enums          : SortedSet Identifier
+  jsTypes        : JSTypes
+
+export
+env : Nat -> List Domain -> Env
+env k ds = let ts = jsTypes ds
+               enums = SortedSet.fromList (ds >>= map name . enums)
+            in MkEnv k enums ts
+
 
 ||| The parent types and mixins of a type. This is
 ||| used by the code generator to implement the
@@ -74,19 +88,20 @@ objectOnly = MkSupertypes [MkIdent "Object"] []
 |||                   the algorithm might loop forever in case of
 |||                   cyclic dependencies. This value corresponds
 |||                   to the maximal length of the inheritance chain.
-export
-supertypes : JSTypes -> (maxIterations : Nat) -> Identifier -> Supertypes
-supertypes _   0    i = objectOnly
-supertypes js (S k) i =
-  case lookup i js of
-       Nothing                              => objectOnly
+supertypes : Env -> Identifier -> Supertypes
+supertypes e = run e.maxInheritance
+  where run : Nat -> Identifier -> Supertypes
+        run 0     i = objectOnly
+        run (S k) i =
+          case lookup i e.jsTypes of
+               Nothing                              => objectOnly
 
-       Just $ MkJSType Nothing mixins       =>
-         record { mixins = mixins } objectOnly
+               Just $ MkJSType Nothing mixins       =>
+                 record { mixins = mixins } objectOnly
 
-       Just $ MkJSType (Just parent) mixins =>
-         let MkSupertypes parents mixins2 = supertypes js k parent
-          in MkSupertypes (parent :: parents) (mixins ++ mixins2)
+               Just $ MkJSType (Just parent) mixins =>
+                 let MkSupertypes parents mixins2 = run k parent
+                  in MkSupertypes (parent :: parents) (mixins ++ mixins2)
 
 --------------------------------------------------------------------------------
 --          Codegen Errors
@@ -414,54 +429,51 @@ domainFunctions d =  (d.dicts  >>= functions)
                   ++ (d.mixins >>= functions)
 
 export
-domains : (maxInheritance : Nat) -> List Domain -> CodegenV (List CGDomain)
-domains mi ds = let ts = jsTypes ds
-                 in traverse (domain ts) ds
-  where domain : JSTypes -> Domain -> CodegenV CGDomain
-        domain ts d = [| MkDomain (pure d.domain)
-                                  (callbacks d.callbacks d.callbackInterfaces)
-                                  (traverse dict d.dictionaries)
-                                  (pure d.enums)
-                                  (traverse iface d.interfaces)
-                                  (traverse mixin d.mixins)
-                      |]
+domain : Env -> Domain -> CodegenV CGDomain
+domain e d = [| MkDomain (pure d.domain)
+                         (callbacks d.callbacks d.callbackInterfaces)
+                         (traverse dict d.dictionaries)
+                         (pure d.enums)
+                         (traverse iface d.interfaces)
+                         (traverse mixin d.mixins)
+             |]
 
-    where dict : Dictionary -> CodegenV CGDict
-          dict v@(MkDictionary _ n i _) =
-            Valid $ MkDict n  (supertypes ts mi n) (dictFuns v)
+  where dict : Dictionary -> CodegenV CGDict
+        dict v@(MkDictionary _ n i _) =
+          Valid $ MkDict n  (supertypes e n) (dictFuns v)
 
-          iface : Interface -> CodegenV CGIface
-          iface v@(MkInterface _ n i _) =
-            MkIface n (supertypes ts mi n) (ifaceConstants v) <$>
-              ifaceFuns d v
+        iface : Interface -> CodegenV CGIface
+        iface v@(MkInterface _ n i _) =
+          MkIface n (supertypes e n) (ifaceConstants v) <$>
+            ifaceFuns d v
 
-          mixin : Mixin -> CodegenV CGMixin
-          mixin v@(MkMixin _ n _) =
-            MkMixin n (mixinConstants v) <$> mixinFuns d v
+        mixin : Mixin -> CodegenV CGMixin
+        mixin v@(MkMixin _ n _) =
+          MkMixin n (mixinConstants v) <$> mixinFuns d v
 
-          callbackArg : ArgumentRest -> Arg
-          callbackArg (Mandatory t n) =
-            MkArg (fromString n.value) (fromIdl t)
-          callbackArg (Optional (_,t) n _) =
-            MkArg (fromString n.value) (UndefOr t)
-          callbackArg (VarArg t n) =
-            MkArg (fromString n.value) (VarArg t)
+        callbackArg : ArgumentRest -> Arg
+        callbackArg (Mandatory t n) =
+          MkArg (fromString n.value) (fromIdl t)
+        callbackArg (Optional (_,t) n _) =
+          MkArg (fromString n.value) (UndefOr t)
+        callbackArg (VarArg t n) =
+          MkArg (fromString n.value) (VarArg t)
 
-          callback : Callback -> CodegenV CGCallback
-          callback (MkCallback _ n t args) =
-            Valid . MkCallback n Nil t $ map (callbackArg . snd) args
+        callback : Callback -> CodegenV CGCallback
+        callback (MkCallback _ n t args) =
+          Valid . MkCallback n Nil t $ map (callbackArg . snd) args
 
-          callbackIface : CallbackInterface -> CodegenV CGCallback
-          callbackIface v@(MkCallbackInterface _ n ms) =
-            case mapMaybe (\(_,m)   => extract RegularOperation m) ms of
-                 [MkOp () t _ args] =>
-                   Valid . MkCallback n (callbackConstants v) t $
-                           map (callbackArg . snd) args
-                   
-                 xs => Invalid [CBInterfaceInvalidOps d n (length xs)]
+        callbackIface : CallbackInterface -> CodegenV CGCallback
+        callbackIface v@(MkCallbackInterface _ n ms) =
+          case mapMaybe (\(_,m)   => extract RegularOperation m) ms of
+               [MkOp () t _ args] =>
+                 Valid . MkCallback n (callbackConstants v) t $
+                         map (callbackArg . snd) args
+                 
+               xs => Invalid [CBInterfaceInvalidOps d n (length xs)]
 
-          callbacks :  List Callback
-                    -> List CallbackInterface
-                    -> CodegenV (List CGCallback)
-          callbacks cs cis =
-            [| traverse callback cs ++ traverse callbackIface cis |]
+        callbacks :  List Callback
+                  -> List CallbackInterface
+                  -> CodegenV (List CGCallback)
+        callbacks cs cis =
+          [| traverse callback cs ++ traverse callbackIface cis |]

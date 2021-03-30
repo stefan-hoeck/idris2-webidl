@@ -64,14 +64,10 @@ runProg (MkEitherT p) = do Right _ <- p
 fromCodegen : CodegenV a -> Prog a
 fromCodegen = toProgWith (fastUnlines . map err) . pure . toEither
   where err : CodegenErr -> String
-        err (CallbackVarArg x y) =
-          #"Callback with vararg in \#{x.domain}: \#{y.value}"#
         err (CBInterfaceInvalidOps x y k) =
           #"Invalid number of callback operations in \#{x.domain}: \#{y.value} (\#{show k} operations)"#
         err (MandatoryAfterOptional x i op) =
           #"Mandatory argument after optional arg in \#{x.domain}: \#{i.value}.\#{show op}"#
-        err (OptionalCallbackArg x y) =
-          #"Callback with optional argument in \#{x.domain}: \#{y.value}"#
         err (RegularOpWithoutName x y) =
           #"Unnamed regular operation in \#{x.domain}: \#{y.value}"#
         err (VarArgAndOptionalArgs x i op) =

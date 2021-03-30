@@ -72,12 +72,11 @@ constants = map (show . const) . sortBy (comparing name)
 --                             map (\v => "x" ++ show v) [the Integer 1 ..]
 
 primType : (name : IdrisIdent) -> List CGType -> CGType -> Doc ()
-primType name ts t = typeDecl (Prim $ show name) (primReturnType t) $
-                      map primType ts
-  where primType : CGType -> Doc ()
+primType name ts t =
+  typeDecl (Prim $ show name) (primReturnType t) (map pretty ts)
 
 
-funType : (name : IdrisIdent) -> List Arg -> CGType -> Doc ()
+-- funType : (name : IdrisIdent) -> List Arg -> CGType -> Doc ()
 -- funType n args t =
 --   let args2 = map (toPrettyParam . snd) args
 -- 
@@ -94,8 +93,8 @@ funType : (name : IdrisIdent) -> List Arg -> CGType -> Doc ()
 --         toPrettyParam (VarArg tpe (MkArgName n)) =
 --           prettyArg (fromString n) (pretty tpe)
 -- 
-funImpl : (name : IdrisIdent) -> List Arg -> Doc ()
-funImpl name n = ?foo
+-- funImpl : (name : IdrisIdent) -> List Arg -> Doc ()
+-- funImpl name n = ?foo
 --  let pn   = pretty name
 --      vals = map pretty $ take n argNames
 --      lhs  = hsep (pn :: vals ++ ["="])
@@ -108,33 +107,17 @@ funImpl name n = ?foo
 --
 --   in sep [lhs, indent 2 rhs]
 
-fun : IdrisIdent -> List Arg -> CGType -> Doc ()
-fun ii args t = vsep [ "export"
-                     , funType ii args t
-                     , funImpl ii args
-                     ] 
--- 
--- readonly : Identifier -> Attribute -> List (Doc ())
--- readonly i (MkAttribute _ t (MkAttributeName n)) =
---   let ii = fromString n
---    in [ ""
---       , pretty $ attrGetFFI n
---       , primType ii 1 t
---       , ""
---       , fun ii [objArg i] t
---       ]
+-- fun : IdrisIdent -> List Arg -> CGType -> Doc ()
+-- fun ii args t = vsep [ "export"
+--                      , funType ii args t
+--                      , funImpl ii args
+--                      ] 
 
 attributeSetFFI : AttributeName -> Identifier -> CGType -> String
 attributeSetFFI n obj t =
    show $ vsep [ ""
                , pretty $ attrSetFFI n
                , primType (setter n) [Ident obj, t] t
-               ]
-
-attributeSet : AttributeName -> Identifier -> CGType -> String
-attributeSet n obj t =
-   show $ vsep [ ""
-               , fun (setter n) [objArg obj, valArg t] Undefined
                ]
 
 attributeGetFFI : AttributeName -> Identifier -> CGType -> String
@@ -144,98 +127,34 @@ attributeGetFFI n obj t =
                , primType (fromString n.value) [Ident obj] t
                ]
 
-attributeGet : AttributeName -> Identifier -> CGType -> String
-attributeGet n obj t =
-   show $ vsep [ ""
-               , fun (fromString n.value) [objArg obj] t
-               ]
-
-optionalAttributeSetFFI : AttributeName -> Identifier -> CGType -> String
-optionalAttributeSetFFI n obj t =
-   show $ vsep [ ""
-               , pretty $ attrSetFFI n
-               , primType (setter n) [Ident obj, t] t
-               ]
-
-optionalAttributeSet : AttributeName -> Identifier -> CGType -> String
-optionalAttributeSet n obj t =
-   show $ vsep [ ""
-               , fun (setter n) [objArg obj, valArg t] Undefined
-               ]
-
-optionalAttributeGetFFI : AttributeName -> Identifier -> CGType -> String
-optionalAttributeGetFFI n obj t =
-   show $ vsep [ ""
-               , pretty $ attrGetFFI n
-               , primType (fromString n.value) [Ident obj] t
-               ]
-
-optionalAttributeGet : AttributeName -> Identifier -> CGType -> String
-optionalAttributeGet n obj t =
-   show $ vsep [ ""
-               , fun (fromString n.value) [objArg obj] t
-               ]
+-- attributeSet : AttributeName -> Identifier -> CGType -> String
+-- attributeSet n obj t =
+--    show $ vsep [ ""
+--                , fun (setter n) [objArg obj, valArg t] Undefined
+--                ]
 -- 
--- codegenForReading : Env -> Attribute -> Bool
--- codegenForReading (MkEnv _ _ cbs) = not . isCallback cbs . type
--- 
--- readwrite : Env -> Identifier -> Attribute -> List (Doc ())
--- readwrite e i a =
---   if codegenForReading e a
---      then readonly i a ++ writeonly i a
---      else writeonly i a
--- 
--- -- TODO: Change Identifier to IdrisIdent here
--- export
--- readOnlyAttributes :  Env
---                    -> Identifier
---                    -> List (Readonly Attribute)
---                    -> List String
--- readOnlyAttributes e i = map (show . indent 2 . vsep . readonly i) 
---                        . sortBy (comparing name)
---                        . filter (codegenForReading e)
---                        . map value
--- 
--- -- TODO: Change Identifier to IdrisIdent here
--- export
--- attributes :  Env
---            -> Identifier
---            -> List Attribute
---            -> List String
--- attributes e i = map (show . indent 2 . vsep . readwrite e i) 
---                . sortBy (comparing name)
--- 
--- -- TODO: Change Identifier to IdrisIdent here
--- export
--- readOnlyAttributesPrim :  Env
---                        -> Identifier
---                        -> List (Readonly Attribute)
---                        -> List String
--- readOnlyAttributesPrim = ?roprim
--- 
--- -- TODO: Change Identifier to IdrisIdent here
--- export
--- attributesPrim :  Env
---                -> Identifier
---                -> List Attribute
---                -> List String
--- attributesPrim = ?rwPrim
+-- attributeGet : AttributeName -> Identifier -> CGType -> String
+-- attributeGet n obj t =
+--    show $ vsep [ ""
+--                , fun (fromString n.value) [objArg obj] t
+--                ]
 
-function : CGFunction -> String
+function : CGFunction -> Maybe String
+function _ = Nothing
 
-primFunction : CGFunction -> String
-primFunction (AttributeSet n o t) = attributeSet n o t
-primFunction (AttributeGet n o t) = attributeGet n o t
-primFunction (OptionalAttributeSet n o t) = ?primFunction_rhs_3
-primFunction (OptionalAttributeGet n o t d) = ?primFunction_rhs_4
-primFunction (Constructor name args optionalArgs) = ?primFunction_rhs_5
-primFunction (Regular name args optionalArgs returnType) = ?primFunction_rhs_6
-primFunction (VarArg name args varArg returnType) = ?primFunction_rhs_7
+primFunction : CGFunction -> Maybe String
+primFunction (AttributeSet n o t)           = Just $ attributeSetFFI n o t
+primFunction (AttributeGet n o t)           = Just $ attributeGetFFI n o t
+primFunction (OptionalAttributeSet n o t)   = Just $ attributeSetFFI n o t
+primFunction (OptionalAttributeGet n o t d) = Just $ attributeGetFFI n o t
+primFunction (Constructor n args optArgs)   = Nothing
+primFunction (Regular n args optArgs t)     = Nothing
+primFunction (VarArg n args varArg t)       = Nothing
 
 export
 functions : List CGFunction -> List String
-functions = map function . sortBy (comparing priority)
+functions = mapMaybe function . sortBy (comparing priority)
 
 export
 primFunctions : List CGFunction -> List String
-primFunctions = map primFunction . sortedNubOn priority
+primFunctions = mapMaybe primFunction . sortedNubOn priority

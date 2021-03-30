@@ -30,14 +30,6 @@ public export
 JSTypes : Type
 JSTypes = SortedMap Identifier JSType
 
-||| Env
-public export
-record Env where
-  constructor MkEnv
-  types         : JSTypes
-  maxIterations : Nat
-  callbacks     : List Identifier
-
 jsTypes : List Domain -> JSTypes
 jsTypes ds =
   let types =  (ds >>= map dictToType . dictionaries)
@@ -62,24 +54,6 @@ jsTypes ds =
                Just js => let js2 = record {mixins $= (incl ::)} js
                            in insert n js2 ts
 
-covering export
-isCallback : List Identifier -> IdlType -> Bool
-isCallback cbs = any (`elem` cbs) . typeIdentifiers
-
-covering
-callbacks : List Domain -> List Identifier
-callbacks ds = let cs =  (ds >>= map name . callbacks)
-                      ++ (ds >>= map name . callbackInterfaces)
-
-                   ts = map name
-                      . filter (isCallback cs . type)
-                      $ ds >>= typedefs
-
-                in cs ++ ts
-
-covering export
-env : (maxInheritance : Nat) -> List Domain -> Env
-env mi ds = MkEnv (jsTypes ds) mi (callbacks ds)
 
 ||| The parent types and mixins of a type. This is
 ||| used by the code generator to implement the
@@ -120,10 +94,8 @@ supertypes js (S k) i =
 
 public export
 data CodegenErr : Type where
-  CallbackVarArg         : Domain -> Identifier -> CodegenErr
   CBInterfaceInvalidOps  : Domain -> Identifier -> Nat -> CodegenErr
   MandatoryAfterOptional : Domain -> Identifier -> OperationName -> CodegenErr
-  OptionalCallbackArg    : Domain -> Identifier -> CodegenErr
   RegularOpWithoutName   : Domain -> Identifier -> CodegenErr
   VarArgAndOptionalArgs  : Domain -> Identifier -> OperationName -> CodegenErr
   VarArgConstructor      : Domain -> Identifier -> CodegenErr
@@ -467,22 +439,24 @@ domains mi ds = let ts = jsTypes ds
           mixin v@(MkMixin _ n _) =
             MkMixin n (mixinConstants v) <$> mixinFuns d v
 
-          callbackArg : Identifier -> ArgumentRest -> CodegenV Arg
-          callbackArg _ (Mandatory t n)  =
-            Valid $ MkArg (fromString n.value) (fromIdl t)
-          callbackArg n (Optional _ _ _) = Invalid [OptionalCallbackArg d n]
-          callbackArg n (VarArg _ _)     = Invalid [CallbackVarArg d n]
+          callbackArg : ArgumentRest -> Arg
+          callbackArg (Mandatory t n) =
+            MkArg (fromString n.value) (fromIdl t)
+          callbackArg (Optional (_,t) n _) =
+            MkArg (fromString n.value) (UndefOr t)
+          callbackArg (VarArg t n) =
+            MkArg (fromString n.value) (VarArg t)
 
           callback : Callback -> CodegenV CGCallback
           callback (MkCallback _ n t args) =
-            MkCallback n Nil t <$> traverse (callbackArg n . snd) args
+            Valid . MkCallback n Nil t $ map (callbackArg . snd) args
 
           callbackIface : CallbackInterface -> CodegenV CGCallback
           callbackIface v@(MkCallbackInterface _ n ms) =
             case mapMaybe (\(_,m)   => extract RegularOperation m) ms of
                  [MkOp () t _ args] =>
-                   MkCallback n (callbackConstants v) t <$>
-                   traverse (callbackArg n . snd) args
+                   Valid . MkCallback n (callbackConstants v) t $
+                           map (callbackArg . snd) args
                    
                  xs => Invalid [CBInterfaceInvalidOps d n (length xs)]
 

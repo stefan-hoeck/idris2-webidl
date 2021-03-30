@@ -75,6 +75,9 @@ required from these bindings, but in a first step
 
  * `bigint` : This is obviously mapped to `Integer`.
 
+ * `boolean` : This gets its own external `Boolean` type with
+    marshalling functions from and to Idris2 `Bool`.
+
  * String types: `DOMString` and `USVString` are ordinary Idris2
    strings, `ByteString` gets its own external type (API yet to be
    defined).

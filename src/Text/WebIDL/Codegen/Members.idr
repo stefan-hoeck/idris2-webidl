@@ -116,6 +116,7 @@ primType name ts t =
 attributeSetFFI : AttributeName -> Identifier -> CGType -> String
 attributeSetFFI n obj t =
    show $ vsep [ ""
+               , "export"
                , pretty $ attrSetFFI n
                , primType (setter n) [Ident obj, t] t
                ]
@@ -123,6 +124,7 @@ attributeSetFFI n obj t =
 attributeGetFFI : AttributeName -> Identifier -> CGType -> String
 attributeGetFFI n obj t =
    show $ vsep [ ""
+               , "export"
                , pretty $ attrGetFFI n
                , primType (fromString n.value) [Ident obj] t
                ]

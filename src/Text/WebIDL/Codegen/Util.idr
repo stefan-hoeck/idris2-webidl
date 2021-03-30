@@ -36,7 +36,8 @@ prettyList (x :: xs) = align $ sep $  ("[" <++> x)
 
 export
 moduleName : String -> String
-moduleName = mapFirstChar toUpper
+moduleName "uievents" = "UIEvents"
+moduleName s          = mapFirstChar toUpper s
 
 --------------------------------------------------------------------------------
 --          String Literals

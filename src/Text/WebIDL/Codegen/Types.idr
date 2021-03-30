@@ -10,7 +10,11 @@ prettyIdent (MkIdent value) = pretty value
 
 export
 Pretty BufferRelatedType where
-  prettyPrec p = prettyPrec p . show
+  pretty Uint8Array        = "UInt8Array"
+  pretty Uint16Array       = "UInt8Array"
+  pretty Uint32Array       = "UInt8Array"
+  pretty Uint8ClampedArray = "UInt8ClampedArray"
+  pretty x                 = pretty $ show x
 
 export
 Pretty PrimitiveType where
@@ -54,11 +58,11 @@ mutual
     prettyPrec p (I x) = prettyIdent x
     prettyPrec p (B x) = prettyPrec p x
     prettyPrec p (Sequence (_,x)) =
-      prettyCon p "JSArray" [prettyPrec App x]
+      prettyCon p "Array" [prettyPrec App x]
     prettyPrec p (FrozenArray (_,x)) =
-      prettyCon p "JSArray" [prettyPrec App x]
+      prettyCon p "Array" [prettyPrec App x]
     prettyPrec p (ObservableArray (_,x)) =
-      prettyCon p "JSArray" [prettyPrec App x]
+      prettyCon p "Array" [prettyPrec App x]
     prettyPrec p Object = "Object"
     prettyPrec p Symbol = "Symbol"
     prettyPrec p (Record x (_,y)) =

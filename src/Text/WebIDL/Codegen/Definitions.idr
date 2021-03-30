@@ -18,7 +18,7 @@ defImports : CGDomain -> String
 defImports d = #"""
                import JS
                import Web.Internal.\#{d.name}Prim
-               import Web.Types
+               import Web.Internal.Types
                """#
 
 typeImports : String
@@ -30,9 +30,9 @@ typeImports = "import JS"
 
 extern : CGDomain -> String
 extern d = fastUnlines [ section "Interfaces" $ exts ext name d.ifaces
-                       , section "Mixins" $ exts extMixin name d.mixins
                        , section "Dictionaries" $ exts ext name d.dicts
-                       , section "Callbacks" $ exts ext name d.callbacks
+                       , section "Mixins" $ exts extNoCast name d.mixins
+                       , section "Callbacks" $ exts extNoCast name d.callbacks
                        ]
   where ext : String -> String
         ext s = #"""
@@ -41,29 +41,10 @@ extern d = fastUnlines [ section "Interfaces" $ exts ext name d.ifaces
                 export
                 SafeCast \#{s} where
                   safeCast = unsafeCastOnPrototypeName "\#{s}"
-                
-                export ToJS \#{s} where toJS = believe_me
-
-                export FromJS \#{s} where fromJS = safeCast
                 """#
 
-        extMixin : String -> String
-        extMixin s = #"""
-                export data \#{s} : Type where [external]
-                
-                export ToJS \#{s} where toJS = believe_me
-
-                export FromJS \#{s} where fromJS ptr = Just (believe_me ptr)
-                """#
-
-        extCallback : String -> String
-        extCallback s = #"""
-                export data \#{s} : Type where [external]
-                
-                export ToJS \#{s} where toJS = believe_me
-
-                export FromJS \#{s} where fromJS ptr = Just (believe_me ptr)
-                """#
+        extNoCast : String -> String
+        extNoCast s = #"export data \#{s} : Type where [external]"#
 
         exts :  (f : String -> String)
              -> (a -> Identifier)
@@ -128,29 +109,30 @@ typedefs ds =
       sect = section "Typedefs" $
                ["", "mutual"] ++ map (show . indent 2) docs
    in #"""
-      module Web.Types
+      module Web.Internal.Types
       
       import JS
-      import public Web.AnimationTypes as Types
-      import public Web.ClipboardTypes as Types
-      import public Web.CssTypes as Types
-      import public Web.DomTypes as Types
-      import public Web.EventTypes as Types
-      import public Web.FetchTypes as Types
-      import public Web.FileTypes as Types
-      import public Web.GeometryTypes as Types
-      import public Web.HtmlTypes as Types
-      import public Web.MediasourceTypes as Types
-      import public Web.MediastreamTypes as Types
-      import public Web.PermissionsTypes as Types
-      import public Web.ServiceworkerTypes as Types
-      import public Web.StreamsTypes as Types
-      import public Web.SvgTypes as Types
-      import public Web.UrlTypes as Types
-      import public Web.VisibilityTypes as Types
-      import public Web.WebglTypes as Types
-      import public Web.WebidlTypes as Types
-      import public Web.XhrTypes as Types
+      import public Web.Internal.AnimationTypes as Types
+      import public Web.Internal.ClipboardTypes as Types
+      import public Web.Internal.CssTypes as Types
+      import public Web.Internal.DomTypes as Types
+      import public Web.Internal.EventTypes as Types
+      import public Web.Internal.FetchTypes as Types
+      import public Web.Internal.FileTypes as Types
+      import public Web.Internal.GeometryTypes as Types
+      import public Web.Internal.HtmlTypes as Types
+      import public Web.Internal.MediasourceTypes as Types
+      import public Web.Internal.MediastreamTypes as Types
+      import public Web.Internal.PermissionsTypes as Types
+      import public Web.Internal.ServiceworkerTypes as Types
+      import public Web.Internal.StreamsTypes as Types
+      import public Web.Internal.SvgTypes as Types
+      import public Web.Internal.UIEventsTypes as Types
+      import public Web.Internal.UrlTypes as Types
+      import public Web.Internal.VisibilityTypes as Types
+      import public Web.Internal.WebglTypes as Types
+      import public Web.Internal.WebidlTypes as Types
+      import public Web.Internal.XhrTypes as Types
       \#{sect}
       """#
       
@@ -169,8 +151,8 @@ export
 types : CGDomain -> String
 types d =
   #"""
-  module Web.\#{d.name}Types
-
+  module Web.Internal.\#{d.name}Types
+   
   \#{typeImports}
   \#{enums d.enums}
   \#{extern d}
@@ -181,8 +163,11 @@ primitives : CGDomain -> String
 primitives d =
   #"""
   module Web.Internal.\#{d.name}Prim
-
-  \#{fastConcat . primFunctions $ domainFunctions d}
+   
+  import JS
+  import Web.Internal.Types
+   
+  \#{fastUnlines . primFunctions $ domainFunctions d}
   """#
 
 export
@@ -190,7 +175,7 @@ definitions : CGDomain -> String
 definitions d =
   #"""
   module Web.\#{d.name}
-
+   
   \#{defImports d}
   \#{ifaces d}
   \#{mixins d}

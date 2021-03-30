@@ -94,7 +94,7 @@ loadDef f = let mn = moduleName
 
 typesGen : Config -> List Domain -> Prog ()
 typesGen c ds =
-  let typesFile = c.outDir ++ "/Web/Types.idr"
+  let typesFile = c.outDir ++ "/Web/Internal/Types.idr"
    in writeDoc typesFile (typedefs ds)
 
 codegen : Config -> CGDomain -> Prog ()

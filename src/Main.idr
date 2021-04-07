@@ -66,16 +66,8 @@ fromCodegen = toProgWith (fastUnlines . map err) . pure . toEither
   where err : CodegenErr -> String
         err (CBInterfaceInvalidOps x y k) =
           #"Invalid number of callback operations in \#{x.domain}: \#{y.value} (\#{show k} operations)"#
-        err (MandatoryAfterOptional x i op) =
-          #"Mandatory argument after optional arg in \#{x.domain}: \#{i.value}.\#{show op}"#
         err (RegularOpWithoutName x y) =
           #"Unnamed regular operation in \#{x.domain}: \#{y.value}"#
-        err (VarArgAndOptionalArgs x i op) =
-          #"Vararg and optional args in \#{x.domain}: \#{i.value}.\#{show op}"#
-        err (VarArgConstructor x i) =
-          #"Vararg constructor in \#{x.domain}: \#{i.value}.new"#
-        err (VarArgNotLastArg x i op) =
-          #"Vararg not last argument in \#{x.domain}: \#{i.value}.\#{show op}"#
 
 
 writeDoc : String -> String -> Prog ()

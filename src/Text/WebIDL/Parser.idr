@@ -312,17 +312,33 @@ argName =   withKey "ArgumentNameKeyword"
               (map (MkArgName . value) . ArgumentNameKeyword.refine)
         <|> map (MkArgName . value) ident
 
-export
-argumentRest : IdlGrammar ArgumentRest
-argumentRest =   [| Optional (key "optional" *> attrTpe) argName defaultV |]
-             <|> [| VarArg    (idlType <* ellipsis) argName |]
-             <|> [| Mandatory idlType argName |]
+arg : IdlGrammar Arg
+arg = [| MkArg extAttributes idlType argName |]
+
+vararg : IdlGrammar Arg
+vararg = [| MkArg extAttributes (idlType <* ellipsis) argName |]
+
+optArg : IdlGrammar OptArg
+optArg = [| MkOptArg extAttributes
+                     (key "optional" *> extAttributes)
+                     idlType
+                     argName
+                     defaultV |]
 
 argumentList : IdlGrammar' ArgumentList
-argumentList = sepBy comma (attributed argumentRest)
+argumentList =   [| VarArg args vararg |]
+             <|> [| NoVarArg (args1 <* comma) (sepBy comma optArg) |]
+             <|> [| NoVarArg args1 (pure Nil) |]
+             <|> [| NoVarArg (pure Nil) (sepBy comma optArg) |]
+
+  where args1 : IdlGrammar (List Arg)
+        args1 = forget <$> sepBy1 comma arg
+
+        args : IdlGrammar' (List Arg)
+        args = (args1 <* comma) <|> pure Nil
 
 optArgList : IdlGrammar' ArgumentList
-optArgList = inParens argumentList <|> pure Nil
+optArgList = inParens argumentList <|> pure (NoVarArg Nil Nil)
 
 --------------------------------------------------------------------------------
 --          Member

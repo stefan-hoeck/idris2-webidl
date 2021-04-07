@@ -84,13 +84,6 @@ Pretty ConstType where
   prettyPrec p (CP x) = prettyPrec p x
   prettyPrec p (CI x) = prettyIdent x
 
-export
-Pretty ArgumentRest where
-  pretty (Optional  (_,t) n _) = prettyArg (fromString n.value) (pretty t)
-  pretty (Mandatory t     n)   = prettyArg (fromString n.value) (pretty t)
-  pretty (VarArg    t     n)   =
-    prettyArg (fromString n.value) $ prettySingleCon Open "VarArg" t
-
 --------------------------------------------------------------------------------
 --          Types
 --------------------------------------------------------------------------------

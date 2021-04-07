@@ -110,11 +110,7 @@ supertypes e = run e.maxInheritance
 public export
 data CodegenErr : Type where
   CBInterfaceInvalidOps  : Domain -> Identifier -> Nat -> CodegenErr
-  MandatoryAfterOptional : Domain -> Identifier -> OperationName -> CodegenErr
   RegularOpWithoutName   : Domain -> Identifier -> CodegenErr
-  VarArgAndOptionalArgs  : Domain -> Identifier -> OperationName -> CodegenErr
-  VarArgConstructor      : Domain -> Identifier -> CodegenErr
-  VarArgNotLastArg       : Domain -> Identifier -> OperationName -> CodegenErr
 
 public export
 Codegen : Type -> Type
@@ -128,28 +124,28 @@ CodegenV = Validated (List CodegenErr)
 --          Functions
 --------------------------------------------------------------------------------
 
-||| A function argument in the code generator.
-public export
-record Arg where
-  constructor MkArg
-  name : IdrisIdent
-  type : CGType
-
-public export
-obj : IdrisIdent
-obj = II "obj" Refl
-
-export
-arg : ArgumentName -> IdlType -> Arg
-arg n = MkArg (fromString n.value) . fromIdl
-
-public export
-objArg : Identifier -> Arg
-objArg = MkArg obj . Ident
-
-public export
-valArg : CGType -> Arg
-valArg = MkArg (II "v" Refl)
+-- ||| A function argument in the code generator.
+-- public export
+-- record Arg where
+--   constructor MkArg
+--   name : IdrisIdent
+--   type : CGType
+-- 
+-- public export
+-- obj : IdrisIdent
+-- obj = II "obj" Refl
+-- 
+-- export
+-- arg : ArgumentName -> IdlType -> Arg
+-- arg n = MkArg (fromString n.value) . fromIdl
+-- 
+-- public export
+-- objArg : Identifier -> Arg
+-- objArg = MkArg obj . Ident
+-- 
+-- public export
+-- valArg : CGType -> Arg
+-- valArg = MkArg (II "v" Refl)
 
 ||| A function, for which we will generate some code.
 public export
@@ -181,45 +177,14 @@ data CGFunction : Type where
 
   ||| An interface constructor with (possibly) optional arguments.
   Constructor      :  (name         : Identifier)
-                   -> (args         : List Arg)
-                   -> (optionalArgs : List Arg)
+                   -> (args         : ArgumentList)
                    -> CGFunction
 
   ||| A regular function with (possibly) optional arguments.
   Regular      :  (name         : OperationName)
-               -> (args         : List Arg)
-               -> (optionalArgs : List Arg)
+               -> (args         : ArgumentList)
                -> (returnType   : IdlType)
                -> CGFunction
-
-  ||| A regular function with a terminal vararg.
-  VarArg       :  (name         : OperationName)
-               -> (args         : List Arg)
-               -> (varArg       : Arg)
-               -> (returnType   : IdlType)
-               -> CGFunction
-
--- ||| Extract the name of a function
--- export
--- name : CGFunction -> IdrisIdent
--- name (AttributeSet n _ _)           = n
--- name (AttributeGet n _ _)           = n
--- name (OptionalAttributeSet n _ _)   = n
--- name (OptionalAttributeGet n _ _ _) = n
--- name (Constructor _ _ _)            = II "new" Refl
--- name (Regular n _ _ _)              = n
--- name (VarArg n _ _ _)               = n
--- 
--- ||| Extract the type of a function
--- export
--- type : CGFunction -> IdlType
--- type (AttributeSet _ _ t)            = t
--- type (AttributeGet _ _ t)            = t
--- type (OptionalAttributeSet _ _ t)    = t
--- type (OptionalAttributeGet _ _ t _)  = t
--- type (Constructor n _ _)             = identToType n
--- type (Regular _ _ _ t)               = t
--- type (VarArg _ _ _ t)                = t
 
 ||| This is used for sorting lists of functions to
 ||| the determine the order in which they appear
@@ -232,52 +197,12 @@ data CGFunction : Type where
 ||| All other functions come later and will be sorted by name.
 export
 priority : CGFunction -> (Nat,String,Nat)
-priority (Constructor n _ _)            = (0,n.value,0)
+priority (Constructor n _)              = (0,n.value,0)
 priority (AttributeSet n _ _)           = (1,show n,1)
 priority (AttributeGet n _ _)           = (1,show n,0)
 priority (OptionalAttributeSet n _ _)   = (1,show n,1)
 priority (OptionalAttributeGet n _ _ _) = (1,show n,0)
-priority (Regular n _ _ _)              = (2,show n,0)
-priority (VarArg n _ _ _)               = (2,show n,0)
-
--- (mandatory args, vararg or optional args)
-SepArgs : Type
-SepArgs = (List Arg, Either Arg (List Arg))
-
--- The following rules apply:
---
---  * a regular operation's name must not be `Nothing`
---  * there can only be one vararg and it must be the last
---    argument
---  * there must be no mandatory argument after an optional
---    argument
---  * optional arguments and varargs must not be mixed
-fromArgList :  (domain : Domain)
-            -> (definitionName : Identifier)
-            -> (operationName  : OperationName)
-            -> (returnType : IdlType)
-            -> (arguments : ArgumentList)
-            -> Codegen SepArgs
-fromArgList dom ident on t args =
-   case run args of
-        Left x                => Left x
-        Right (as,os,Nothing) => Right (as, Right os)
-        Right (as,Nil,Just a) => Right (as, Left a)
-        Right (as,_,Just _)   => Left [VarArgAndOptionalArgs dom ident on]
-
-  where run :  ArgumentList -> Codegen (List Arg, List Arg, Maybe Arg)
-        run []                              = Right (Nil,Nil,Nothing)
-        run ((_, VarArg t n)     :: Nil)    = Right (Nil,Nil,Just $ arg n t)
-        run ((_, VarArg t n)     :: _)      =
-          Left [VarArgNotLastArg dom ident on]
-
-        run ((_, Optional (_,t) n d) :: xs) =
-          do (Nil,os,va) <- run xs
-               | _ => Left [MandatoryAfterOptional dom ident on]
-             pure (Nil, arg n t :: os, va)
-
-        run ((_, Mandatory t n)  :: xs)     =
-          map (\(as,os,m) => (arg n t :: as, os, m)) (run xs)
+priority (Regular n _ _)                = (2,show n,0)
 
 fromRegular :  Domain
             -> Identifier
@@ -287,21 +212,10 @@ fromRegular dom ident (MkOp () t Nothing args) =
   Invalid [RegularOpWithoutName dom ident]
 
 fromRegular dom ident (MkOp () t (Just op) args) = 
-   case fromArgList dom ident op t args of
-        Left x               => Invalid x
-        Right (as, Left a)   => Valid [ VarArg op as a t ]
-        Right (as, Right os) => Valid [ Regular op as os t ]
+  Valid [Regular op args t]
 
-fromConstructor :  Domain
-                -> Identifier
-                -> ArgumentList
-                -> CodegenV (List CGFunction)
-fromConstructor dom ident args =
-  let con = MkOpName "new"
-   in case fromArgList dom ident con (identToType ident) args of
-           Left x  => Invalid x
-           Right (as, Left a)   => Invalid [VarArgConstructor dom ident]
-           Right (as, Right os) => Valid [ Constructor ident as os ]
+fromConstructor : Identifier -> ArgumentList -> CodegenV (List CGFunction)
+fromConstructor name args = Valid [Constructor name args]
 
 fromAttrRO : Identifier -> Readonly Attribute -> CodegenV (List CGFunction)
 fromAttrRO obj (MkRO $ MkAttribute _ t n) =
@@ -311,7 +225,6 @@ fromAttr : Identifier -> Attribute -> CodegenV (List CGFunction)
 fromAttr obj (MkAttribute _ t n) =
   let cgt = fromIdl t
    in Valid [AttributeGet n obj cgt, AttributeSet n obj cgt]
-
 
 dictFuns : Dictionary -> List CGFunction
 dictFuns d = d.members >>= fromMember . snd
@@ -340,7 +253,7 @@ mixinFuns dom m = concat <$> traverse (fromMember . snd) m.members
 ifaceFuns : Domain -> Interface -> CodegenV (List CGFunction)
 ifaceFuns dom i = concat <$> traverse (fromMember . snd) i.members
   where fromMember : InterfaceMember -> CodegenV (List CGFunction)
-        fromMember (Z $ MkConstructor args) = fromConstructor dom i.name args
+        fromMember (Z $ MkConstructor args) = fromConstructor i.name args
         fromMember (S $ Z $ IConst x)       = Valid Nil
 
         fromMember (S $ Z $ IOp x)          =
@@ -410,7 +323,7 @@ record CGCallback where
   name      : Identifier
   constants : List Const
   type      : IdlType
-  args      : List Arg
+  args      : ArgumentList
 
 public export
 record CGDomain where
@@ -451,24 +364,13 @@ domain e d = [| MkDomain (pure d.domain)
         mixin v@(MkMixin _ n _) =
           MkMixin n (mixinConstants v) <$> mixinFuns d v
 
-        callbackArg : ArgumentRest -> Arg
-        callbackArg (Mandatory t n) =
-          MkArg (fromString n.value) (fromIdl t)
-        callbackArg (Optional (_,t) n _) =
-          MkArg (fromString n.value) (UndefOr t)
-        callbackArg (VarArg t n) =
-          MkArg (fromString n.value) (VarArg t)
-
         callback : Callback -> CodegenV CGCallback
-        callback (MkCallback _ n t args) =
-          Valid . MkCallback n Nil t $ map (callbackArg . snd) args
+        callback (MkCallback _ n t args) = Valid $ MkCallback n Nil t args
 
         callbackIface : CallbackInterface -> CodegenV CGCallback
         callbackIface v@(MkCallbackInterface _ n ms) =
           case mapMaybe (\(_,m)   => extract RegularOperation m) ms of
-               [MkOp () t _ args] =>
-                 Valid . MkCallback n (callbackConstants v) t $
-                         map (callbackArg . snd) args
+               [MkOp () t _ a] => Valid $ MkCallback n (callbackConstants v) t a
                  
                xs => Invalid [CBInterfaceInvalidOps d n (length xs)]
 

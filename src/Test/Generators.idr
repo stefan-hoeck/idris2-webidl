@@ -315,15 +315,17 @@ argName = choice [ map (MkArgName . value) identifier
                                            , "unrestricted" ]
                  ]
 
-export
-argumentRest : Gen ArgumentRest
-argumentRest = choice [ [| Optional (typeWithAttr 3) argName defaultVal |]
-                      , [| Mandatory idlType' argName |]
-                      , [| VarArg idlType' argName |]
-                      ]
+arg : Gen Arg
+arg = [| MkArg extAttributes idlType' argName |]
+
+optArg : Gen OptArg
+optArg = [| MkOptArg extAttributes extAttributes idlType' argName defaultVal |]
 
 argumentList : Gen ArgumentList
-argumentList = linList 5 (attributed argumentRest)
+argumentList =
+  choice [ [| VarArg (linList 5 arg) arg |]
+         , [| NoVarArg (linList 5 arg) (linList 5 optArg) |]
+         ]
 
 constType : Gen ConstType
 constType = choice [map CP primitive, map CI identifier]

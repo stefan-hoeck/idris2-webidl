@@ -35,8 +35,11 @@ inAngles f a = "<" ++ f a ++ ">"
 emaybe : Encoder a -> Encoder (Maybe a)
 emaybe f = maybe "" f
 
+sepList' : (sep : String) -> List String -> String
+sepList' sep = fastConcat . intersperse sep
+
 sepList : (sep : String) -> Encoder a -> Encoder (List a)
-sepList sep f = fastConcat . intersperse sep . map f
+sepList sep f = sepList' sep . map f
 
 emptyIfNull : Foldable f =>  Encoder (f a) -> Encoder (f a)
 emptyIfNull f as = if null as then "" else f as
@@ -238,20 +241,31 @@ defaultV Null      = "= null"
 defaultV (S x)     = "= " ++ stringLit x
 defaultV (C x)     = "= " ++ constValue x
 
-export
-argumentRest : Encoder ArgumentRest
-argumentRest (Optional t n d) =
-  spaced ["optional",attributed idlType t,n.value,defaultV d]
-argumentRest (Mandatory t n) = spaced [idlType t,n.value]
-argumentRest (VarArg t n)    = spaced [idlType t ++ "...",n.value]
+arg : Encoder Arg
+arg (MkArg as t n) = spaced [extAttributes as, idlType t, n.value]
+
+vararg : Encoder Arg
+vararg (MkArg as t n) = spaced [extAttributes as, idlType t ++ "...", n.value]
+
+optArg : Encoder OptArg
+optArg (MkOptArg as tas t n d) = spaced [ extAttributes as
+                                        , "optional"
+                                        , attributed idlType (tas,t)
+                                        , n.value
+                                        , defaultV d
+                                        ]
 
 export
 argumentList : Encoder ArgumentList
-argumentList = sepList "," (attributed argumentRest)
+argumentList (VarArg args va) =
+  sepList' "," (map arg args ++ [vararg va])
+
+argumentList (NoVarArg args optArgs) =
+  sepList' "," (map arg args ++ map optArg optArgs)
 
 optArgList : Encoder ArgumentList
-optArgList Nil = ""
-optArgList as  = inParens argumentList as
+optArgList (NoVarArg Nil Nil) = ""
+optArgList x                  = inParens argumentList x
 
 --------------------------------------------------------------------------------
 --          Members

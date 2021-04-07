@@ -36,9 +36,6 @@ prop_primitiveType = prp primitive primitive primitive
 prop_idlType : Property
 prop_idlType = prp idlType (idlType 5) idlType
 
-prop_argumentRest : Property
-prop_argumentRest = prp argumentRest argumentRest argumentRest
-
 prop_const : Property
 prop_const = prp const const const
 
@@ -61,7 +58,6 @@ props = MkGroup "Parser Properties"
           , ("prop_extAttributes", prop_extAttributes)
           , ("prop_primitiveType", prop_primitiveType)
           , ("prop_idlType", prop_idlType)
-          , ("prop_argumentRest", prop_argumentRest)
           , ("prop_const", prop_const)
           , ("prop_operation", prop_operation)
           , ("prop_interfaceMember", prop_interfaceMember)

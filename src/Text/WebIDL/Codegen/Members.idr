@@ -149,9 +149,8 @@ primFunction (AttributeSet n o t)           = Just $ attributeSetFFI n o t
 primFunction (AttributeGet n o t)           = Just $ attributeGetFFI n o t
 primFunction (OptionalAttributeSet n o t)   = Just $ attributeSetFFI n o t
 primFunction (OptionalAttributeGet n o t d) = Just $ attributeGetFFI n o t
-primFunction (Constructor n args optArgs)   = Nothing
-primFunction (Regular n args optArgs t)     = Nothing
-primFunction (VarArg n args varArg t)       = Nothing
+primFunction (Constructor n args)           = Nothing
+primFunction (Regular n args t)             = Nothing
 
 export
 functions : List CGFunction -> List String

@@ -52,24 +52,25 @@ record ArgumentName where
 
 %runElab derive "ArgumentName" [Generic,Meta,Eq,Show]
 
-||| Ellipsis ::
-|||     ...
-|||     ε
-||| ArgumentRest ::
-|||     optional TypeWithExtendedAttributes ArgumentName Default
-|||     Type Ellipsis ArgumentName
 public export
-data ArgumentRest : Type where
-  Optional :  (tpe : Attributed IdlType)
-           -> (name : ArgumentName)
-           -> (def : Default)
-           -> ArgumentRest
+record Arg where
+  constructor MkArg
+  attrs    : ExtAttributeList
+  type     : IdlType
+  name     : ArgumentName
 
-  Mandatory : (tpe : IdlType) -> (name : ArgumentName) -> ArgumentRest
+%runElab derive "Text.WebIDL.Types.Argument.Arg" [Generic,Meta,Eq,Show]
 
-  VarArg    : (tpe : IdlType) -> (name : ArgumentName) -> ArgumentRest
+public export
+record OptArg where
+  constructor MkOptArg
+  attrs     : ExtAttributeList
+  typeAttrs : ExtAttributeList
+  type      : IdlType
+  name      : ArgumentName
+  def       : Default
 
-%runElab derive "ArgumentRest" [Generic,Meta,Eq,Show]
+%runElab derive "OptArg" [Generic,Meta,Eq,Show]
 
 ||| ArgumentList ::
 |||     Argument Arguments
@@ -81,6 +82,16 @@ data ArgumentRest : Type where
 ||| 
 ||| Argument ::
 |||     ExtendedAttributeList ArgumentRest
+|||
+||| Ellipsis ::
+|||     ...
+|||     ε
+||| ArgumentRest ::
+|||     optional TypeWithExtendedAttributes ArgumentName Default
+|||     Type Ellipsis ArgumentName
 public export
-0 ArgumentList : Type
-ArgumentList = List (Attributed ArgumentRest)
+data ArgumentList : Type where
+  VarArg : (args : List Arg) -> (vararg : Arg) -> ArgumentList
+  NoVarArg : (args : List Arg) -> (optArgs : List OptArg) -> ArgumentList
+
+%runElab derive "ArgumentList" [Generic,Meta,Eq,Show]

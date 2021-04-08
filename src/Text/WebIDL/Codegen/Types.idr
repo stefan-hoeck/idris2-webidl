@@ -102,13 +102,13 @@ CGType = IdlTypeF ExtAttributeList Kind
 
 public export
 data CGArg : Type where
-  Regular     : ArgumentName -> CGType -> CGArg
+  Required    : ArgumentName -> CGType -> CGArg
   OptionalArg : ArgumentName -> CGType -> Default -> CGArg
   VarArg      : ArgumentName -> CGType -> CGArg
 
 export
 argIdent : CGArg -> IdrisIdent
-argIdent (Regular x _)       = fromString x.value
+argIdent (Required x _)      = fromString x.value
 argIdent (OptionalArg x _ _) = fromString x.value
 argIdent (VarArg x _)        = fromString x.value
 

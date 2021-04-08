@@ -65,10 +65,10 @@ constants = map (show . const) . sortBy (comparing name)
 --------------------------------------------------------------------------------
 
 obj : Kind -> CGArg
-obj = Regular (MkArgName "obj") . identToType
+obj = Required (MkArgName "obj") . identToType
 
 prettyArgType : CGArg -> Doc ()
-prettyArgType (Regular _ t)       = pretty t
+prettyArgType (Required _ t)      = pretty t
 prettyArgType (OptionalArg _ t _) = prettySingleCon Open "UndefOr" t
 prettyArgType (VarArg _ t)        = prettySingleCon Open "VarArg" t
 
@@ -156,16 +156,18 @@ constr k o as =
   show $ fun o (constr k) (primConstructor k) as (FromIdl $ identToType o)
 
 function : (Nat,CGFunction) -> Maybe String
-function (k,AttributeSet n o t) = Just $ attributeSet k n o t
-function (k,AttributeGet n o t) = Just $ attributeGet k n o t
-function (k,Constructor o args) = Just $ constr k o args
-function (k,Regular n o args t) = Just $ op k n o args t
+function (k,AttributeSet n o t)     = Just $ attributeSet k n o t
+function (k,AttributeGet n o t)     = Just $ attributeGet k n o t
+function (k,DictConstructor n args) = Nothing
+function (k,Constructor o args)     = Just $ constr k o args
+function (k,Regular n o args t)     = Just $ op k n o args t
 
 prim : (Nat,CGFunction) -> Maybe String
-prim (k,AttributeSet n o a) = Just $ attributeSetFFI k n o a
-prim (k,AttributeGet n o t) = Just $ attributeGetFFI k n o t
-prim (k,Constructor n args) = Just $ constructorFFI k n args
-prim (k,Regular n o args t) = Just $ opFFI k n o args t
+prim (k,AttributeSet n o a)     = Just $ attributeSetFFI k n o a
+prim (k,AttributeGet n o t)     = Just $ attributeGetFFI k n o t
+prim (k,DictConstructor n args) = Nothing
+prim (k,Constructor n args)     = Just $ constructorFFI k n args
+prim (k,Regular n o args t)     = Just $ opFFI k n o args t
 
 tagFunctions : List CGFunction -> List (Nat,CGFunction)
 tagFunctions = go 0

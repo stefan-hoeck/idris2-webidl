@@ -75,10 +75,10 @@ optArg : Env -> IdlType -> Default -> CGArg
 optArg e t = OptionalArg (MkArgName "value") (map (kind e) t)
 
 valArg : Env -> IdlType -> CGArg
-valArg e t = Regular (MkArgName "value") (map (kind e) t)
+valArg e t = Required (MkArgName "value") (map (kind e) t)
 
 arg : Env -> Arg -> CGArg
-arg e (MkArg _ t n) = Regular n (map (kind e) t)
+arg e (MkArg _ t n) = Required n (map (kind e) t)
 
 vararg : Env -> Arg -> CGArg
 vararg e (MkArg _ t n) = VarArg n (map (kind e) t)
@@ -168,6 +168,9 @@ data CGFunction : Type where
   ||| An interface constructor with (possibly) optional arguments.
   Constructor  :  (obj : Kind) -> (args : Args) -> CGFunction
 
+  ||| An interface constructor with (possibly) optional arguments.
+  DictConstructor : (obj : Kind) -> (args : Args) -> CGFunction
+
   ||| A regular function with (possibly) optional arguments.
   Regular      :  OperationName
                -> (obj : Kind)
@@ -186,10 +189,11 @@ data CGFunction : Type where
 ||| All other functions come later and will be sorted by name.
 export
 priority : CGFunction -> (Nat,String,Nat)
-priority (Constructor n _)    = (0,value (ident n),0)
-priority (AttributeSet n _ _) = (1,show n,1)
-priority (AttributeGet n _ _) = (1,show n,0)
-priority (Regular n o _ _)    = (2,n.value ++ value (ident o),0)
+priority (DictConstructor n _) = (0,value (ident n),0)
+priority (Constructor n _)     = (0,value (ident n),0)
+priority (AttributeSet n _ _)  = (1,show n,1)
+priority (AttributeGet n _ _)  = (1,show n,0)
+priority (Regular n o _ _)     = (2,n.value ++ value (ident o),0)
 
 fromRegular :  Env
             -> Domain
@@ -216,8 +220,18 @@ fromAttr e obj (MkAttribute _ t n) =
       ak  = kind e obj
    in Valid [AttributeGet n ak cgt, AttributeSet n ak (valArg e t)]
 
+dictCon : Env -> Kind -> List DictionaryMemberRest -> CGFunction
+dictCon e o = go Nil Nil
+  where go : Args -> Args -> List DictionaryMemberRest -> CGFunction
+        go xs ys [] = DictConstructor o (reverse xs ++ reverse ys)
+        go xs ys (Required _ t n :: zs) =
+          go (Required (MkArgName n.value) (map (kind e) t) :: xs) ys zs
+        go xs ys (Optional t n d :: zs) =
+          go xs (OptionalArg (MkArgName n.value) (map (kind e) t) d :: ys) zs
+
 dictFuns : Env -> Dictionary -> List CGFunction
-dictFuns e d = d.members >>= fromMember . snd
+dictFuns e d = dictCon e (kind e d.name) (map snd d.members) ::
+               (d.members >>= fromMember . snd)
   where fromMember : DictionaryMemberRest -> List CGFunction
         fromMember (Required _ t n) =
           let an = MkAttributeName n.value

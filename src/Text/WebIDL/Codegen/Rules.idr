@@ -71,11 +71,24 @@ env k ds = let ts = jsTypes ds
 kind : Env -> Identifier -> Kind
 kind e i = fromMaybe (KOther i) $ lookup i e.kinds
 
-toArg : Env -> IdlType -> ArgType
-toArg e t = Regular $ map (kind e) t
+optArg : Env -> IdlType -> Default -> CGArg
+optArg e t = OptionalArg (MkArgName "value") (map (kind e) t)
+
+valArg : Env -> IdlType -> CGArg
+valArg e t = Regular (MkArgName "value") (map (kind e) t)
+
+arg : Env -> Arg -> CGArg
+arg e (MkArg _ t n) = Regular n (map (kind e) t)
+
+vararg : Env -> Arg -> CGArg
+vararg e (MkArg _ t n) = VarArg n (map (kind e) t)
+
+opt : Env -> OptArg -> CGArg
+opt e (MkOptArg _ _ t n d) = OptionalArg n (map (kind e) t) d
 
 toArgs : Env -> ArgumentList -> Args
-toArgs e t = map (kind e) t
+toArgs e (VarArg as v)    = map (arg e) as ++ [vararg e v]
+toArgs e (NoVarArg as os) = map (arg e) as ++ map (opt e) os
 
 toReturnType : Env -> IdlType -> ReturnType
 toReturnType _ (D $ NotNull $ P Undefined) = Undefined
@@ -137,63 +150,27 @@ CodegenV = Validated (List CodegenErr)
 --          Functions
 --------------------------------------------------------------------------------
 
--- ||| A function argument in the code generator.
--- public export
--- record Arg where
---   constructor MkArg
---   name : IdrisIdent
---   type : ArgType
--- 
--- public export
--- obj : IdrisIdent
--- obj = II "obj" Refl
--- 
--- export
--- arg : ArgumentName -> IdlType -> Arg
--- arg n = MkArg (fromString n.value) . fromIdl
--- 
--- public export
--- objArg : Identifier -> Arg
--- objArg = MkArg obj . Ident
--- 
--- public export
--- valArg : ArgType -> Arg
--- valArg = MkArg (II "v" Refl)
-
 ||| A function, for which we will generate some code.
 public export
 data CGFunction : Type where
   ||| An attribute setter.
   AttributeSet :  (name : AttributeName)
                -> (obj  : Kind)
-               -> (tpe  : CGType)
+               -> (tpe  : CGArg)
                -> CGFunction
 
   ||| An attribute getter.
   AttributeGet :  (name : AttributeName)
                -> (obj  : Kind)
-               -> (tpe  : CGType)
+               -> (tpe  : ReturnType)
                -> CGFunction
-
-  ||| A setter for an optional attribute.
-  OptionalAttributeSet :  (name : AttributeName)
-                       -> (obj  : Kind)
-                       -> (tpe  : CGType)
-                       -> CGFunction
-
-  ||| A getter for an optional attribute.
-  OptionalAttributeGet :  (name  : AttributeName)
-                       -> (obj   : Kind)
-                       -> (tpe   : CGType)
-                       -> (deflt : Default)
-                       -> CGFunction
 
   ||| An interface constructor with (possibly) optional arguments.
   Constructor  :  (obj : Kind) -> (args : Args) -> CGFunction
 
   ||| A regular function with (possibly) optional arguments.
-  Regular      :  (obj : Kind)
-               -> OperationName
+  Regular      :  OperationName
+               -> (obj : Kind)
                -> Args
                -> ReturnType
                -> CGFunction
@@ -209,12 +186,10 @@ data CGFunction : Type where
 ||| All other functions come later and will be sorted by name.
 export
 priority : CGFunction -> (Nat,String,Nat)
-priority (Constructor n _)              = (0,value (ident n),0)
-priority (AttributeSet n _ _)           = (1,show n,1)
-priority (AttributeGet n _ _)           = (1,show n,0)
-priority (OptionalAttributeSet n _ _)   = (1,show n,1)
-priority (OptionalAttributeGet n _ _ _) = (1,show n,0)
-priority (Regular k n _ _)              = (2,n.value ++ value (ident k),0)
+priority (Constructor n _)    = (0,value (ident n),0)
+priority (AttributeSet n _ _) = (1,show n,1)
+priority (AttributeGet n _ _) = (1,show n,0)
+priority (Regular n o _ _)    = (2,n.value ++ value (ident o),0)
 
 fromRegular :  Env
             -> Domain
@@ -225,7 +200,7 @@ fromRegular e dom ident (MkOp () _ Nothing _) =
   Invalid [RegularOpWithoutName dom ident]
 
 fromRegular e dom ident (MkOp () t (Just op) args) = 
-  Valid [Regular (kind e ident) op (toArgs e args) (toReturnType e t)]
+  Valid [Regular op (kind e ident) (toArgs e args) (toReturnType e t)]
 
 fromConstructor : Env -> Identifier -> ArgumentList -> CodegenV (List CGFunction)
 fromConstructor e name args =
@@ -233,29 +208,29 @@ fromConstructor e name args =
 
 fromAttrRO : Env -> Identifier -> Readonly Attribute -> CodegenV (List CGFunction)
 fromAttrRO e obj (MkRO $ MkAttribute _ t n) =
-  Valid [AttributeGet n (kind e obj) $ map (kind e) t]
+  Valid [AttributeGet n (kind e obj) $ FromIdl (map (kind e) t)]
 
 fromAttr : Env -> Identifier -> Attribute -> CodegenV (List CGFunction)
 fromAttr e obj (MkAttribute _ t n) =
-  let cgt = map (kind e) t
+  let cgt = FromIdl $ map (kind e) t
       ak  = kind e obj
-   in Valid [AttributeGet n ak cgt, AttributeSet n ak cgt]
+   in Valid [AttributeGet n ak cgt, AttributeSet n ak (valArg e t)]
 
 dictFuns : Env -> Dictionary -> List CGFunction
 dictFuns e d = d.members >>= fromMember . snd
   where fromMember : DictionaryMemberRest -> List CGFunction
         fromMember (Required _ t n) =
           let an = MkAttributeName n.value
-              cgt = map (kind e) t
+              cgt = FromIdl $ map (kind e) t
               ak  = kind e d.name
-           in [ AttributeGet an ak cgt , AttributeSet an ak cgt ]
+           in [ AttributeGet an ak cgt , AttributeSet an ak (valArg e t) ]
 
         fromMember (Optional t n def) =
           let an = MkAttributeName n.value
-              cgt = map (kind e) t
+              cgt = Optional (map (kind e) t) def
               ak  = kind e d.name
-           in [ OptionalAttributeGet an ak cgt def
-              , OptionalAttributeSet an ak cgt
+           in [ AttributeGet an ak cgt
+              , AttributeSet an ak (optArg e t def)
               ]
 
 mixinFuns : Env -> Domain -> Mixin -> CodegenV (List CGFunction)

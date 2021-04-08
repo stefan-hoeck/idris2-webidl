@@ -64,64 +64,44 @@ constants = map (show . const) . sortBy (comparing name)
 --          Functions
 --------------------------------------------------------------------------------
 
-obj : Kind -> ArgType
-obj = Regular . identToType
+obj : Kind -> CGArg
+obj = Regular (MkArgName "obj") . identToType
+
+prettyArgType : CGArg -> Doc ()
+prettyArgType (Regular _ t)       = pretty t
+prettyArgType (OptionalArg _ t _) = prettySingleCon Open "UndefOr" t
+prettyArgType (VarArg _ t)        = prettySingleCon Open "VarArg" t
+
+prettyArg : CGArg -> Doc ()
+prettyArg a = parens $ hsep [pretty (argIdent a), ":", prettyArgType a]
+
+primType : (name : IdrisIdent) -> Args -> ReturnType -> Doc ()
+primType name as t =
+  typeDecl name (primReturnType t) (map prettyArgType as)
+
+funType : (name : IdrisIdent) -> Args -> ReturnType -> Doc ()
+funType name as t = typeDecl name (returnType t) (map prettyArg as)
+
+fun :  (name : IdrisIdent)
+    -> (prim : IdrisIdent)
+    -> Args
+    -> ReturnType
+    -> Doc ()
+fun name prim args t = indent 2 $ vsep [ ""
+                                       , "export"
+                                       , funType name args t
+                                       ] 
 
 --------------------------------------------------------------------------------
 --          Attributes
 --------------------------------------------------------------------------------
 
-primType : (name : IdrisIdent) -> List ArgType -> ReturnType -> Doc ()
-primType name ts t = typeDecl name (primReturnType t) (map pretty ts)
-
-
--- funType : (name : IdrisIdent) -> List Arg -> ArgType -> Doc ()
--- funType n args t =
---   let args2 = map (toPrettyParam . snd) args
--- 
---    in typeDeclWithImplicits n (returnType t) [] args2
--- 
---   where toPrettyParam : ArgumentRest -> Doc ()
---         toPrettyParam (Optional (e,tpe) (MkArgName n) def) =
---           prettyArg (fromString n) (pretty tpe)
--- 
---         toPrettyParam (Mandatory tpe (MkArgName n)) =
---           prettyArg (fromString n) (pretty tpe)
--- 
---         -- TODO: Properly support varargs
---         toPrettyParam (VarArg tpe (MkArgName n)) =
---           prettyArg (fromString n) (pretty tpe)
--- 
--- funImpl : (name : IdrisIdent) -> List Arg -> Doc ()
--- funImpl name n = ?foo
---  let pn   = pretty name
---      vals = map pretty $ take n argNames
---      lhs  = hsep (pn :: vals ++ ["="])
---      rhs  = hsep ["primToJSIO" 
---                  , "\"" <+> pn <+> "\""
---                  , "$"
---                  , pretty (Prim $ show name)
---                  , align $ sep $ map (\v => parens ("toJS" <++> v)) vals
---                  ]
---
---   in sep [lhs, indent 2 rhs]
-
--- fun : IdrisIdent -> List Arg -> ArgType -> Doc ()
--- fun ii args t = vsep [ "export"
---                      , funType ii args t
---                      , funImpl ii args
---                      ] 
-
---------------------------------------------------------------------------------
---          Attributes
---------------------------------------------------------------------------------
-
-attributeSetFFI : AttributeName -> Kind -> ArgType -> String
+attributeSetFFI : AttributeName -> Kind -> CGArg -> String
 attributeSetFFI n o t =
    show $ vsep [ ""
                , "export"
                , pretty $ attrSetFFI n
-               , primType (primSetter o n) [obj o, t] Undefined
+               , primType (primSetter n o) [obj o, t] Undefined
                ]
 
 attributeGetFFI : AttributeName -> Kind -> ReturnType -> String
@@ -129,51 +109,50 @@ attributeGetFFI n o t =
    show $ vsep [ ""
                , "export"
                , pretty $ attrGetFFI n
-               , primType (primGetter o n) [obj o] t
+               , primType (primGetter n o) [obj o] t
                ]
 
-opFFI : Kind -> OperationName -> List ArgType -> ReturnType -> String
-opFFI k n as t =
-  let args = Regular (identToType k) :: as
+opFFI : OperationName -> Kind -> Args -> ReturnType -> String
+opFFI n o as t =
+  let args = obj o :: as
    in show $ vsep [ ""
                   , pretty $ funFFI n (length args)
-                  , primType (primOp k n) args t
+                  , primType (primOp n o) args t
                   ]
 
-constructorFFI : Kind -> List ArgType -> String
-constructorFFI n args =
+constructorFFI : Kind -> Args -> String
+constructorFFI o args =
   show $ vsep [ ""
-              , pretty $ conFFI n (length args)
-              , primType (primConstructor n) args (FromIdl $ identToType n)
+              , pretty $ conFFI o (length args)
+              , primType (primConstructor o) args (FromIdl $ identToType o)
               ]
 
--- attributeSet : AttributeName -> Identifier -> ArgType -> String
--- attributeSet n obj t =
---    show $ vsep [ ""
---                , fun (setter n) [objArg obj, valArg t] Undefined
---                ]
--- 
--- attributeGet : AttributeName -> Identifier -> ArgType -> String
--- attributeGet n obj t =
---    show $ vsep [ ""
---                , fun (fromString n.value) [objArg obj] t
---                ]
+attributeSet : AttributeName -> Kind -> CGArg -> String
+attributeSet n o a =
+  show $ fun (setter n) (primSetter n o) [obj o, a] Undefined
+
+attributeGet : AttributeName -> Kind -> ReturnType -> String
+attributeGet n o t = show $ fun (getter n) (primGetter n o) [obj o] t
+
+op : OperationName -> Kind -> Args -> ReturnType -> String
+op n o as t =
+  let args = obj o :: as
+   in show $ fun (fromString $ n.value) (primOp n o) args t
+
+constr : Kind -> Args -> String
+constr o as = show $ fun "new" (primConstructor o) as (FromIdl $ identToType o)
 
 function : CGFunction -> Maybe String
-function _ = Nothing
-
-toArgTypeList : Args -> List ArgType
-toArgTypeList (VarArg as v)    = map (Regular . type) as ++ [VarArg v.type]
-toArgTypeList (NoVarArg as os) = map (Regular . type) as ++
-                                 map (OptionalArg . type) os
+function (AttributeSet n o t) = Just $ attributeSet n o t
+function (AttributeGet n o t) = Just $ attributeGet n o t
+function (Constructor o args) = Nothing
+function (Regular n o args t) = Just $ op n o args t
 
 prim : CGFunction -> Maybe String
-prim (AttributeSet n o t)           = Just $ attributeSetFFI n o (Regular t)
-prim (AttributeGet n o t)           = Just $ attributeGetFFI n o (FromIdl t)
-prim (OptionalAttributeSet n o t)   = Just $ attributeSetFFI n o (OptionalArg t)
-prim (OptionalAttributeGet n o t d) = Just $ attributeGetFFI n o (Optional t)
-prim (Constructor n args)           = Just $ constructorFFI n (toArgTypeList args)
-prim (Regular k n args t)           = Just $ opFFI k n (toArgTypeList args) t
+prim (AttributeSet n o a) = Just $ attributeSetFFI n o a
+prim (AttributeGet n o t) = Just $ attributeGetFFI n o t
+prim (Constructor n args) = Just $ constructorFFI n args
+prim (Regular n o args t) = Just $ opFFI n o args t
 
 export
 functions : List CGFunction -> List String

@@ -101,28 +101,33 @@ CGType : Type
 CGType = IdlTypeF ExtAttributeList Kind
 
 public export
-data ArgType : Type where
-  Regular     : CGType -> ArgType
-  OptionalArg : CGType -> ArgType
-  VarArg      : CGType -> ArgType
+data CGArg : Type where
+  Regular     : ArgumentName -> CGType -> CGArg
+  OptionalArg : ArgumentName -> CGType -> Default -> CGArg
+  VarArg      : ArgumentName -> CGType -> CGArg
 
 export
-Pretty ArgType where
-  prettyPrec p (Regular x)     = prettyPrec p x
-  prettyPrec p (OptionalArg x) = prettySingleCon p "UndefOr" x
-  prettyPrec p (VarArg x)      = prettySingleCon p "VarArg" x
+argIdent : CGArg -> IdrisIdent
+argIdent (Regular x _)       = fromString x.value
+argIdent (OptionalArg x _ _) = fromString x.value
+argIdent (VarArg x _)        = fromString x.value
+
+
+public export
+Args : Type
+Args = List CGArg
 
 public export
 data ReturnType : Type where
   Undefined : ReturnType
-  Optional  : CGType -> ReturnType
+  Optional  : CGType -> Default -> ReturnType
   FromIdl   : CGType -> ReturnType
 
 export
 Pretty ReturnType where
-  prettyPrec p Undefined    = "()"
-  prettyPrec p (Optional x) = prettySingleCon p "UndefOr" x
-  prettyPrec p (FromIdl x)  = prettyPrec p x
+  prettyPrec p Undefined      = "()"
+  prettyPrec p (Optional x _) = prettySingleCon p "UndefOr" x
+  prettyPrec p (FromIdl x)    = prettyPrec p x
 
 export
 returnType : ReturnType -> Doc ()
@@ -131,19 +136,3 @@ returnType = jsio Open
 export
 primReturnType : ReturnType -> Doc ()
 primReturnType = primIO Open
-
---------------------------------------------------------------------------------
---          Argument Lists
---------------------------------------------------------------------------------
-
-public export
-CGArg : Type
-CGArg = ArgF ExtAttributeList Kind
-
-public export
-CGOptArg : Type
-CGOptArg = OptArgF ExtAttributeList Kind
-
-public export
-Args : Type
-Args = ArgumentListF ExtAttributeList Kind

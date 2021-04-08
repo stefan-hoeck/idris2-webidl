@@ -223,23 +223,27 @@ setter : AttributeName -> IdrisIdent
 setter = fromString . ("set" ++) . mapFirstChar toUpper . value
 
 export
-primSetter : Kind -> AttributeName -> IdrisIdent
-primSetter k n = Prim $ fromString (  "set"
+getter : AttributeName -> IdrisIdent
+getter = fromString . value
+
+export
+primSetter : AttributeName -> Kind -> IdrisIdent
+primSetter n o = Prim $ fromString (  "set"
                                    ++ mapFirstChar toUpper n.value
-                                   ++ kindToString k
+                                   ++ kindToString o
                                    )
 
 export
-primGetter : Kind -> AttributeName -> IdrisIdent
-primGetter k n = Prim $ fromString (n.value ++ kindToString k)
+primGetter : AttributeName -> Kind -> IdrisIdent
+primGetter n o = Prim $ fromString (n.value ++ kindToString o)
 
 export
-primOp : Kind -> OperationName -> IdrisIdent
-primOp k n = Prim $ fromString (n.value ++ kindToString k)
+primOp : OperationName -> Kind -> IdrisIdent
+primOp n o = Prim $ fromString (n.value ++ kindToString o)
 
 export
 primConstructor : Kind -> IdrisIdent
-primConstructor k = Prim $ fromString ("new" ++ kindToString k)
+primConstructor o = Prim $ fromString ("new" ++ kindToString o)
 
 foreignBrowser : String -> String
 foreignBrowser s = "%foreign \"browser:lambda:" ++ s ++ "\""

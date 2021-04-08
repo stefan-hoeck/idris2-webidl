@@ -116,7 +116,6 @@ typedefs ds =
       import public Web.Internal.ClipboardTypes as Types
       import public Web.Internal.CssTypes as Types
       import public Web.Internal.DomTypes as Types
-      import public Web.Internal.EventTypes as Types
       import public Web.Internal.FetchTypes as Types
       import public Web.Internal.FileTypes as Types
       import public Web.Internal.GeometryTypes as Types

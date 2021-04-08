@@ -61,22 +61,21 @@ constants = map (show . const) . sortBy (comparing name)
                           ]
 
 --------------------------------------------------------------------------------
+--          Functions
+--------------------------------------------------------------------------------
+
+obj : Kind -> ArgType
+obj = Regular . identToType
+
+--------------------------------------------------------------------------------
 --          Attributes
 --------------------------------------------------------------------------------
 
--- argNames : Stream IdrisIdent
--- argNames = map fromString $ "a" :: "b" :: "c" :: "d" :: "e" :: "f" :: "g" ::
---                             "h" :: "i" :: "j" :: "k" :: "l" :: "m" :: "n" :: 
---                             "o" :: "p" :: "q" :: "r" :: "s" :: "t" :: "u" :: 
---                             "v" :: "w" :: "x" :: "y" :: "z" :: 
---                             map (\v => "x" ++ show v) [the Integer 1 ..]
-
-primType : (name : IdrisIdent) -> List CGType -> CGType -> Doc ()
-primType name ts t =
-  typeDecl (Prim $ show name) (primReturnType t) (map pretty ts)
+primType : (name : IdrisIdent) -> List ArgType -> ReturnType -> Doc ()
+primType name ts t = typeDecl name (primReturnType t) (map pretty ts)
 
 
--- funType : (name : IdrisIdent) -> List Arg -> CGType -> Doc ()
+-- funType : (name : IdrisIdent) -> List Arg -> ArgType -> Doc ()
 -- funType n args t =
 --   let args2 = map (toPrettyParam . snd) args
 -- 
@@ -107,35 +106,54 @@ primType name ts t =
 --
 --   in sep [lhs, indent 2 rhs]
 
--- fun : IdrisIdent -> List Arg -> CGType -> Doc ()
+-- fun : IdrisIdent -> List Arg -> ArgType -> Doc ()
 -- fun ii args t = vsep [ "export"
 --                      , funType ii args t
 --                      , funImpl ii args
 --                      ] 
 
-attributeSetFFI : AttributeName -> Identifier -> CGType -> String
-attributeSetFFI n obj t =
+--------------------------------------------------------------------------------
+--          Attributes
+--------------------------------------------------------------------------------
+
+attributeSetFFI : AttributeName -> Kind -> ArgType -> String
+attributeSetFFI n o t =
    show $ vsep [ ""
                , "export"
                , pretty $ attrSetFFI n
-               , primType (setter n) [Ident obj, t] t
+               , primType (primSetter o n) [obj o, t] Undefined
                ]
 
-attributeGetFFI : AttributeName -> Identifier -> CGType -> String
-attributeGetFFI n obj t =
+attributeGetFFI : AttributeName -> Kind -> ReturnType -> String
+attributeGetFFI n o t =
    show $ vsep [ ""
                , "export"
                , pretty $ attrGetFFI n
-               , primType (fromString n.value) [Ident obj] t
+               , primType (primGetter o n) [obj o] t
                ]
 
--- attributeSet : AttributeName -> Identifier -> CGType -> String
+opFFI : Kind -> OperationName -> List ArgType -> ReturnType -> String
+opFFI k n as t =
+  let args = Regular (identToType k) :: as
+   in show $ vsep [ ""
+                  , pretty $ funFFI n (length args)
+                  , primType (primOp k n) args t
+                  ]
+
+constructorFFI : Kind -> List ArgType -> String
+constructorFFI n args =
+  show $ vsep [ ""
+              , pretty $ conFFI n (length args)
+              , primType (primConstructor n) args (FromIdl $ identToType n)
+              ]
+
+-- attributeSet : AttributeName -> Identifier -> ArgType -> String
 -- attributeSet n obj t =
 --    show $ vsep [ ""
 --                , fun (setter n) [objArg obj, valArg t] Undefined
 --                ]
 -- 
--- attributeGet : AttributeName -> Identifier -> CGType -> String
+-- attributeGet : AttributeName -> Identifier -> ArgType -> String
 -- attributeGet n obj t =
 --    show $ vsep [ ""
 --                , fun (fromString n.value) [objArg obj] t
@@ -144,13 +162,18 @@ attributeGetFFI n obj t =
 function : CGFunction -> Maybe String
 function _ = Nothing
 
-primFunction : CGFunction -> Maybe String
-primFunction (AttributeSet n o t)           = Just $ attributeSetFFI n o t
-primFunction (AttributeGet n o t)           = Just $ attributeGetFFI n o t
-primFunction (OptionalAttributeSet n o t)   = Just $ attributeSetFFI n o t
-primFunction (OptionalAttributeGet n o t d) = Just $ attributeGetFFI n o t
-primFunction (Constructor n args)           = Nothing
-primFunction (Regular n args t)             = Nothing
+toArgTypeList : Args -> List ArgType
+toArgTypeList (VarArg as v)    = map (Regular . type) as ++ [VarArg v.type]
+toArgTypeList (NoVarArg as os) = map (Regular . type) as ++
+                                 map (OptionalArg . type) os
+
+prim : CGFunction -> Maybe String
+prim (AttributeSet n o t)           = Just $ attributeSetFFI n o (Regular t)
+prim (AttributeGet n o t)           = Just $ attributeGetFFI n o (FromIdl t)
+prim (OptionalAttributeSet n o t)   = Just $ attributeSetFFI n o (OptionalArg t)
+prim (OptionalAttributeGet n o t d) = Just $ attributeGetFFI n o (Optional t)
+prim (Constructor n args)           = Just $ constructorFFI n (toArgTypeList args)
+prim (Regular k n args t)           = Just $ opFFI k n (toArgTypeList args) t
 
 export
 functions : List CGFunction -> List String
@@ -158,4 +181,4 @@ functions = mapMaybe function . sortBy (comparing priority)
 
 export
 primFunctions : List CGFunction -> List String
-primFunctions = mapMaybe primFunction . sortedNubOn priority
+primFunctions = mapMaybe prim . sortedNubOn priority

@@ -169,6 +169,7 @@ public export
 isIdrisKeyword : String -> Bool
 isIdrisKeyword "covering"       = True
 isIdrisKeyword "data"           = True
+isIdrisKeyword "do"             = True
 isIdrisKeyword "default"        = True
 isIdrisKeyword "export"         = True
 isIdrisKeyword "implementation" = True

@@ -4,9 +4,13 @@ import Language.Reflection.Refined
 import Text.WebIDL.Codegen.Util
 import Text.WebIDL.Types
 
-prettyIdent : Identifier -> Doc ann
-prettyIdent (MkIdent "void") = "Undefined"
-prettyIdent (MkIdent value) = pretty value
+--------------------------------------------------------------------------------
+--          Pretty Types
+--------------------------------------------------------------------------------
+
+export
+Pretty Kind where
+  pretty = pretty . value . ident
 
 export
 Pretty BufferRelatedType where
@@ -45,17 +49,17 @@ Pretty a => Pretty (Nullable a) where
 
 mutual
   export
-  Pretty IdlType where
+  Pretty b => Pretty (IdlTypeF a b) where
     prettyPrec _ Any         = "AnyPtr"
     prettyPrec p (D x)       = prettyPrec p x
     prettyPrec p (U x)       = prettyPrec p x
     prettyPrec p (Promise x) = prettyCon p "Promise" [prettyPrec App x]
 
   export
-  Pretty Distinguishable where
+  Pretty b => Pretty (DistinguishableF a b) where
     prettyPrec p (P x) = prettyPrec p x
     prettyPrec p (S x) = prettyPrec p x
-    prettyPrec p (I x) = prettyIdent x
+    prettyPrec p (I x) = prettyPrec p x
     prettyPrec p (B x) = prettyPrec p x
     prettyPrec p (Sequence _ x) =
       prettyCon p "Array" [prettyPrec App x]
@@ -69,53 +73,77 @@ mutual
       prettyCon p "Record" [prettyPrec App x, prettyPrec App y]
 
   export
-  Pretty UnionType where
+  Pretty b => Pretty (UnionTypeF a b) where
     prettyPrec p (UT fst snd rest) =
-      prettyParens (p >= App) $
-        "Union" <++> prettyList (map pretty $ fst :: snd :: rest)
+      let args = map (prettyPrec App) (fst :: snd :: rest)
+          con  = pretty $ "Union" ++ show (length args)
+       in prettyCon p con args
 
   export
-  Pretty UnionMemberType where
+  Pretty b => Pretty (UnionMemberTypeF a b) where
     prettyPrec p (UD _ x) = prettyPrec p x
     prettyPrec p (UU x)     = prettyPrec p x
 
 export
-Pretty ConstType where
+Pretty Identifier where pretty = pretty . value
+
+export
+Pretty a => Pretty (ConstTypeF a) where
   prettyPrec p (CP x) = prettyPrec p x
-  prettyPrec p (CI x) = prettyIdent x
+  prettyPrec p (CI x) = prettyPrec p x
 
 --------------------------------------------------------------------------------
 --          Types
 --------------------------------------------------------------------------------
 
 public export
-data CGType : Type where
-  Ident     : Identifier -> CGType
-  Idl       : IdlType -> CGType
-  UndefOr   : IdlType -> CGType
-  Undefined : CGType
-  VarArg    : IdlType -> CGType
+CGType : Type
+CGType = IdlTypeF ExtAttributeList Kind
+
+public export
+data ArgType : Type where
+  Regular     : CGType -> ArgType
+  OptionalArg : CGType -> ArgType
+  VarArg      : CGType -> ArgType
 
 export
-Pretty CGType where
-  prettyPrec p (Ident x)   = prettyPrec p x.value
-  prettyPrec p (Idl x)     = prettyPrec p x
-  prettyPrec p (UndefOr x) = prettySingleCon p "UndefOr" x
-  prettyPrec p Undefined   = "Undefined"
-  prettyPrec p (VarArg x)  = prettySingleCon p "VarArg" x
+Pretty ArgType where
+  prettyPrec p (Regular x)     = prettyPrec p x
+  prettyPrec p (OptionalArg x) = prettySingleCon p "UndefOr" x
+  prettyPrec p (VarArg x)      = prettySingleCon p "VarArg" x
+
+public export
+data ReturnType : Type where
+  Undefined : ReturnType
+  Optional  : CGType -> ReturnType
+  FromIdl   : CGType -> ReturnType
 
 export
-fromIdl : IdlType -> CGType
-fromIdl (D $ NotNull $ P Undefined)        = Undefined
-fromIdl (D $ NotNull $ I $ MkIdent "void") = Undefined
-fromIdl t                                  = Idl t
+Pretty ReturnType where
+  prettyPrec p Undefined    = "()"
+  prettyPrec p (Optional x) = prettySingleCon p "UndefOr" x
+  prettyPrec p (FromIdl x)  = prettyPrec p x
 
 export
-returnType : CGType -> Doc ()
-returnType Undefined = jsio Open "()"
-returnType x         = jsio Open x
+returnType : ReturnType -> Doc ()
+returnType = jsio Open
 
 export
-primReturnType : CGType -> Doc ()
-primReturnType Undefined = primIO Open "()"
-primReturnType x         = primIO Open x
+primReturnType : ReturnType -> Doc ()
+primReturnType = primIO Open
+
+--------------------------------------------------------------------------------
+--          Argument Lists
+--------------------------------------------------------------------------------
+
+public export
+CGArg : Type
+CGArg = ArgF ExtAttributeList Kind
+
+public export
+CGOptArg : Type
+CGOptArg = OptArgF ExtAttributeList Kind
+
+public export
+Args : Type
+Args = ArgumentListF ExtAttributeList Kind

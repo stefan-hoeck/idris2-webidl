@@ -97,9 +97,9 @@ data PrimitiveType = Unsigned     IntType
 %runElab derive "PrimitiveType" [Generic,Meta,Eq,Show]
 
 public export
-data ConstType = CP PrimitiveType | CI Identifier
+data ConstTypeF a = CP PrimitiveType | CI a
 
-%runElab derive "ConstType" [Generic,Meta,Eq,Show]
+%runElab derive "ConstTypeF" [Generic,Meta,Eq,Show]
 
 ||| Null ::
 |||     ?
@@ -203,6 +203,10 @@ public export
 Distinguishable : Type
 Distinguishable = DistinguishableF ExtAttributeList Identifier
 
+public export
+ConstType : Type
+ConstType = ConstTypeF Identifier
+
 ||| OptionalType ::
 |||     , TypeWithExtendedAttributes
 |||     ε
@@ -212,12 +216,12 @@ OptionalType = Maybe (Attributed IdlType)
 
 ||| Wraps and `Indentifier` as a non-nullable type.
 export
-identToType : Identifier -> IdlType
+identToType : b -> IdlTypeF a b
 identToType = D . NotNull . I
 
 ||| The `Undefined` type
 export
-undefined : IdlType
+undefined : IdlTypeF a b
 undefined = D $ NotNull $ P Undefined
 
 --------------------------------------------------------------------------------
@@ -235,6 +239,18 @@ mutual
   Traversable Nullable where
     traverse f (MaybeNull x) = MaybeNull <$> f x
     traverse f (NotNull x)   = NotNull <$> f x
+
+mutual
+  export
+  Functor ConstTypeF where map = mapDefault
+
+  export
+  Foldable ConstTypeF where foldr = foldrDefault
+
+  export
+  Traversable ConstTypeF where
+    traverse _ (CP x) = pure (CP x)
+    traverse f (CI x) = CI <$> f x
 
 mutual
   export

@@ -235,3 +235,95 @@ mutual
   Traversable Nullable where
     traverse f (MaybeNull x) = MaybeNull <$> f x
     traverse f (NotNull x)   = NotNull <$> f x
+
+mutual
+  export
+  Bifunctor DistinguishableF where bimap = bimapDefault
+
+  export
+  Bifoldable DistinguishableF where bifoldr = bifoldrDefault
+
+  export
+  Bitraversable DistinguishableF where
+    bitraverse _ _ (P x) = pure (P x)
+    bitraverse _ _ (S x) = pure (S x)
+    bitraverse _ g (I x) = I <$> g x
+    bitraverse _ _ (B x) = pure (B x)
+    bitraverse f g (Sequence x y) = [| Sequence (f x) (bitraverse f g y) |]
+    bitraverse f g (FrozenArray x y) = [| FrozenArray (f x) (bitraverse f g y) |]
+    bitraverse f g (ObservableArray x y) = [| ObservableArray (f x) (bitraverse f g y) |]
+    bitraverse f g (Record x y z) = [| Record (pure x) (f y) (bitraverse f g z) |]
+    bitraverse _ _ Object = pure Object
+    bitraverse _ _ Symbol = pure Symbol
+
+  export
+  Functor (DistinguishableF a) where map = bimap id
+
+  export
+  Foldable (DistinguishableF a) where foldr = bifoldr (const id)
+
+  export
+  Traversable (DistinguishableF a) where traverse = bitraverse pure
+
+  export
+  Bifunctor UnionMemberTypeF where bimap = bimapDefault
+
+  export
+  Bifoldable UnionMemberTypeF where bifoldr = bifoldrDefault
+
+  export
+  Bitraversable UnionMemberTypeF where
+    bitraverse f g (UD x y) = [| UD (f x) (traverse (bitraverse f g) y) |]
+    bitraverse f g (UU x) = UU <$> traverse (bitraverse f g) x
+
+  export
+  Functor (UnionMemberTypeF a) where map = bimap id
+
+  export
+  Foldable (UnionMemberTypeF a) where foldr = bifoldr (const id)
+
+  export
+  Traversable (UnionMemberTypeF a) where traverse = bitraverse pure
+
+  export
+  Bifunctor UnionTypeF where bimap = bimapDefault
+
+  export
+  Bifoldable UnionTypeF where bifoldr = bifoldrDefault
+
+  export
+  Bitraversable UnionTypeF where
+    bitraverse f g (UT a b ts) =
+      [| UT (bitraverse f g a) (bitraverse f g b)
+            (traverse (bitraverse f g) ts) |]
+
+  export
+  Functor (UnionTypeF a) where map = bimap id
+
+  export
+  Foldable (UnionTypeF a) where foldr = bifoldr (const id)
+
+  export
+  Traversable (UnionTypeF a) where traverse = bitraverse pure
+
+  export
+  Bifunctor IdlTypeF where bimap = bimapDefault
+
+  export
+  Bifoldable IdlTypeF where bifoldr = bifoldrDefault
+
+  export
+  Bitraversable IdlTypeF where
+    bitraverse f g Any = pure Any
+    bitraverse f g (D x) = D <$> traverse (bitraverse f g) x
+    bitraverse f g (U x) = U <$> traverse (bitraverse f g) x
+    bitraverse f g (Promise x) = Promise <$> bitraverse f g x
+
+  export
+  Functor (IdlTypeF a) where map = bimap id
+
+  export
+  Foldable (IdlTypeF a) where foldr = bifoldr (const id)
+
+  export
+  Traversable (IdlTypeF a) where traverse = bitraverse pure

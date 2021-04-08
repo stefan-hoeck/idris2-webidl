@@ -70,35 +70,51 @@ callbacks = section "Callbacks"
 --          Interfaces
 --------------------------------------------------------------------------------
 
+ifaces' : (CGIface -> List String) -> CGDomain -> String
+ifaces' f = section "Interfaces" . map ns . sortBy (comparing name) . ifaces
+  where ns : CGIface -> String
+        ns i = namespaced i.name (f i)
+
 ifaces : CGDomain -> String
-ifaces = section "Interfaces" . map iface . sortBy (comparing name) . ifaces
-  where iface : CGIface -> String
-        iface (MkIface n s cs fs) =
-          namespaced n $ jsType n s :: constants cs ++ functions fs
+ifaces = ifaces' \(MkIface n s cs fs) =>
+         jsType n s :: constants cs ++ functions fs
+
+primIfaces : CGDomain -> String
+primIfaces = ifaces' (primFunctions . functions)
 
 --------------------------------------------------------------------------------
 --          Dictionaries
 --------------------------------------------------------------------------------
 
+dicts' : (CGDict -> List String) -> CGDomain -> String
+dicts' f = section "Dictionaries" . map ns . sortBy (comparing name) . dicts
+  where ns : CGDict -> String
+        ns d = namespaced d.name (f d)
+
 dicts : CGDomain -> String
-dicts = section "Dictionaries" . map dict . sortBy (comparing name) . dicts
-  where dict : CGDict -> String
-        dict (MkDict n s fs) =
-          namespaced n $ jsType n s :: functions fs
+dicts = dicts' \(MkDict n s fs) => jsType n s :: functions fs
+
+primDicts : CGDomain -> String
+primDicts = dicts' (primFunctions . functions)
 
 --------------------------------------------------------------------------------
 --          Mixins
 --------------------------------------------------------------------------------
 
-mixins : CGDomain -> String
-mixins = section "Mixins" . map mixin . sortBy (comparing name) . mixins
-  where mixin : CGMixin -> String
-        mixin (MkMixin n cs fs) =
-           namespaced n $ constants cs ++ functions fs
+mixins' : (CGMixin -> List String) -> CGDomain -> String
+mixins' f = section "Mixins" . map ns . sortBy (comparing name) . mixins
+  where ns : CGMixin -> String
+        ns m = namespaced m.name (f m)
 
--- --------------------------------------------------------------------------------
--- --          Typedefs
--- --------------------------------------------------------------------------------
+mixins : CGDomain -> String
+mixins = mixins' \(MkMixin n cs fs) => constants cs ++ functions fs
+
+primMixins : CGDomain -> String
+primMixins = mixins' (primFunctions . functions)
+
+--------------------------------------------------------------------------------
+--          Typedefs
+--------------------------------------------------------------------------------
 
 export
 typedefs : List Domain -> String
@@ -166,7 +182,9 @@ primitives d =
   import JS
   import Web.Internal.Types
    
-  \#{fastUnlines . primFunctions $ domainFunctions d}
+  \#{primIfaces d}
+  \#{primMixins d}
+  \#{primDicts d}
   """#
 
 export

@@ -218,32 +218,42 @@ argNames = "a" :: "b" :: "c" :: "d" :: "e" :: "f" :: "g" ::
            "v" :: "w" :: "y" :: "z" :: 
            map (\v => "x" ++ show v) [the Integer 1 ..]
 
-export
-setter : AttributeName -> IdrisIdent
-setter = fromString . ("set" ++) . mapFirstChar toUpper . value
+ix : Nat -> String
+ix Z = ""
+ix k = show k
 
 export
-getter : AttributeName -> IdrisIdent
-getter = fromString . value
+primSetter : Nat -> AttributeName -> IdrisIdent
+primSetter k n =
+  Prim $ fromString ("set" ++ mapFirstChar toUpper n.value ++ ix k)
 
 export
-primSetter : AttributeName -> Kind -> IdrisIdent
-primSetter n o = Prim $ fromString (  "set"
-                                   ++ mapFirstChar toUpper n.value
-                                   ++ kindToString o
-                                   )
+setter : Nat -> AttributeName -> IdrisIdent
+setter k n = fromString $ "set" ++ mapFirstChar toUpper n.value ++ ix k
 
 export
-primGetter : AttributeName -> Kind -> IdrisIdent
-primGetter n o = Prim $ fromString (n.value ++ kindToString o)
+primGetter : Nat -> AttributeName -> IdrisIdent
+primGetter k n = Prim $ fromString (n.value ++ ix k)
 
 export
-primOp : OperationName -> Kind -> IdrisIdent
-primOp n o = Prim $ fromString (n.value ++ kindToString o)
+getter : Nat -> AttributeName -> IdrisIdent
+getter k n = fromString $ n.value ++ ix k
 
 export
-primConstructor : Kind -> IdrisIdent
-primConstructor o = Prim $ fromString ("new" ++ kindToString o)
+primOp : Nat -> OperationName -> IdrisIdent
+primOp k n = Prim $ fromString (n.value ++ ix k)
+
+export
+op : Nat -> OperationName -> IdrisIdent
+op k n = fromString (n.value ++ ix k)
+
+export
+primConstructor : Nat -> IdrisIdent
+primConstructor k = Prim $ fromString ("new" ++ ix k)
+
+export
+constr : Nat -> IdrisIdent
+constr k = fromString ("new" ++ ix k)
 
 foreignBrowser : String -> String
 foreignBrowser s = "%foreign \"browser:lambda:" ++ s ++ "\""

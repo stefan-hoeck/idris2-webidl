@@ -96,68 +96,80 @@ fun name prim args t = indent 2 $ vsep [ ""
 --          Attributes
 --------------------------------------------------------------------------------
 
-attributeSetFFI : AttributeName -> Kind -> CGArg -> String
-attributeSetFFI n o t =
-   show $ vsep [ ""
-               , "export"
-               , pretty $ attrSetFFI n
-               , primType (primSetter n o) [obj o, t] Undefined
-               ]
+attributeSetFFI : Nat -> AttributeName -> Kind -> CGArg -> String
+attributeSetFFI k n o t =
+   show . indent 2 $ vsep [ ""
+                   , "export"
+                   , pretty $ attrSetFFI n
+                   , primType (primSetter k n) [obj o, t] Undefined
+                   ]
 
-attributeGetFFI : AttributeName -> Kind -> ReturnType -> String
-attributeGetFFI n o t =
-   show $ vsep [ ""
-               , "export"
-               , pretty $ attrGetFFI n
-               , primType (primGetter n o) [obj o] t
-               ]
+attributeGetFFI : Nat -> AttributeName -> Kind -> ReturnType -> String
+attributeGetFFI k n o t =
+   show . indent 2 $ vsep [ ""
+                     , "export"
+                     , pretty $ attrGetFFI n
+                     , primType (primGetter k n) [obj o] t
+                     ]
 
-opFFI : OperationName -> Kind -> Args -> ReturnType -> String
-opFFI n o as t =
+opFFI : Nat -> OperationName -> Kind -> Args -> ReturnType -> String
+opFFI k n o as t =
   let args = obj o :: as
-   in show $ vsep [ ""
-                  , pretty $ funFFI n (length args)
-                  , primType (primOp n o) args t
+   in show . indent 2 $ vsep [ ""
+                      , pretty $ funFFI n (length args)
+                      , primType (primOp k n) args t
+                      ]
+
+constructorFFI : Nat -> Kind -> Args -> String
+constructorFFI k o args =
+  show . indent 2 $ vsep [ ""
+                  , pretty $ conFFI o (length args)
+                  , primType (primConstructor k) args (FromIdl $ identToType o)
                   ]
 
-constructorFFI : Kind -> Args -> String
-constructorFFI o args =
-  show $ vsep [ ""
-              , pretty $ conFFI o (length args)
-              , primType (primConstructor o) args (FromIdl $ identToType o)
-              ]
+attributeSet : Nat -> AttributeName -> Kind -> CGArg -> String
+attributeSet k n o a =
+  show $ fun (setter k n) (primSetter k n) [obj o, a] Undefined
 
-attributeSet : AttributeName -> Kind -> CGArg -> String
-attributeSet n o a =
-  show $ fun (setter n) (primSetter n o) [obj o, a] Undefined
+attributeGet : Nat -> AttributeName -> Kind -> ReturnType -> String
+attributeGet k n o t =
+  show $ fun (getter k n) (primGetter k n) [obj o] t
 
-attributeGet : AttributeName -> Kind -> ReturnType -> String
-attributeGet n o t = show $ fun (getter n) (primGetter n o) [obj o] t
-
-op : OperationName -> Kind -> Args -> ReturnType -> String
-op n o as t =
+op : Nat -> OperationName -> Kind -> Args -> ReturnType -> String
+op k n o as t =
   let args = obj o :: as
-   in show $ fun (fromString $ n.value) (primOp n o) args t
+   in show $ fun (op k n) (primOp k n) args t
 
-constr : Kind -> Args -> String
-constr o as = show $ fun "new" (primConstructor o) as (FromIdl $ identToType o)
+constr : Nat -> Kind -> Args -> String
+constr k o as =
+  show $ fun (constr k) (primConstructor k) as (FromIdl $ identToType o)
 
-function : CGFunction -> Maybe String
-function (AttributeSet n o t) = Just $ attributeSet n o t
-function (AttributeGet n o t) = Just $ attributeGet n o t
-function (Constructor o args) = Nothing
-function (Regular n o args t) = Just $ op n o args t
+function : (Nat,CGFunction) -> Maybe String
+function (k,AttributeSet n o t) = Just $ attributeSet k n o t
+function (k,AttributeGet n o t) = Just $ attributeGet k n o t
+function (k,Constructor o args) = Nothing
+function (k,Regular n o args t) = Just $ op k n o args t
 
-prim : CGFunction -> Maybe String
-prim (AttributeSet n o a) = Just $ attributeSetFFI n o a
-prim (AttributeGet n o t) = Just $ attributeGetFFI n o t
-prim (Constructor n args) = Just $ constructorFFI n args
-prim (Regular n o args t) = Just $ opFFI n o args t
+prim : (Nat,CGFunction) -> Maybe String
+prim (k,AttributeSet n o a) = Just $ attributeSetFFI k n o a
+prim (k,AttributeGet n o t) = Just $ attributeGetFFI k n o t
+prim (k,Constructor n args) = Just $ constructorFFI k n args
+prim (k,Regular n o args t) = Just $ opFFI k n o args t
+
+tagFunctions : List CGFunction -> List (Nat,CGFunction)
+tagFunctions = go 0
+  where go : Nat -> List CGFunction -> List (Nat,CGFunction)
+        go _ []        = []
+        go k (x :: []) = [(k,x)]
+        go k (x :: t@(y :: ys)) =
+          if priority x == priority y
+             then (k,x) :: go (S k) t
+             else (k,x) :: go 0 t
 
 export
 functions : List CGFunction -> List String
-functions = mapMaybe function . sortBy (comparing priority)
+functions = mapMaybe function . tagFunctions . sortBy (comparing priority)
 
 export
 primFunctions : List CGFunction -> List String
-primFunctions = mapMaybe prim . sortedNubOn priority
+primFunctions = mapMaybe prim . tagFunctions . sortBy (comparing priority)

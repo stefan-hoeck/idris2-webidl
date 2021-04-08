@@ -175,12 +175,15 @@ isIdrisKeyword "export"         = True
 isIdrisKeyword "implementation" = True
 isIdrisKeyword "interface"      = True
 isIdrisKeyword "module"         = True
+isIdrisKeyword "namespace"      = True
 isIdrisKeyword "open"           = True
+isIdrisKeyword "partial"        = True
 isIdrisKeyword "private"        = True
 isIdrisKeyword "prefix"         = True
 isIdrisKeyword "public"         = True
 isIdrisKeyword "record"         = True
 isIdrisKeyword "total"          = True
+isIdrisKeyword "where"          = True
 isIdrisKeyword _                = False
 
 ||| Wrapper type making sure that no Idris2 keyword
@@ -205,7 +208,9 @@ data IdrisIdent : Type where
 
 export
 Show IdrisIdent where
-  show (II v _)       = v
+  show (II v _)       = case strM v of
+                             StrCons '_' xs => xs
+                             _              => v
   show (Prim v)       = "prim__" ++ v
   show (Underscore v) = v ++ "_"
 

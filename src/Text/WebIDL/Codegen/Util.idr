@@ -290,3 +290,15 @@ conFFI n k =
       vals = fastConcat $ intersperse "," vs
       args = fastConcat $ intersperse " " vs
    in foreignBrowser #"(\#{vals})=> new \#{kindToString n}(\#{args})"#
+
+export
+conDictFFI : List ArgumentName -> String
+conDictFFI ns =
+  let vs     = take (length ns) argNames
+      vals   = fastConcat $ intersperse "," vs
+      fields = fastConcat $ intersperse "," (zipWith app vs ns)
+   in foreignBrowser #"(\#{vals})=> {\#{fields}}"#
+
+  where app : String -> ArgumentName -> String
+        app v a = a.value ++ ": " ++ v
+

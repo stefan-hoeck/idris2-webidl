@@ -11,7 +11,10 @@ depends    = base        >= 0.3.0
 main       = Main
 executable = generateDomBindings
 
-modules = Text.WebIDL.Codegen
+modules = Data.Bitraversable
+        , Data.Functor.Const
+        , Data.Traversable
+        , Text.WebIDL.Codegen
         , Text.WebIDL.Codegen.Definitions
         , Text.WebIDL.Codegen.Enum
         , Text.WebIDL.Codegen.Members

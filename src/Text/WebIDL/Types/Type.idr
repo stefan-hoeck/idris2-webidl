@@ -1,5 +1,7 @@
 module Text.WebIDL.Types.Type
 
+import Data.Bitraversable
+import Data.Traversable
 import Text.WebIDL.Types.Attribute
 import Text.WebIDL.Types.Identifier
 import Generics.Derive
@@ -95,9 +97,9 @@ data PrimitiveType = Unsigned     IntType
 %runElab derive "PrimitiveType" [Generic,Meta,Eq,Show]
 
 public export
-data ConstType = CP PrimitiveType | CI Identifier
+data ConstTypeF a = CP PrimitiveType | CI a
 
-%runElab derive "ConstType" [Generic,Meta,Eq,Show]
+%runElab derive "ConstTypeF" [Generic,Meta,Eq,Show]
 
 ||| Null ::
 |||     ?
@@ -125,10 +127,11 @@ mutual
   ||| PromiseType ::
   |||     Promise < Type >
   public export
-  data IdlType = Any
-               | D (Nullable Distinguishable)
-               | U (Nullable UnionType)
-               | Promise IdlType
+  data IdlTypeF : (a : Type) -> (b : Type) -> Type where
+    Any     : IdlTypeF a b
+    D       : Nullable (DistinguishableF a b) -> IdlTypeF a b
+    U       : Nullable (UnionTypeF a b) -> IdlTypeF a b
+    Promise : IdlTypeF a b -> IdlTypeF a b
 
   ||| UnionType ::
   |||     ( UnionMemberType or UnionMemberType UnionMemberTypes )
@@ -137,21 +140,20 @@ mutual
   |||     or UnionMemberType UnionMemberTypes
   |||     ε
   public export
-  record UnionType where
+  record UnionTypeF (a : Type) (b : Type) where
     constructor UT
-    fst  : UnionMemberType
-    snd  : UnionMemberType
-    rest : List UnionMemberType
+    fst  : UnionMemberTypeF a b
+    snd  : UnionMemberTypeF a b
+    rest : List (UnionMemberTypeF a b)
 
   ||| UnionMemberType ::
   |||     ExtendedAttributeList DistinguishableType
   |||     UnionType Null
   public export
-  data UnionMemberType =
-      UD (Attributed $ Nullable Distinguishable)
-    | UU (Nullable UnionType)
+  data UnionMemberTypeF : (a : Type) -> (b : Type) -> Type where
+    UD : a -> Nullable (DistinguishableF a b) -> UnionMemberTypeF a b
+    UU : Nullable (UnionTypeF a b) -> UnionMemberTypeF a b
 
-  
   ||| DistinguishableType ::
   |||     PrimitiveType Null
   |||     StringType Null
@@ -167,23 +169,43 @@ mutual
   ||| RecordType ::
   |||     record < StringType , TypeWithExtendedAttributes >
   public export
-  data Distinguishable =
-      P PrimitiveType
-    | S StringType
-    | I Identifier
-    | B BufferRelatedType
-    | Sequence (Attributed IdlType)
-    | FrozenArray (Attributed IdlType)
-    | ObservableArray (Attributed IdlType)
-    | Record StringType (Attributed IdlType)
-    | Object
-    | Symbol
+  data DistinguishableF : (a : Type) -> (b : Type) -> Type where
+    P : PrimitiveType -> DistinguishableF a b
+    S : StringType -> DistinguishableF a b
+    I : b -> DistinguishableF a b
+    B : BufferRelatedType -> DistinguishableF a b
+    Sequence : a -> IdlTypeF a b -> DistinguishableF a b
+    FrozenArray : a -> IdlTypeF a b -> DistinguishableF a b
+    ObservableArray : a -> IdlTypeF a b -> DistinguishableF a b
+    Record : StringType -> a -> IdlTypeF a b -> DistinguishableF a b
+    Object : DistinguishableF a b
+    Symbol : DistinguishableF a b
 
-%runElab deriveMutual [ ("Distinguishable", [Generic,Meta,Show,Eq])
-                      , ("UnionMemberType", [Generic,Meta,Show,Eq])
-                      , ("UnionType",       [Generic,Meta,Show,Eq])
-                      , ("IdlType",         [Generic,Meta,Show,Eq])
+%runElab deriveMutual [ ("DistinguishableF", [Generic,Meta,Show,Eq])
+                      , ("UnionMemberTypeF", [Generic,Meta,Show,Eq])
+                      , ("UnionTypeF",       [Generic,Meta,Show,Eq])
+                      , ("IdlTypeF",         [Generic,Meta,Show,Eq])
                       ]
+
+public export
+IdlType : Type
+IdlType = IdlTypeF ExtAttributeList Identifier
+
+public export
+UnionType : Type
+UnionType = UnionTypeF ExtAttributeList Identifier
+
+public export
+UnionMemberType : Type
+UnionMemberType = UnionMemberTypeF ExtAttributeList Identifier
+
+public export
+Distinguishable : Type
+Distinguishable = DistinguishableF ExtAttributeList Identifier
+
+public export
+ConstType : Type
+ConstType = ConstTypeF Identifier
 
 ||| OptionalType ::
 |||     , TypeWithExtendedAttributes
@@ -194,10 +216,130 @@ OptionalType = Maybe (Attributed IdlType)
 
 ||| Wraps and `Indentifier` as a non-nullable type.
 export
-identToType : Identifier -> IdlType
+identToType : b -> IdlTypeF a b
 identToType = D . NotNull . I
 
 ||| The `Undefined` type
 export
-undefined : IdlType
+undefined : IdlTypeF a b
 undefined = D $ NotNull $ P Undefined
+
+--------------------------------------------------------------------------------
+--          Implementations
+--------------------------------------------------------------------------------
+
+mutual
+  export
+  Functor Nullable where map = mapDefault
+
+  export
+  Foldable Nullable where foldr = foldrDefault
+
+  export
+  Traversable Nullable where
+    traverse f (MaybeNull x) = MaybeNull <$> f x
+    traverse f (NotNull x)   = NotNull <$> f x
+
+mutual
+  export
+  Functor ConstTypeF where map = mapDefault
+
+  export
+  Foldable ConstTypeF where foldr = foldrDefault
+
+  export
+  Traversable ConstTypeF where
+    traverse _ (CP x) = pure (CP x)
+    traverse f (CI x) = CI <$> f x
+
+mutual
+  export
+  Bifunctor DistinguishableF where bimap = bimapDefault
+
+  export
+  Bifoldable DistinguishableF where bifoldr = bifoldrDefault
+
+  export
+  Bitraversable DistinguishableF where
+    bitraverse _ _ (P x) = pure (P x)
+    bitraverse _ _ (S x) = pure (S x)
+    bitraverse _ g (I x) = I <$> g x
+    bitraverse _ _ (B x) = pure (B x)
+    bitraverse f g (Sequence x y) = [| Sequence (f x) (bitraverse f g y) |]
+    bitraverse f g (FrozenArray x y) = [| FrozenArray (f x) (bitraverse f g y) |]
+    bitraverse f g (ObservableArray x y) = [| ObservableArray (f x) (bitraverse f g y) |]
+    bitraverse f g (Record x y z) = [| Record (pure x) (f y) (bitraverse f g z) |]
+    bitraverse _ _ Object = pure Object
+    bitraverse _ _ Symbol = pure Symbol
+
+  export
+  Functor (DistinguishableF a) where map = bimap id
+
+  export
+  Foldable (DistinguishableF a) where foldr = bifoldr (const id)
+
+  export
+  Traversable (DistinguishableF a) where traverse = bitraverse pure
+
+  export
+  Bifunctor UnionMemberTypeF where bimap = bimapDefault
+
+  export
+  Bifoldable UnionMemberTypeF where bifoldr = bifoldrDefault
+
+  export
+  Bitraversable UnionMemberTypeF where
+    bitraverse f g (UD x y) = [| UD (f x) (traverse (bitraverse f g) y) |]
+    bitraverse f g (UU x) = UU <$> traverse (bitraverse f g) x
+
+  export
+  Functor (UnionMemberTypeF a) where map = bimap id
+
+  export
+  Foldable (UnionMemberTypeF a) where foldr = bifoldr (const id)
+
+  export
+  Traversable (UnionMemberTypeF a) where traverse = bitraverse pure
+
+  export
+  Bifunctor UnionTypeF where bimap = bimapDefault
+
+  export
+  Bifoldable UnionTypeF where bifoldr = bifoldrDefault
+
+  export
+  Bitraversable UnionTypeF where
+    bitraverse f g (UT a b ts) =
+      [| UT (bitraverse f g a) (bitraverse f g b)
+            (traverse (bitraverse f g) ts) |]
+
+  export
+  Functor (UnionTypeF a) where map = bimap id
+
+  export
+  Foldable (UnionTypeF a) where foldr = bifoldr (const id)
+
+  export
+  Traversable (UnionTypeF a) where traverse = bitraverse pure
+
+  export
+  Bifunctor IdlTypeF where bimap = bimapDefault
+
+  export
+  Bifoldable IdlTypeF where bifoldr = bifoldrDefault
+
+  export
+  Bitraversable IdlTypeF where
+    bitraverse f g Any = pure Any
+    bitraverse f g (D x) = D <$> traverse (bitraverse f g) x
+    bitraverse f g (U x) = U <$> traverse (bitraverse f g) x
+    bitraverse f g (Promise x) = Promise <$> bitraverse f g x
+
+  export
+  Functor (IdlTypeF a) where map = bimap id
+
+  export
+  Foldable (IdlTypeF a) where foldr = bifoldr (const id)
+
+  export
+  Traversable (IdlTypeF a) where traverse = bitraverse pure

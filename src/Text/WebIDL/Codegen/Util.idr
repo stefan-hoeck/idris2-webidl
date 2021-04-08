@@ -1,10 +1,37 @@
 module Text.WebIDL.Codegen.Util
 
 import Data.List
+import Data.Stream
 import public Data.String
 import public Data.Vect
 import public Text.PrettyPrint.Prettyprinter
 import public Text.WebIDL.Types
+
+--------------------------------------------------------------------------------
+--          Kinds
+--------------------------------------------------------------------------------
+
+public export
+data Kind : Type where
+  KEnum       : Identifier -> Kind
+  KMixin      : Identifier -> Kind
+  KInterface  : Identifier -> Kind
+  KDictionary : Identifier -> Kind
+  KCallback   : Identifier -> Kind
+  KOther      : Identifier -> Kind
+
+public export
+ident : Kind -> Identifier
+ident (KEnum x)       = x
+ident (KMixin x)      = x
+ident (KInterface x)  = x
+ident (KDictionary x) = x
+ident (KCallback x)   = x
+ident (KOther x)      = x
+
+public export
+kindToString : Kind -> String
+kindToString = value . ident
 
 export
 mapFirstChar : (Char -> Char) -> String -> String
@@ -184,17 +211,60 @@ prettyArg name tpe = parens $ hsep [pretty name,":",tpe]
 --          Foreign Function Implementations
 --------------------------------------------------------------------------------
 
+argNames : Stream String
+argNames = "a" :: "b" :: "c" :: "d" :: "e" :: "f" :: "g" ::
+           "h" :: "i" :: "j" :: "k" :: "l" :: "m" :: "n" :: 
+           "o" :: "p" :: "q" :: "r" :: "s" :: "t" :: "u" :: 
+           "v" :: "w" :: "y" :: "z" :: 
+           map (\v => "x" ++ show v) [the Integer 1 ..]
+
 export
 setter : AttributeName -> IdrisIdent
 setter = fromString . ("set" ++) . mapFirstChar toUpper . value
 
-foreignBrowser : String
-foreignBrowser ="%foreign \"browser:lambda:"
+export
+primSetter : Kind -> AttributeName -> IdrisIdent
+primSetter k n = Prim $ fromString (  "set"
+                                   ++ mapFirstChar toUpper n.value
+                                   ++ kindToString k
+                                   )
+
+export
+primGetter : Kind -> AttributeName -> IdrisIdent
+primGetter k n = Prim $ fromString (n.value ++ kindToString k)
+
+export
+primOp : Kind -> OperationName -> IdrisIdent
+primOp k n = Prim $ fromString (n.value ++ kindToString k)
+
+export
+primConstructor : Kind -> IdrisIdent
+primConstructor k = Prim $ fromString ("new" ++ kindToString k)
+
+foreignBrowser : String -> String
+foreignBrowser s = "%foreign \"browser:lambda:" ++ s ++ "\""
 
 export
 attrGetFFI : AttributeName -> String
-attrGetFFI n = #"\#{foreignBrowser}x=>x.\#{n.value}""#
+attrGetFFI n = foreignBrowser #"x=>x.\#{n.value}"#
 
 export
 attrSetFFI : AttributeName -> String
-attrSetFFI n = #"\#{foreignBrowser}(x,v)=>{x.\#{n.value} = v}""#
+attrSetFFI n = foreignBrowser #"(x,v)=>{x.\#{n.value} = v}"#
+
+export
+funFFI : OperationName -> Nat -> String
+funFFI n Z = foreignBrowser #"x=>x.\#{n.value}()"#
+funFFI n k =
+  let vs = take k argNames
+      vals = fastConcat $ intersperse "," vs
+      args = fastConcat $ intersperse " " vs
+   in foreignBrowser #"(x,\#{vals})=>x.\#{n.value}(\#{args})"#
+
+export
+conFFI : Kind -> Nat -> String
+conFFI n k =
+  let vs = take k argNames
+      vals = fastConcat $ intersperse "," vs
+      args = fastConcat $ intersperse " " vs
+   in foreignBrowser #"(\#{vals})=> new \#{kindToString n}(\#{args})"#

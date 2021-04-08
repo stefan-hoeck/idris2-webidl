@@ -115,13 +115,13 @@ namespace ExtAttribute
 |||   , ExtendedAttribute ExtendedAttributes
 |||   ε
 public export
-0 ExtAttributeList : Type
+ExtAttributeList : Type
 ExtAttributeList = List ExtAttribute
 
 ||| TypeWithExtendedAttributes ::
 |||     ExtendedAttributeList Type
 public export
-0 Attributed : Type -> Type
+Attributed : Type -> Type
 Attributed a = (ExtAttributeList, a)
 
 --------------------------------------------------------------------------------

@@ -131,12 +131,12 @@ extAttribute (EAParens i r) = inParens eaInner i ++ emaybe extAttribute r
 extAttribute (EAOther o r)  = other o ++ " " ++ emaybe extAttribute r
 
 export
-extAttributes : Encoder ExtAttributeList
-extAttributes = emptyIfNull . inBrackets $ sepList "," extAttribute
+attributes : Encoder ExtAttributeList
+attributes = emptyIfNull . inBrackets $ sepList "," extAttribute
 
 export
 attributed : Encoder a -> Encoder (Attributed a)
-attributed f (as,a) = extAttributes as ++ " " ++ f a
+attributed f (as,a) = attributes as ++ " " ++ f a
 
 --------------------------------------------------------------------------------
 --          Type
@@ -193,8 +193,8 @@ mutual
 
   export
   unionMember : Encoder UnionMemberType
-  unionMember (UD x) = attributed (nullable distinguishable) x
-  unionMember (UU x) = nullable union x
+  unionMember (UD a x) = attributed (nullable distinguishable) (a,x)
+  unionMember (UU x)   = nullable union x
 
   export
   union : Encoder UnionType
@@ -207,14 +207,14 @@ mutual
   distinguishable (S x) = stringType x
   distinguishable (I x) = ident x
   distinguishable (B x) = bufferRelated x
-  distinguishable (Sequence x) =
-    "sequence" ++ inAngles (attributed idlType) x
-  distinguishable (FrozenArray x) =
-    "FrozenArray" ++ inAngles (attributed idlType) x
-  distinguishable (ObservableArray x) =
-    "ObservableArray" ++ inAngles (attributed idlType) x
-  distinguishable (Record x y) =
-    "record<" ++ stringType x ++ "," ++ attributed idlType y ++ ">"
+  distinguishable (Sequence a x) =
+    "sequence" ++ inAngles (attributed idlType) (a,x)
+  distinguishable (FrozenArray a x) =
+    "FrozenArray" ++ inAngles (attributed idlType) (a,x)
+  distinguishable (ObservableArray a x) =
+    "ObservableArray" ++ inAngles (attributed idlType) (a,x)
+  distinguishable (Record x a y) =
+    "record<" ++ stringType x ++ "," ++ attributed idlType (a,y) ++ ">"
   distinguishable Object = "object"
   distinguishable Symbol = "symbol"
 
@@ -242,13 +242,13 @@ defaultV (S x)     = "= " ++ stringLit x
 defaultV (C x)     = "= " ++ constValue x
 
 arg : Encoder Arg
-arg (MkArg as t n) = spaced [extAttributes as, idlType t, n.value]
+arg (MkArg as t n) = spaced [attributes as, idlType t, n.value]
 
 vararg : Encoder Arg
-vararg (MkArg as t n) = spaced [extAttributes as, idlType t ++ "...", n.value]
+vararg (MkArg as t n) = spaced [attributes as, idlType t ++ "...", n.value]
 
 optArg : Encoder OptArg
-optArg (MkOptArg as tas t n d) = spaced [ extAttributes as
+optArg (MkOptArg as tas t n d) = spaced [ attributes as
                                         , "optional"
                                         , attributed idlType (tas,t)
                                         , n.value
@@ -313,7 +313,7 @@ inheritance = maybe "" \i => " : " ++ i.value
 
 dictMemberRest : Encoder DictionaryMemberRest
 dictMemberRest (Required as t n) =
-  member "required" [extAttributes as,idlType t,n.value]
+  member "required" [attributes as,idlType t,n.value]
 dictMemberRest (Optional t n d) =
   member "" [idlType t, n.value, defaultV d]
 
@@ -328,7 +328,7 @@ inherit f = ("inherit " ++) . f . value
 
 attribute : Encoder Attribute
 attribute (MkAttribute as t n) =
-  member "attribute" [extAttributes as, idlType t, n.value]
+  member "attribute" [attributes as, idlType t, n.value]
 
 stringifier : Encoder Stringifier
 stringifier = ("stringifier " ++)
@@ -402,8 +402,8 @@ interfaceMembers = sepList " " $ attributed interfaceMember
 --------------------------------------------------------------------------------
 
 def : ExtAttributeList -> (key : String) -> List String -> String
-def as ""  ss = extAttributes as ++ spaced ss ++ ";"
-def as key ss = extAttributes as ++ spaced (key :: ss) ++ ";"
+def as ""  ss = attributes as ++ spaced ss ++ ";"
+def as key ss = attributes as ++ spaced (key :: ss) ++ ";"
 
 callback : Encoder Callback
 callback (MkCallback as n t args) =
@@ -456,7 +456,7 @@ pnamespace (MkPNamespace as n ms) =
 
 typedef : Encoder Typedef
 typedef (MkTypedef as tas t n) =
-  def as "typedef" [extAttributes tas, idlType t, n.value]
+  def as "typedef" [attributes tas, idlType t, n.value]
 
 export
 definition : Encoder Definition

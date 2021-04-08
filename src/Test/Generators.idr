@@ -175,12 +175,12 @@ extAttribute (S k) = let rest = maybe $ extAttribute k
                                 ]
 
 export
-extAttributes : Gen ExtAttributeList
-extAttributes = linList 2 $ extAttribute 3
+attributes : Gen ExtAttributeList
+attributes = linList 2 $ extAttribute 3
 
 export
 attributed : Gen a -> Gen (Attributed a)
-attributed ga = [| (,) extAttributes ga |]
+attributed ga = [| (,) attributes ga |]
 
 --------------------------------------------------------------------------------
 --          Types
@@ -243,25 +243,22 @@ mutual
                       , element [Object, Symbol]
                       ]
 
-  dist (S k) = choice [ map Sequence (typeWithAttr k)
-                      , map FrozenArray (typeWithAttr k)
-                      , map ObservableArray (typeWithAttr k)
-                      , [| Record stringType (typeWithAttr k) |]
+  dist (S k) = choice [ [| Sequence attributes (idlType k) |]
+                      , [| FrozenArray attributes (idlType k) |]
+                      , [| ObservableArray attributes (idlType k) |]
+                      , [| Record stringType attributes (idlType k) |]
                       ]
 
   distinguishable : Nat -> Gen (Nullable Distinguishable)
   distinguishable n = nullable (dist n)
-
-  typeWithAttr : Nat -> Gen (Attributed IdlType)
-  typeWithAttr k = attributed (idlType k)
 
   union : Nat -> Gen UnionType
   union n = let um = unionMember n
              in [| UT um um (linList 2 um) |]
 
   unionMember : Nat -> Gen UnionMemberType
-  unionMember 0     = map UD (attributed $ distinguishable 0)
-  unionMember (S k) = choice [ map UD (attributed $ distinguishable k)
+  unionMember 0     = [| UD attributes (distinguishable 0) |]
+  unionMember (S k) = choice [ [| UD attributes (distinguishable k) |]
                              , map UU (nullable $ union k)
                              ]
 idlType' : Gen IdlType
@@ -316,10 +313,10 @@ argName = choice [ map (MkArgName . value) identifier
                  ]
 
 arg : Gen Arg
-arg = [| MkArg extAttributes idlType' argName |]
+arg = [| MkArg attributes idlType' argName |]
 
 optArg : Gen OptArg
-optArg = [| MkOptArg extAttributes extAttributes idlType' argName defaultVal |]
+optArg = [| MkOptArg attributes attributes idlType' argName defaultVal |]
 
 argumentList : Gen ArgumentList
 argumentList =
@@ -377,7 +374,7 @@ inheritance = maybe identifier
 
 dictMemberRest : Gen DictionaryMemberRest
 dictMemberRest =
-  choice [ [| Required extAttributes idlType' identifier |]
+  choice [ [| Required attributes idlType' identifier |]
          , [| Optional idlType' identifier defaultVal |]
          ]
 
@@ -397,7 +394,7 @@ inherit : Gen a -> Gen (Inherit a)
 inherit = map MkI
 
 attribute : Gen Attribute
-attribute = [| MkAttribute extAttributes idlType' attributeName |]
+attribute = [| MkAttribute attributes idlType' attributeName |]
 
 stringifier : Gen Stringifier
 stringifier = choice [ map (\v => inject v) regularOperation
@@ -476,22 +473,22 @@ interfaceMembers = linList memberSize (attributed interfaceMember)
 export
 definition : Gen Definition
 definition = ns
-  [ [| MkCallback extAttributes identifier idlType' argumentList |]
-  , [| MkCallbackInterface extAttributes identifier callbackInterfaceMembers |]
-  , [| MkDictionary extAttributes identifier inheritance dictMembers |]
-  , [| MkEnum extAttributes identifier (linList1 5 stringLit) |]
-  , [| MkIncludes extAttributes identifier identifier |]
-  , [| MkInterface extAttributes identifier inheritance interfaceMembers |]
-  , [| MkMixin  extAttributes identifier mixinMembers |]
-  , [| MkNamespace extAttributes identifier namespaceMembers |]
-  , [| MkTypedef extAttributes extAttributes idlType' identifier |]
+  [ [| MkCallback attributes identifier idlType' argumentList |]
+  , [| MkCallbackInterface attributes identifier callbackInterfaceMembers |]
+  , [| MkDictionary attributes identifier inheritance dictMembers |]
+  , [| MkEnum attributes identifier (linList1 5 stringLit) |]
+  , [| MkIncludes attributes identifier identifier |]
+  , [| MkInterface attributes identifier inheritance interfaceMembers |]
+  , [| MkMixin  attributes identifier mixinMembers |]
+  , [| MkNamespace attributes identifier namespaceMembers |]
+  , [| MkTypedef attributes attributes idlType' identifier |]
   ]
 
 export
 part : Gen Part
 part = ns
-  [ [| MkPDictionary extAttributes identifier dictMembers |]
-  , [| MkPInterface extAttributes identifier partialInterfaceMembers |]
-  , [| MkPMixin extAttributes identifier mixinMembers |]
-  , [| MkPNamespace extAttributes identifier namespaceMembers |]
+  [ [| MkPDictionary attributes identifier dictMembers |]
+  , [| MkPInterface attributes identifier partialInterfaceMembers |]
+  , [| MkPMixin attributes identifier mixinMembers |]
+  , [| MkPNamespace attributes identifier namespaceMembers |]
   ]

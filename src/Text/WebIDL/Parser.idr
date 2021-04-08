@@ -148,8 +148,8 @@ extAttrs1 : IdlGrammar ExtAttributeList
 extAttrs1 = forget <$> inBrackets (sepBy1 comma extAttribute)
 
 export
-extAttributes : IdlGrammar' ExtAttributeList
-extAttributes = extAttrs1 <|> pure Nil
+attributes : IdlGrammar' ExtAttributeList
+attributes = extAttrs1 <|> pure Nil
 
 export
 attributed : IdlGrammar a -> IdlGrammar (Attributed a)
@@ -238,7 +238,8 @@ mutual
   --     record < StringType , TypeWithExtendedAttributes >
   recrd : IdlGrammar Distinguishable
   recrd = Record <$> (key "record" *> symbol '<' *> stringType)
-                 <*> (comma *> attrTpe <* symbol '>')
+                 <*> (comma *> attributes)
+                 <*> (idlType <* symbol '>')
 
   -- DistinguishableType ::
   --     PrimitiveType Null
@@ -258,9 +259,9 @@ mutual
     <|> map B bufferRelated
     <|> (key "object" $> Object)
     <|> (key "symbol" $> Symbol)
-    <|> map Sequence (key "sequence" *> inAngles attrTpe)
-    <|> map FrozenArray (key "FrozenArray" *> inAngles attrTpe)
-    <|> map ObservableArray (key "ObservableArray" *> inAngles attrTpe)
+    <|> (key "sequence" *> inAngles [| Sequence attributes idlType |])
+    <|> (key "FrozenArray" *> inAngles [| FrozenArray attributes idlType |])
+    <|> (key "ObservableArray" *> inAngles [| ObservableArray attributes idlType |])
     <|> recrd
     <|> map I ident
 
@@ -282,7 +283,7 @@ mutual
   --     ExtendedAttributeList DistinguishableType
   --     UnionType Null
   unionMember : IdlGrammar UnionMemberType
-  unionMember =   map UD (attributed distinguishableType)
+  unionMember =   [| UD attributes distinguishableType |]
               <|> map UU (nullable union)
 
 optionalType : IdlGrammar' OptionalType
@@ -313,14 +314,14 @@ argName =   withKey "ArgumentNameKeyword"
         <|> map (MkArgName . value) ident
 
 arg : IdlGrammar Arg
-arg = [| MkArg extAttributes idlType argName |]
+arg = [| MkArg attributes idlType argName |]
 
 vararg : IdlGrammar Arg
-vararg = [| MkArg extAttributes (idlType <* ellipsis) argName |]
+vararg = [| MkArg attributes (idlType <* ellipsis) argName |]
 
 optArg : IdlGrammar OptArg
-optArg = [| MkOptArg extAttributes
-                     (key "optional" *> extAttributes)
+optArg = [| MkOptArg attributes
+                     (key "optional" *> attributes)
                      idlType
                      argName
                      defaultV |]
@@ -381,7 +382,7 @@ callbackInterfaceMember =   map (\v => inject v) const
                         <|> map (\v => inject v) regularOperation
 
 dictMember : IdlGrammar DictionaryMemberRest
-dictMember = member ["required"] [| Required extAttributes idlType ident |]
+dictMember = member ["required"] [| Required attributes idlType ident |]
            <|> member [] [| Optional idlType ident defaultV |]
 
 inheritance : IdlGrammar' Inheritance
@@ -400,7 +401,7 @@ inherit g = key "inherit" *> map MkI g
 
 attribute : IdlGrammar Attribute
 attribute = member ["attribute"]
-            [| MkAttribute extAttributes idlType attributeName |]
+            [| MkAttribute attributes idlType attributeName |]
 
 stringifier : IdlGrammar Stringifier
 stringifier =   key "stringifier" *> (
@@ -475,13 +476,13 @@ def :  (ss : List String)
     -> {auto 0 prf : NonEmpty ss}
     -> (IdlGrammar ExtAttributeList -> IdlGrammar a)
     -> IdlGrammar a
-def (s :: ss) g = g (run ss (extAttributes <* key s)) <* symbol ';'
+def (s :: ss) g = g (run ss (attributes <* key s)) <* symbol ';'
   where run : List String -> IdlGrammar x -> IdlGrammar x
         run []        y = y
         run (x :: xs) y = run xs (y <* key x)
 
 def0 : (IdlGrammar' ExtAttributeList -> IdlGrammar a) -> IdlGrammar a
-def0 g = g extAttributes <* symbol ';'
+def0 g = g attributes <* symbol ';'
 
 -- optional trailing comma
 enumLits : IdlGrammar (List1 StringLit)
@@ -541,7 +542,7 @@ pinterface =
 
 typedef : IdlGrammar Typedef
 typedef = def ["typedef"] \as =>
-          [| MkTypedef as extAttributes idlType ident |]
+          [| MkTypedef as attributes idlType ident |]
 
 export
 definition : IdlGrammar Definition

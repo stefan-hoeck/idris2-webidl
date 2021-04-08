@@ -57,15 +57,15 @@ mutual
     prettyPrec p (S x) = prettyPrec p x
     prettyPrec p (I x) = prettyIdent x
     prettyPrec p (B x) = prettyPrec p x
-    prettyPrec p (Sequence (_,x)) =
+    prettyPrec p (Sequence _ x) =
       prettyCon p "Array" [prettyPrec App x]
-    prettyPrec p (FrozenArray (_,x)) =
+    prettyPrec p (FrozenArray _ x) =
       prettyCon p "Array" [prettyPrec App x]
-    prettyPrec p (ObservableArray (_,x)) =
+    prettyPrec p (ObservableArray _ x) =
       prettyCon p "Array" [prettyPrec App x]
     prettyPrec p Object = "Object"
     prettyPrec p Symbol = "Symbol"
-    prettyPrec p (Record x (_,y)) =
+    prettyPrec p (Record x _ y) =
       prettyCon p "Record" [prettyPrec App x, prettyPrec App y]
 
   export
@@ -76,7 +76,7 @@ mutual
 
   export
   Pretty UnionMemberType where
-    prettyPrec p (UD (_,x)) = prettyPrec p x
+    prettyPrec p (UD _ x) = prettyPrec p x
     prettyPrec p (UU x)     = prettyPrec p x
 
 export

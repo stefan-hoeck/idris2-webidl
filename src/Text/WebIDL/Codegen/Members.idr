@@ -79,18 +79,27 @@ primType : (name : IdrisIdent) -> Args -> ReturnType -> Doc ()
 primType name as t =
   typeDecl name (primReturnType t) (map prettyArgType as)
 
-funType : (name : IdrisIdent) -> Args -> ReturnType -> Doc ()
-funType name as t = typeDecl name (returnType t) (map prettyArg as)
-
-fun :  (name : IdrisIdent)
+fun :  (ns : Kind)
+    -> (name : IdrisIdent)
     -> (prim : IdrisIdent)
     -> Args
     -> ReturnType
     -> Doc ()
-fun name prim args t = indent 2 $ vsep [ ""
-                                       , "export"
-                                       , funType name args t
-                                       ] 
+fun ns name prim args t = indent 2 $ vsep ["","export",funType,funImpl] 
+  where funType : Doc ()
+        funType = typeDecl name (returnType t) (map prettyArg args)
+
+        primNS : Doc ()
+        primNS = pretty ns <+> "." <+> pretty prim
+
+        funImpl : Doc ()
+        funImpl = let vs  = take (length args) (unShadowingArgNames name)
+                      lhs = hsep (pretty name :: map pretty vs)
+                      rhs = hsep [ "primJS $"
+                                 , primNS
+                                 , align (sep $ map pretty vs)
+                                 ]
+                   in lhs <++> "=" <++> rhs
 
 --------------------------------------------------------------------------------
 --          Attributes
@@ -99,55 +108,57 @@ fun name prim args t = indent 2 $ vsep [ ""
 attributeSetFFI : Nat -> AttributeName -> Kind -> CGArg -> String
 attributeSetFFI k n o t =
    show . indent 2 $ vsep [ ""
-                   , "export"
-                   , pretty $ attrSetFFI n
-                   , primType (primSetter k n) [obj o, t] Undefined
-                   ]
+                          , "export"
+                          , pretty $ attrSetFFI n
+                          , primType (primSetter k n) [obj o, t] Undefined
+                          ]
 
 attributeGetFFI : Nat -> AttributeName -> Kind -> ReturnType -> String
 attributeGetFFI k n o t =
    show . indent 2 $ vsep [ ""
-                     , "export"
-                     , pretty $ attrGetFFI n
-                     , primType (primGetter k n) [obj o] t
-                     ]
+                          , "export"
+                          , pretty $ attrGetFFI n
+                          , primType (primGetter k n) [obj o] t
+                          ]
 
 opFFI : Nat -> OperationName -> Kind -> Args -> ReturnType -> String
 opFFI k n o as t =
   let args = obj o :: as
    in show . indent 2 $ vsep [ ""
-                      , pretty $ funFFI n (length args)
-                      , primType (primOp k n) args t
-                      ]
+                             , "export"
+                             , pretty $ funFFI n (length args)
+                             , primType (primOp k n) args t
+                             ]
 
 constructorFFI : Nat -> Kind -> Args -> String
 constructorFFI k o args =
   show . indent 2 $ vsep [ ""
-                  , pretty $ conFFI o (length args)
-                  , primType (primConstructor k) args (FromIdl $ identToType o)
-                  ]
+                         , "export"
+                         , pretty $ conFFI o (length args)
+                         , primType (primConstructor k) args (FromIdl $ identToType o)
+                         ]
 
 attributeSet : Nat -> AttributeName -> Kind -> CGArg -> String
 attributeSet k n o a =
-  show $ fun (setter k n) (primSetter k n) [obj o, a] Undefined
+  show $ fun o (setter k n) (primSetter k n) [obj o, a] Undefined
 
 attributeGet : Nat -> AttributeName -> Kind -> ReturnType -> String
 attributeGet k n o t =
-  show $ fun (getter k n) (primGetter k n) [obj o] t
+  show $ fun o (getter k n) (primGetter k n) [obj o] t
 
 op : Nat -> OperationName -> Kind -> Args -> ReturnType -> String
 op k n o as t =
   let args = obj o :: as
-   in show $ fun (op k n) (primOp k n) args t
+   in show $ fun o (op k n) (primOp k n) args t
 
 constr : Nat -> Kind -> Args -> String
 constr k o as =
-  show $ fun (constr k) (primConstructor k) as (FromIdl $ identToType o)
+  show $ fun o (constr k) (primConstructor k) as (FromIdl $ identToType o)
 
 function : (Nat,CGFunction) -> Maybe String
 function (k,AttributeSet n o t) = Just $ attributeSet k n o t
 function (k,AttributeGet n o t) = Just $ attributeGet k n o t
-function (k,Constructor o args) = Nothing
+function (k,Constructor o args) = Just $ constr k o args
 function (k,Regular n o args t) = Just $ op k n o args t
 
 prim : (Nat,CGFunction) -> Maybe String

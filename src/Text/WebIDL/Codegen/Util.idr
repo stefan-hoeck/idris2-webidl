@@ -211,12 +211,20 @@ prettyArg name tpe = parens $ hsep [pretty name,":",tpe]
 --          Foreign Function Implementations
 --------------------------------------------------------------------------------
 
+export
 argNames : Stream String
 argNames = "a" :: "b" :: "c" :: "d" :: "e" :: "f" :: "g" ::
            "h" :: "i" :: "j" :: "k" :: "l" :: "m" :: "n" :: 
            "o" :: "p" :: "q" :: "r" :: "s" :: "t" :: "u" :: 
            "v" :: "w" :: "y" :: "z" :: 
            map (\v => "x" ++ show v) [the Integer 1 ..]
+
+export
+unShadowingArgNames : IdrisIdent -> Stream String
+unShadowingArgNames i = go (show i) argNames
+  where go : String -> Stream String -> Stream String
+        go s (h :: t) = if s == h then t else h :: go s t
+
 
 ix : Nat -> String
 ix Z = ""

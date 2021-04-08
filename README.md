@@ -11,10 +11,10 @@ Parsers and (eventually) Idris code generator for WebIDL documents
   - [x] Property test for parsers and encoders
 - [ ] Idris2 code generator
   - [ ] Foreign function implementations
-    -[ ] Attribute getters
-    -[ ] Attribute setters
-    -[ ] Regular function implementations
-    -[ ] Interface constructors
+    -[x] Attribute getters
+    -[x] Attribute setters
+    -[x] Regular function implementations
+    -[x] Interface constructors
     -[ ] Dictionary constructors
 
   - [ ] API function implementations

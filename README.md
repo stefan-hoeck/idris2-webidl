@@ -11,36 +11,36 @@ Parsers and (eventually) Idris code generator for WebIDL documents
   - [x] Property test for parsers and encoders
 - [ ] Idris2 code generator
   - [ ] Foreign function implementations
-    -[x] Attribute getters
-    -[x] Attribute setters
-    -[x] Regular function implementations
-    -[x] Interface constructors
-    -[x] Dictionary constructors
-    -[ ] Static functions
-    -[ ] Namespace members
-    -[ ] Setters and Getters
-    -[ ] Stringifiers
-    -[ ] Iterables
-    -[ ] Setlikes
-    -[ ] Maplikes
+    - [x] Attribute getters
+    - [x] Attribute setters
+    - [x] Regular function implementations
+    - [x] Interface constructors
+    - [x] Dictionary constructors
+    - [ ] Static functions
+    - [ ] Namespace members
+    - [ ] Setters and Getters
+    - [ ] Stringifiers
+    - [ ] Iterables
+    - [ ] Setlikes
+    - [ ] Maplikes
   - [ ] API function implementations
-    -[x] Attribute getters
-    -[x] Attribute setters
-    -[ ] Optional attribute unsetters
-    -[ ] Optional attribute getters supporting a default return value
-    -[x] Regular functions (no optional arguments or variadic argument)
-    -[ ] Functions with optional arguments
-         (including a second version with the optional arguments
-         missing)
-    -[ ] Functions with a variadic argument (not sure yet how
-         to handle these).
-    -[ ] Static functions
-    -[ ] Namespace members
-    -[ ] Setters and Getters
-    -[ ] Stringifiers
-    -[ ] Iterables
-    -[ ] Setlikes
-    -[ ] Maplikes
+    - [x] Attribute getters
+    - [x] Attribute setters
+    - [ ] Optional attribute unsetters
+    - [ ] Optional attribute getters supporting a default return value
+    - [x] Regular functions (no optional arguments or variadic argument)
+    - [ ] Functions with optional arguments
+          (including a second version with the optional arguments
+          missing)
+    - [ ] Functions with a variadic argument (not sure yet how
+          to handle these).
+    - [ ] Static functions
+    - [ ] Namespace members
+    - [ ] Setters and Getters
+    - [ ] Stringifiers
+    - [ ] Iterables
+    - [ ] Setlikes
+    - [ ] Maplikes
   - [ ] Marshalling
     -[ ] from enum types to `String` and back
     -[ ] from `Maybe` to `Nullable` and back

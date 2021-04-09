@@ -18,7 +18,7 @@ Parsers and (eventually) Idris code generator for WebIDL documents
     - [x] Dictionary constructors
     - [ ] Static functions
     - [ ] Namespace members
-    - [ ] Setters and Getters
+    - [x] Setters and Getters
     - [ ] Stringifiers
     - [ ] Iterables
     - [ ] Setlikes
@@ -36,7 +36,7 @@ Parsers and (eventually) Idris code generator for WebIDL documents
           to handle these).
     - [ ] Static functions
     - [ ] Namespace members
-    - [ ] Setters and Getters
+    - [x] Setters and Getters
     - [ ] Stringifiers
     - [ ] Iterables
     - [ ] Setlikes

@@ -315,6 +315,14 @@ fromAttr e obj (MkAttribute _ t n) =
       ak  = kind e obj
    in Valid [AttributeGet n ak cgt, AttributeSet n ak (valArg e t)]
 
+fromStr : Env -> Domain -> Identifier -> Stringifier -> CodegenV (List CGFunction)
+fromStr e _ obj (Z v)              = fromAttr e obj v
+fromStr e _ obj (S $ Z v)          = fromAttrRO e obj v
+fromStr e d obj (S $ S $ Z v)      = fromOp e d obj v
+fromStr e d obj (S $ S $ S $ Z ()) =
+  let name = Just $ MkOpName "toString"
+   in fromOp e d obj (MkOp () domString name (NoVarArg [] []))
+
 fromStaticAttrRO : Env -> Identifier -> Readonly Attribute -> CodegenV (List CGFunction)
 fromStaticAttrRO e obj (MkRO $ MkAttribute _ t n) =
   Valid [StaticAttributeGet n (kind e obj) $ (rtpe e t)]
@@ -357,7 +365,7 @@ mixinFuns e dom m = concat <$> traverse (fromMember . snd) m.members
   where fromMember : MixinMember -> CodegenV (List CGFunction)
         fromMember (MConst _)   = Valid Nil
         fromMember (MOp op)     = fromOp e dom m.name op
-        fromMember (MStr _)     = Valid Nil
+        fromMember (MStr s)     = fromStr e dom m.name s
         fromMember (MAttrRO ro) = fromAttrRO e m.name ro
         fromMember (MAttr at)   = fromAttr e m.name at
 
@@ -393,7 +401,7 @@ ifaceFuns e dom i = concat <$> traverse (fromMember . snd) i.members
                MkOp (Just Deleter) _ _       _  => Valid Nil
                MkOp _              t n       as => fromOp e dom i.name x
 
-        fromMember (S $ Z $ IStr x)                = Valid Nil
+        fromMember (S $ Z $ IStr x)                = fromStr e dom i.name x
         fromMember (S $ Z $ IStatic $ Z x)         = fromStaticAttr e i.name x
         fromMember (S $ Z $ IStatic $ S $ Z x)     = fromStaticAttrRO e i.name x
         fromMember (S $ Z $ IStatic $ S $ S $ Z x) = fromStaticOp e dom i.name x

@@ -302,3 +302,11 @@ dictConFFI ns =
   where app : String -> ArgumentName -> String
         app v a = a.value ++ ": " ++ v
 
+export
+getterFFI : String
+getterFFI = foreignBrowser "(o,x)=>o[x]"
+
+export
+setterFFI : String
+setterFFI = foreignBrowser "(o,x,v)=>o[x] = v"
+

@@ -166,6 +166,8 @@ constr k o as =
 function : (Nat,CGFunction) -> Maybe String
 function (k,AttributeSet n o t)     = Just $ attributeSet k n o t
 function (k,AttributeGet n o t)     = Just $ attributeGet k n o t
+function (k,Getter _ _ _ _)         = Nothing
+function (k,Setter _ _ _ _)         = Nothing
 function (k,DictConstructor o args) = Just $ constr k o args
 function (k,Constructor o args)     = Just $ constr k o args
 function (k,Regular n o args t)     = Just $ op k n o args t
@@ -173,6 +175,8 @@ function (k,Regular n o args t)     = Just $ op k n o args t
 prim : (Nat,CGFunction) -> Maybe String
 prim (k,AttributeSet n o a)     = Just $ setAttributeImpl k n o a
 prim (k,AttributeGet n o t)     = Just $ getAttributeImpl k n o t
+prim (k,Getter _ _ _ _)         = Nothing
+prim (k,Setter _ _ _ _)         = Nothing
 prim (k,DictConstructor n args) = Just $ dictConImpl k n args
 prim (k,Constructor n args)     = Just $ constructorImpl k n args
 prim (k,Regular n o args t)     = Just $ opImpl k n o args t

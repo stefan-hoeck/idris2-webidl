@@ -68,6 +68,10 @@ fromCodegen = toProgWith (fastUnlines . map err) . pure . toEither
           #"Invalid number of callback operations in \#{x.domain}: \#{y.value} (\#{show k} operations)"#
         err (RegularOpWithoutName x y) =
           #"Unnamed regular operation in \#{x.domain}: \#{y.value}"#
+        err (InvalidGetter x y) =
+          #"Invalid getter in \#{x.domain}: \#{y.value}"#
+        err (InvalidSetter x y) =
+          #"Invalid setter in \#{x.domain}: \#{y.value}"#
 
 
 writeDoc : String -> String -> Prog ()

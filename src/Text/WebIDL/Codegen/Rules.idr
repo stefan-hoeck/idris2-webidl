@@ -71,29 +71,32 @@ env k ds = let ts = jsTypes ds
 kind : Env -> Identifier -> Kind
 kind e i = fromMaybe (KOther i) $ lookup i e.kinds
 
+tpe : Env -> IdlType -> CGType
+tpe e = map (kind e)
+
 optArg : Env -> IdlType -> Default -> CGArg
-optArg e t = OptionalArg (MkArgName "value") (map (kind e) t)
+optArg e t = OptionalArg (MkArgName "value") (tpe e t)
 
 valArg : Env -> IdlType -> CGArg
-valArg e t = Required (MkArgName "value") (map (kind e) t)
+valArg e t = Required (MkArgName "value") (tpe e t)
 
 arg : Env -> Arg -> CGArg
-arg e (MkArg _ t n) = Required n (map (kind e) t)
+arg e (MkArg _ t n) = Required n (tpe e t)
 
 vararg : Env -> Arg -> CGArg
-vararg e (MkArg _ t n) = VarArg n (map (kind e) t)
+vararg e (MkArg _ t n) = VarArg n (tpe e t)
 
 opt : Env -> OptArg -> CGArg
-opt e (MkOptArg _ _ t n d) = OptionalArg n (map (kind e) t) d
+opt e (MkOptArg _ _ t n d) = OptionalArg n (tpe e t) d
 
 toArgs : Env -> ArgumentList -> Args
 toArgs e (VarArg as v)    = map (arg e) as ++ [vararg e v]
 toArgs e (NoVarArg as os) = map (arg e) as ++ map (opt e) os
 
-toReturnType : Env -> IdlType -> ReturnType
-toReturnType _ (D $ NotNull $ P Undefined) = Undefined
-toReturnType _ (D $ NotNull $ I $ MkIdent "void") = Undefined
-toReturnType e t = FromIdl (map (kind e) t)
+rtpe : Env -> IdlType -> ReturnType
+rtpe _ (D $ NotNull $ P Undefined) = Undefined
+rtpe _ (D $ NotNull $ I $ MkIdent "void") = Undefined
+rtpe e t = FromIdl (tpe e t)
 
 ||| The parent types and mixins of a type. This is
 ||| used by the code generator to implement the
@@ -136,6 +139,8 @@ supertypes e = run e.maxInheritance
 public export
 data CodegenErr : Type where
   CBInterfaceInvalidOps  : Domain -> Identifier -> Nat -> CodegenErr
+  InvalidGetter          : Domain -> Identifier -> CodegenErr
+  InvalidSetter          : Domain -> Identifier -> CodegenErr
   RegularOpWithoutName   : Domain -> Identifier -> CodegenErr
 
 public export
@@ -165,6 +170,20 @@ data CGFunction : Type where
                -> (tpe  : ReturnType)
                -> CGFunction
 
+  ||| An indexed getter.
+  Getter       :  (name  : Maybe OperationName)
+               -> (obj   : Kind)
+               -> (index : CGArg)
+               -> (tpe   : ReturnType)
+               -> CGFunction
+
+  ||| An indexed setter.
+  Setter       :  (name  : Maybe OperationName)
+               -> (obj   : Kind)
+               -> (index : CGArg)
+               -> (value : CGArg)
+               -> CGFunction
+
   ||| An interface constructor with (possibly) optional arguments.
   Constructor  :  (obj : Kind) -> (args : Args) -> CGFunction
 
@@ -191,9 +210,11 @@ export
 priority : CGFunction -> (Nat,String,Nat)
 priority (DictConstructor n _) = (0,value (ident n),0)
 priority (Constructor n _)     = (0,value (ident n),0)
-priority (AttributeSet n _ _)  = (1,show n,1)
-priority (AttributeGet n _ _)  = (1,show n,0)
-priority (Regular n o _ _)     = (2,n.value ++ value (ident o),0)
+priority (Getter n _ _ _)      = (1,show n,0)
+priority (Setter n _ _ _)      = (1,show n,1)
+priority (AttributeSet n _ _)  = (2,show n,1)
+priority (AttributeGet n _ _)  = (2,show n,0)
+priority (Regular n o _ _)     = (3,n.value ++ value (ident o),0)
 
 fromRegular :  Env
             -> Domain
@@ -204,7 +225,7 @@ fromRegular e dom ident (MkOp () _ Nothing _) =
   Invalid [RegularOpWithoutName dom ident]
 
 fromRegular e dom ident (MkOp () t (Just op) args) = 
-  Valid [Regular op (kind e ident) (toArgs e args) (toReturnType e t)]
+  Valid [Regular op (kind e ident) (toArgs e args) (rtpe e t)]
 
 fromConstructor : Env -> Identifier -> ArgumentList -> CodegenV (List CGFunction)
 fromConstructor e name args =
@@ -212,11 +233,11 @@ fromConstructor e name args =
 
 fromAttrRO : Env -> Identifier -> Readonly Attribute -> CodegenV (List CGFunction)
 fromAttrRO e obj (MkRO $ MkAttribute _ t n) =
-  Valid [AttributeGet n (kind e obj) $ FromIdl (map (kind e) t)]
+  Valid [AttributeGet n (kind e obj) $ (rtpe e t)]
 
 fromAttr : Env -> Identifier -> Attribute -> CodegenV (List CGFunction)
 fromAttr e obj (MkAttribute _ t n) =
-  let cgt = FromIdl $ map (kind e) t
+  let cgt = rtpe e t
       ak  = kind e obj
    in Valid [AttributeGet n ak cgt, AttributeSet n ak (valArg e t)]
 
@@ -225,9 +246,9 @@ dictCon e o = go Nil Nil
   where go : Args -> Args -> List DictionaryMemberRest -> CGFunction
         go xs ys [] = DictConstructor o (reverse xs ++ reverse ys)
         go xs ys (Required _ t n :: zs) =
-          go (Required (MkArgName n.value) (map (kind e) t) :: xs) ys zs
+          go (Required (MkArgName n.value) (tpe e t) :: xs) ys zs
         go xs ys (Optional t n d :: zs) =
-          go xs (OptionalArg (MkArgName n.value) (map (kind e) t) d :: ys) zs
+          go xs (OptionalArg (MkArgName n.value) (tpe e t) d :: ys) zs
 
 dictFuns : Env -> Dictionary -> List CGFunction
 dictFuns e d = dictCon e (kind e d.name) (map snd d.members) ::
@@ -235,13 +256,13 @@ dictFuns e d = dictCon e (kind e d.name) (map snd d.members) ::
   where fromMember : DictionaryMemberRest -> List CGFunction
         fromMember (Required _ t n) =
           let an = MkAttributeName n.value
-              cgt = FromIdl $ map (kind e) t
+              cgt = rtpe e t
               ak  = kind e d.name
            in [ AttributeGet an ak cgt , AttributeSet an ak (valArg e t) ]
 
         fromMember (Optional t n def) =
           let an = MkAttributeName n.value
-              cgt = Optional (map (kind e) t) (Just def)
+              cgt = Optional (tpe e t) (Just def)
               ak  = kind e d.name
            in [ AttributeGet an ak cgt
               , AttributeSet an ak (optArg e t def)
@@ -256,9 +277,28 @@ mixinFuns e dom m = concat <$> traverse (fromMember . snd) m.members
         fromMember (MAttrRO ro) = fromAttrRO e m.name ro
         fromMember (MAttr at)   = fromAttr e m.name at
 
+longIndex : IdlTypeF a b
+longIndex = D $ NotNull $ P $ Unsigned Long
+
+stringIndex : IdlTypeF a b
+stringIndex = D $ NotNull $ S DOMString
+
+isIndex : Eq a => Eq b => IdlTypeF a b -> Bool
+isIndex t = t == longIndex || t == stringIndex
+
 ifaceFuns : Env -> Domain -> Interface -> CodegenV (List CGFunction)
 ifaceFuns e dom i = concat <$> traverse (fromMember . snd) i.members
-  where fromMember : InterfaceMember -> CodegenV (List CGFunction)
+  where getter :  Maybe OperationName
+               -> IdlType
+               -> ArgumentList
+               -> CodegenV (List CGFunction)
+        getter op t (NoVarArg [a] Nil) =
+          if isIndex a.type
+             then Valid [Getter op (kind e i.name) (arg e a) (rtpe e t)]
+             else Invalid [InvalidGetter dom i.name]
+        getter _ _ _ = Invalid [InvalidGetter dom i.name]
+
+        fromMember : InterfaceMember -> CodegenV (List CGFunction)
         fromMember (Z $ MkConstructor args) = fromConstructor e i.name args
         fromMember (S $ Z $ IConst x)       = Valid Nil
 
@@ -266,7 +306,9 @@ ifaceFuns e dom i = concat <$> traverse (fromMember . snd) i.members
           case x of
                MkOp Nothing t n args => fromRegular e dom i.name
                                      $  MkOp () t n args
-               MkOp (Just _) _ _ _   => Valid Nil
+               MkOp (Just Getter) _ _ _   => ?foo_1 --Valid Nil
+               MkOp (Just Setter) _ _ _   => ?foo_2 --Valid Nil
+               MkOp (Just Deleter) _ _ _   => Valid Nil
 
         fromMember (S $ Z $ IStr x)        = Valid Nil
         fromMember (S $ Z $ IStatic x)     = Valid Nil

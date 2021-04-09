@@ -113,20 +113,6 @@ fun ns name prim args t = show . indent 2 $ vsep ["","export",funType,funImpl]
                                  ]
                    in lhs <++> "=" <++> rhs
 
-opImpl : Nat -> OperationName -> Kind -> Args -> ReturnType -> String
-opImpl k n o as t =
-  let args = obj o :: as
-   in show . indent 2 $ vsep [ ""
-                             , "export"
-                             , pretty $ funFFI n (length args)
-                             , primType (primOp k n) args t
-                             ]
-
-op : Nat -> OperationName -> Kind -> Args -> ReturnType -> String
-op k n o as t =
-  let args = obj o :: as
-   in fun o (op k n) (primOp k n) args t
-
 --------------------------------------------------------------------------------
 --          Attributes
 --------------------------------------------------------------------------------
@@ -137,13 +123,21 @@ function (k,Getter o i t) = fun o (getter k) (primGetter k) [obj o, i] t
 function (k,Setter o i v) =
   fun o (setter k) (primSetter k) [obj o, i, v] Undefined
 
-function (k,Regular n o args t) = op k n o args t
+function (k,Regular n o as t) = fun o (op k n) (primOp k n) (obj o :: as) t
+
+function (k,Static n o as t) = fun o (op k n) (primOp k n) as t
 
 function (k,AttributeSet n o t) =
   fun o (attrSetter k n) (primAttrSetter k n) [obj o, t] Undefined
 
 function (k,AttributeGet n o t) =
   fun o (attrGetter k n) (primAttrGetter k n) [obj o] t
+
+function (k,StaticAttributeSet n o t) =
+  fun o (attrSetter k n) (primAttrSetter k n) [t] Undefined
+
+function (k,StaticAttributeGet n o t) =
+  fun o (attrGetter k n) (primAttrGetter k n) [] t
 
 function (k,DictConstructor o as) =
   fun o (constr k) (primConstr k) as (fromKind o)
@@ -154,13 +148,24 @@ function (k,Constructor o as) =
 prim : (Nat,CGFunction) -> String
 prim (k,Getter o i t) = primFun (primGetter k) getterFFI [obj o, i] t
 prim (k,Setter o i v) = primFun (primSetter k) setterFFI [obj o, i, v] Undefined
-prim (k,Regular n o args t) = opImpl k n o args t
+prim (k,Regular n o args t) =
+  let as = obj o :: args
+   in primFun (primOp k n) (funFFI n $ length as) as t
+
+prim (k,Static n o as t) =
+  primFun (primOp k n) (staticFunFFI o n $ length as) as t
 
 prim (k,AttributeSet n o t) =
   primFun (primAttrSetter k n) (attrSetFFI n) [obj o, t] Undefined
 
 prim (k,AttributeGet n o t) =
   primFun (primAttrGetter k n) (attrGetFFI n) [obj o] t
+
+prim (k,StaticAttributeSet n o t) =
+  primFun (primAttrSetter k n) (staticAttrSetFFI o n) [t] Undefined
+
+prim (k,StaticAttributeGet n o t) =
+  primFun (primAttrGetter k n) (staticAttrGetFFI o n) [] t
 
 prim (k,DictConstructor o as) =
   primFun (primConstr k) (dictConFFI $ map argName as) as (fromKind o)

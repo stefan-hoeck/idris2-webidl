@@ -227,6 +227,18 @@ data CGFunction : Type where
                -> (tpe  : ReturnType)
                -> CGFunction
 
+  ||| A static attribute setter.
+  StaticAttributeSet :  (name : AttributeName)
+                     -> (obj  : Kind)
+                     -> (tpe  : CGArg)
+                     -> CGFunction
+
+  ||| A static attribute getter.
+  StaticAttributeGet :  (name : AttributeName)
+                     -> (obj  : Kind)
+                     -> (tpe  : ReturnType)
+                     -> CGFunction
+
   ||| An indexed getter.
   Getter : (obj : Kind) -> (index : CGArg) -> (tpe : ReturnType) -> CGFunction
 
@@ -246,6 +258,13 @@ data CGFunction : Type where
                -> ReturnType
                -> CGFunction
 
+  ||| A static function with (possibly) optional arguments.
+  Static       :  OperationName
+               -> (obj : Kind)
+               -> Args
+               -> ReturnType
+               -> CGFunction
+
 ||| This is used for sorting lists of functions to
 ||| the determine the order in which they appear
 ||| in the generated code.
@@ -257,13 +276,16 @@ data CGFunction : Type where
 ||| All other functions come later and will be sorted by name.
 export
 priority : CGFunction -> (Nat,String,Nat)
-priority (DictConstructor n _) = (0,value (ident n),0)
-priority (Constructor n _)     = (0,value (ident n),0)
-priority (Getter _ _ _)        = (1,"",0)
-priority (Setter _ _ _)        = (1,"",1)
-priority (AttributeSet n _ _)  = (2,show n,1)
-priority (AttributeGet n _ _)  = (2,show n,0)
-priority (Regular n o _ _)     = (3,n.value ++ value (ident o),0)
+priority (DictConstructor n _)       = (0,value (ident n),0)
+priority (Constructor n _)           = (0,value (ident n),0)
+priority (StaticAttributeSet n _ _)  = (1,show n,1)
+priority (StaticAttributeGet n _ _)  = (1,show n,0)
+priority (Static n o _ _)            = (2,n.value ++ value (ident o),0)
+priority (Getter _ _ _)              = (3,"",0)
+priority (Setter _ _ _)              = (3,"",1)
+priority (AttributeSet n _ _)        = (4,show n,1)
+priority (AttributeGet n _ _)        = (4,show n,0)
+priority (Regular n o _ _)           = (5,n.value ++ value (ident o),0)
 
 fromOp : Env -> Domain -> Identifier -> Op a -> CodegenV (List CGFunction)
 fromOp e dom ident (MkOp _ _ Nothing _) =
@@ -271,6 +293,13 @@ fromOp e dom ident (MkOp _ _ Nothing _) =
 
 fromOp e dom ident (MkOp _ t (Just op) args) = 
   Valid [Regular op (kind e ident) (toArgs e args) (rtpe e t)]
+
+fromStaticOp : Env -> Domain -> Identifier -> Op a -> CodegenV (List CGFunction)
+fromStaticOp e dom ident (MkOp _ _ Nothing _) =
+  Invalid [RegularOpWithoutName dom ident]
+
+fromStaticOp e dom ident (MkOp _ t (Just op) args) = 
+  Valid [Static op (kind e ident) (toArgs e args) (rtpe e t)]
 
 fromConstructor : Env -> Identifier -> ArgumentList -> CodegenV (List CGFunction)
 fromConstructor e name args =
@@ -285,6 +314,16 @@ fromAttr e obj (MkAttribute _ t n) =
   let cgt = rtpe e t
       ak  = kind e obj
    in Valid [AttributeGet n ak cgt, AttributeSet n ak (valArg e t)]
+
+fromStaticAttrRO : Env -> Identifier -> Readonly Attribute -> CodegenV (List CGFunction)
+fromStaticAttrRO e obj (MkRO $ MkAttribute _ t n) =
+  Valid [StaticAttributeGet n (kind e obj) $ (rtpe e t)]
+
+fromStaticAttr : Env -> Identifier -> Attribute -> CodegenV (List CGFunction)
+fromStaticAttr e obj (MkAttribute _ t n) =
+  let cgt = rtpe e t
+      ak  = kind e obj
+   in Valid [StaticAttributeGet n ak cgt, StaticAttributeSet n ak (valArg e t)]
 
 dictCon : Env -> Kind -> List DictionaryMemberRest -> CGFunction
 dictCon e o = go Nil Nil
@@ -354,17 +393,19 @@ ifaceFuns e dom i = concat <$> traverse (fromMember . snd) i.members
                MkOp (Just Deleter) _ _       _  => Valid Nil
                MkOp _              t n       as => fromOp e dom i.name x
 
-        fromMember (S $ Z $ IStr x)        = Valid Nil
-        fromMember (S $ Z $ IStatic x)     = Valid Nil
-        fromMember (S $ Z $ IAttr x)       = fromAttr e i.name x
-        fromMember (S $ Z $ IMap x)        = Valid Nil
-        fromMember (S $ Z $ ISet x)        = Valid Nil
-        fromMember (S $ Z $ IAttrRO x)     = fromAttrRO e i.name x
-        fromMember (S $ Z $ IMapRO x)      = Valid Nil
-        fromMember (S $ Z $ ISetRO x)      = Valid Nil
-        fromMember (S $ Z $ IAttrInh x)    = Valid Nil
-        fromMember (S $ Z $ IIterable x y) = Valid Nil
-        fromMember (S $ Z $ IAsync x y xs) = Valid Nil
+        fromMember (S $ Z $ IStr x)                = Valid Nil
+        fromMember (S $ Z $ IStatic $ Z x)         = fromStaticAttr e i.name x
+        fromMember (S $ Z $ IStatic $ S $ Z x)     = fromStaticAttrRO e i.name x
+        fromMember (S $ Z $ IStatic $ S $ S $ Z x) = fromStaticOp e dom i.name x
+        fromMember (S $ Z $ IAttr x)               = fromAttr e i.name x
+        fromMember (S $ Z $ IMap x)                = Valid Nil
+        fromMember (S $ Z $ ISet x)                = Valid Nil
+        fromMember (S $ Z $ IAttrRO x)             = fromAttrRO e i.name x
+        fromMember (S $ Z $ IMapRO x)              = Valid Nil
+        fromMember (S $ Z $ ISetRO x)              = Valid Nil
+        fromMember (S $ Z $ IAttrInh x)            = Valid Nil
+        fromMember (S $ Z $ IIterable x y)         = Valid Nil
+        fromMember (S $ Z $ IAsync x y xs)         = Valid Nil
         fromMember (S $ S x) impossible
 
 ifaceConstants : Interface -> List Const

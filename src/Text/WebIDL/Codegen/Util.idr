@@ -295,8 +295,18 @@ attrGetFFI : AttributeName -> String
 attrGetFFI n = foreignBrowser #"x=>x.\#{n.value}"#
 
 export
+staticAttrGetFFI : Kind -> AttributeName -> String
+staticAttrGetFFI o n =
+  foreignBrowser #"()=>\#{kindToString o}.\#{n.value}"#
+
+export
 attrSetFFI : AttributeName -> String
 attrSetFFI n = foreignBrowser #"(x,v)=>{x.\#{n.value} = v}"#
+
+export
+staticAttrSetFFI : Kind -> AttributeName -> String
+staticAttrSetFFI o n =
+  foreignBrowser #"v=>{\#{kindToString o}.\#{n.value} = v}"#
 
 export
 funFFI : OperationName -> Nat -> String
@@ -306,6 +316,15 @@ funFFI n k =
       vals = fastConcat $ intersperse "," vs
       args = fastConcat $ intersperse " " vs
    in foreignBrowser #"(x,\#{vals})=>x.\#{n.value}(\#{args})"#
+
+export
+staticFunFFI : Kind -> OperationName -> Nat -> String
+staticFunFFI o n Z = foreignBrowser #"x=>x.\#{n.value}()"#
+staticFunFFI o n k =
+  let vs = take k argNames
+      vals = fastConcat $ intersperse "," vs
+      args = fastConcat $ intersperse " " vs
+   in foreignBrowser #"(\#{vals})=>\#{kindToString o}.\#{n.value}(\#{args})"#
 
 export
 conFFI : Kind -> Nat -> String

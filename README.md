@@ -16,7 +16,7 @@ Parsers and (eventually) Idris code generator for WebIDL documents
     - [x] Regular function implementations
     - [x] Interface constructors
     - [x] Dictionary constructors
-    - [ ] Static functions
+    - [x] Static functions
     - [ ] Namespace members
     - [x] Setters and Getters
     - [ ] Stringifiers
@@ -34,7 +34,7 @@ Parsers and (eventually) Idris code generator for WebIDL documents
           missing)
     - [ ] Functions with a variadic argument (not sure yet how
           to handle these).
-    - [ ] Static functions
+    - [x] Static functions
     - [ ] Namespace members
     - [x] Setters and Getters
     - [ ] Stringifiers

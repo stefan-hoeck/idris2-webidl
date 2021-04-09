@@ -123,7 +123,7 @@ Args = List CGArg
 public export
 data ReturnType : Type where
   Undefined : ReturnType
-  Optional  : CGType -> Default -> ReturnType
+  Optional  : CGType -> Maybe Default -> ReturnType
   FromIdl   : CGType -> ReturnType
 
 export

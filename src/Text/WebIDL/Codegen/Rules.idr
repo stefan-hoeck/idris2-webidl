@@ -241,7 +241,7 @@ dictFuns e d = dictCon e (kind e d.name) (map snd d.members) ::
 
         fromMember (Optional t n def) =
           let an = MkAttributeName n.value
-              cgt = Optional (map (kind e) t) def
+              cgt = Optional (map (kind e) t) (Just def)
               ak  = kind e d.name
            in [ AttributeGet an ak cgt
               , AttributeSet an ak (optArg e t def)

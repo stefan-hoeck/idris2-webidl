@@ -16,22 +16,37 @@ Parsers and (eventually) Idris code generator for WebIDL documents
     -[x] Regular function implementations
     -[x] Interface constructors
     -[x] Dictionary constructors
-
+    -[ ] Static functions
+    -[ ] Namespace members
+    -[ ] Setters and Getters
+    -[ ] Stringifiers
+    -[ ] Iterables
+    -[ ] Setlikes
+    -[ ] Maplikes
   - [ ] API function implementations
-    -[ ] Attribute getters
-    -[ ] Attribute setters
+    -[x] Attribute getters
+    -[x] Attribute setters
     -[ ] Optional attribute unsetters
     -[ ] Optional attribute getters supporting a default return value
-    -[ ] Regular functions (no optional arguments or variadic argument)
+    -[x] Regular functions (no optional arguments or variadic argument)
     -[ ] Functions with optional arguments
          (including a second version with the optional arguments
          missing)
     -[ ] Functions with a variadic argument (not sure yet how
          to handle these).
-    -[ ] Marshalling from `Maybe` to `Nullable` and back
-    -[ ] Marshalling from `Union` to `NS I` (from `Data.SOP.NS`) and back
-    -[ ] Marshalling from `UndefOr` to an appropriate Idris2 ADT
-    -[ ] Marshalling from Idris2 functions to callback types
+    -[ ] Static functions
+    -[ ] Namespace members
+    -[ ] Setters and Getters
+    -[ ] Stringifiers
+    -[ ] Iterables
+    -[ ] Setlikes
+    -[ ] Maplikes
+  - [ ] Marshalling
+    -[ ] from enum types to `String` and back
+    -[ ] from `Maybe` to `Nullable` and back
+    -[ ] from `Union` to `NS I` (from `Data.SOP.NS`) and back
+    -[ ] from `UndefOr` to an appropriate Idris2 ADT
+    -[ ] from Idris2 functions to callback types
 
 ## Codegen Notes
 

@@ -105,24 +105,24 @@ fun ns name prim args t = indent 2 $ vsep ["","export",funType,funImpl]
 --          Attributes
 --------------------------------------------------------------------------------
 
-attributeSetFFI : Nat -> AttributeName -> Kind -> CGArg -> String
-attributeSetFFI k n o t =
+setAttributeImpl : Nat -> AttributeName -> Kind -> CGArg -> String
+setAttributeImpl k n o t =
    show . indent 2 $ vsep [ ""
                           , "export"
                           , pretty $ attrSetFFI n
                           , primType (primSetter k n) [obj o, t] Undefined
                           ]
 
-attributeGetFFI : Nat -> AttributeName -> Kind -> ReturnType -> String
-attributeGetFFI k n o t =
+getAttributeImpl : Nat -> AttributeName -> Kind -> ReturnType -> String
+getAttributeImpl k n o t =
    show . indent 2 $ vsep [ ""
                           , "export"
                           , pretty $ attrGetFFI n
                           , primType (primGetter k n) [obj o] t
                           ]
 
-opFFI : Nat -> OperationName -> Kind -> Args -> ReturnType -> String
-opFFI k n o as t =
+opImpl : Nat -> OperationName -> Kind -> Args -> ReturnType -> String
+opImpl k n o as t =
   let args = obj o :: as
    in show . indent 2 $ vsep [ ""
                              , "export"
@@ -130,11 +130,19 @@ opFFI k n o as t =
                              , primType (primOp k n) args t
                              ]
 
-constructorFFI : Nat -> Kind -> Args -> String
-constructorFFI k o args =
+constructorImpl : Nat -> Kind -> Args -> String
+constructorImpl k o args =
   show . indent 2 $ vsep [ ""
                          , "export"
                          , pretty $ conFFI o (length args)
+                         , primType (primConstructor k) args (FromIdl $ identToType o)
+                         ]
+
+dictConImpl : Nat -> Kind -> Args -> String
+dictConImpl k o args =
+  show . indent 2 $ vsep [ ""
+                         , "export"
+                         , pretty $ dictConFFI (map argName args)
                          , primType (primConstructor k) args (FromIdl $ identToType o)
                          ]
 
@@ -158,16 +166,16 @@ constr k o as =
 function : (Nat,CGFunction) -> Maybe String
 function (k,AttributeSet n o t)     = Just $ attributeSet k n o t
 function (k,AttributeGet n o t)     = Just $ attributeGet k n o t
-function (k,DictConstructor n args) = Nothing
+function (k,DictConstructor o args) = Just $ constr k o args
 function (k,Constructor o args)     = Just $ constr k o args
 function (k,Regular n o args t)     = Just $ op k n o args t
 
 prim : (Nat,CGFunction) -> Maybe String
-prim (k,AttributeSet n o a)     = Just $ attributeSetFFI k n o a
-prim (k,AttributeGet n o t)     = Just $ attributeGetFFI k n o t
-prim (k,DictConstructor n args) = Nothing
-prim (k,Constructor n args)     = Just $ constructorFFI k n args
-prim (k,Regular n o args t)     = Just $ opFFI k n o args t
+prim (k,AttributeSet n o a)     = Just $ setAttributeImpl k n o a
+prim (k,AttributeGet n o t)     = Just $ getAttributeImpl k n o t
+prim (k,DictConstructor n args) = Just $ dictConImpl k n args
+prim (k,Constructor n args)     = Just $ constructorImpl k n args
+prim (k,Regular n o args t)     = Just $ opImpl k n o args t
 
 tagFunctions : List CGFunction -> List (Nat,CGFunction)
 tagFunctions = go 0

@@ -292,8 +292,8 @@ conFFI n k =
    in foreignBrowser #"(\#{vals})=> new \#{kindToString n}(\#{args})"#
 
 export
-conDictFFI : List ArgumentName -> String
-conDictFFI ns =
+dictConFFI : List ArgumentName -> String
+dictConFFI ns =
   let vs     = take (length ns) argNames
       vals   = fastConcat $ intersperse "," vs
       fields = fastConcat $ intersperse "," (zipWith app vs ns)

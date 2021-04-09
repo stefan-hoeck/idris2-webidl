@@ -15,7 +15,7 @@ Parsers and (eventually) Idris code generator for WebIDL documents
     -[x] Attribute setters
     -[x] Regular function implementations
     -[x] Interface constructors
-    -[ ] Dictionary constructors
+    -[x] Dictionary constructors
 
   - [ ] API function implementations
     -[ ] Attribute getters

@@ -107,11 +107,14 @@ data CGArg : Type where
   VarArg      : ArgumentName -> CGType -> CGArg
 
 export
-argIdent : CGArg -> IdrisIdent
-argIdent (Required x _)      = fromString x.value
-argIdent (OptionalArg x _ _) = fromString x.value
-argIdent (VarArg x _)        = fromString x.value
+argName : CGArg -> ArgumentName
+argName (Required x _)      = x
+argName (OptionalArg x _ _) = x
+argName (VarArg x _)        = x
 
+export
+argIdent : CGArg -> IdrisIdent
+argIdent = fromString . value . argName
 
 public export
 Args : Type

@@ -17,6 +17,7 @@ Parsers and (eventually) Idris code generator for WebIDL documents
     - [x] Interface constructors
     - [x] Dictionary constructors
     - [x] Static functions
+    - [ ] Function to callback converters
     - [ ] Iterables
     - [ ] Namespace members
     - [x] Setters and Getters
@@ -34,6 +35,7 @@ Parsers and (eventually) Idris code generator for WebIDL documents
           missing)
     - [ ] Functions with a variadic argument (not sure yet how
           to handle these).
+    - [ ] Function to callback converters
     - [x] Static functions
     - [ ] Iterables
     - [ ] Namespace members

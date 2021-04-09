@@ -4,6 +4,7 @@ import Data.List
 import Data.List.Elem
 import Data.SOP
 import Data.String
+import Text.WebIDL.Codegen.Args
 import Text.WebIDL.Codegen.Enum
 import Text.WebIDL.Codegen.Members
 import Text.WebIDL.Codegen.Rules

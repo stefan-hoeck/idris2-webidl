@@ -1,6 +1,7 @@
 module Text.WebIDL.Codegen.Members
 
 import Data.List
+import Text.WebIDL.Codegen.Args
 import Text.WebIDL.Codegen.Rules
 import Text.WebIDL.Codegen.Types
 import Text.WebIDL.Codegen.Util
@@ -65,19 +66,19 @@ constants = map (show . const) . sortBy (comparing name)
 --------------------------------------------------------------------------------
 
 obj : Kind -> CGArg
-obj k = Required (MkArgName "obj") (MkAType (identToType k) Nothing)
+obj k = Mandatory (MkArgName "obj") (MkAType (identToType k) Nothing)
 
-prettyArgType : CGArg -> Doc ()
-prettyArgType (Required _ t)      = pretty t
-prettyArgType (OptionalArg _ t _) = prettySingleCon Open "UndefOr" t
-prettyArgType (VarArg _ t)        = prettySingleCon Open "VarArg" t
+primArgType : CGArg -> Doc ()
+primArgType (Mandatory _ t)  = pretty t
+primArgType (Optional _ t _) = prettySingleCon Open "UndefOr" t
+primArgType (VarArg _ t)     = prettySingleCon Open "VarArg" t
 
 prettyArg : CGArg -> Doc ()
-prettyArg a = parens $ hsep [pretty (argIdent a), ":", prettyArgType a]
+prettyArg a = parens $ hsep [pretty (argIdent a), ":", primArgType a]
 
 primType : (name : IdrisIdent) -> Args -> ReturnType -> Doc ()
 primType name as t =
-  typeDecl name (primReturnType t) (map prettyArgType as)
+  typeDecl name (primReturnType t) (map primArgType as)
 
 primFun :  (name : IdrisIdent)
         -> (impl : String)

@@ -2,70 +2,16 @@ module Text.WebIDL.Codegen.Rules
 
 import Data.List
 import Data.List.Elem
-import Data.Validated
-import Data.SortedMap
-import Data.SortedSet
-import Text.WebIDL.Types
-import Text.WebIDL.Codegen.Types
 import Text.WebIDL.Codegen.Util
-import Text.PrettyPrint.Prettyprinter
 
-||| An external, un-parameterized Javascript type, represented
-||| by an identifier. Such a type comes with a parent
-||| type (given as an `inheritance` value in the spec)
-||| and a number of mixed in types.
-|||
-||| The actual name of the type is not included, as the set
-||| of types is given in `Env` as as `SortedMap`.
-public export
-record JSType where
-  constructor MkJSType
-  parent : Maybe Identifier
-  mixins : List Identifier
+--------------------------------------------------------------------------------
+--          Environment
+--------------------------------------------------------------------------------
 
-||| The set of external un-parameterized types from the
-||| whole spec.
-public export
-JSTypes : Type
-JSTypes = SortedMap Identifier JSType
-
-jsTypes : List Domain -> JSTypes
-jsTypes ds =
-  let types =  (ds >>= map dictToType . dictionaries)
-            ++ (ds >>= map interfaceToType . interfaces)
-
-      includes = ds >>= includeStatements
-
-      initialMap = SortedMap.fromList types
-
-   in foldl mixin initialMap includes
-
-  where dictToType : Dictionary -> (Identifier,JSType)
-        dictToType (MkDictionary _ n i _) = (n, MkJSType i Nil)
-
-        interfaceToType : Interface -> (Identifier,JSType)
-        interfaceToType (MkInterface _ n i _) = (n, MkJSType i Nil)
-
-        mixin : JSTypes -> Includes -> JSTypes
-        mixin ts (MkIncludes _ n incl) =
-          case lookup n ts of
-               Nothing => ts
-               Just js => let js2 = record {mixins $= (incl ::)} js
-                           in insert n js2 ts
-
-public export
-record Env where
-  constructor MkEnv
-  maxInheritance : Nat
-  kinds          : SortedMap Identifier Kind
-  jsTypes        : JSTypes
-  aliases        : SortedMap Identifier CGType
-
+||| Calculate the environment from a list of domains.
 export
 env : Nat -> List Domain -> Env
-env k ds = let ts = jsTypes ds
-
-               kinds = SortedMap.fromList
+env k ds = let kinds = SortedMap.fromList
                      $  (ds >>= pairs name KEnum . enums)
                      ++ (ds >>= pairs name KMixin . mixins)
                      ++ (ds >>= pairs name KInterface . interfaces)
@@ -74,13 +20,16 @@ env k ds = let ts = jsTypes ds
                      ++ (ds >>= pairs name KCallback . callbacks)
                      ++ (ds >>= pairs name KAlias . typedefs)
 
-            in MkEnv k kinds ts (aliases kinds $ ds >>= typedefs)
-  where pairs :  (a -> Identifier)
+            in MkEnv k kinds jsTypes (aliases kinds $ ds >>= typedefs)
+  where -- pairs list of identifiers with their kinds
+        pairs :  (a -> Identifier)
               -> (Identifier -> Kind)
               -> List a
               -> List (Identifier,Kind)
         pairs name knd = map \v => (name v, knd $ name v)
 
+        -- calculates the mapping from type aliases to the
+        -- types they represent
         aliases :  SortedMap Identifier Kind
                 -> List Typedef
                 -> SortedMap Identifier CGType
@@ -90,6 +39,35 @@ env k ds = let ts = jsTypes ds
 
                 mkPair : Typedef -> (Identifier,CGType)
                 mkPair (MkTypedef _ _ t n) = (n, map kind t)
+
+        dictToType : Dictionary -> (Identifier,JSType)
+        dictToType (MkDictionary _ n i _) = (n, MkJSType i Nil)
+
+        interfaceToType : Interface -> (Identifier,JSType)
+        interfaceToType (MkInterface _ n i _) = (n, MkJSType i Nil)
+
+        mixin :  SortedMap Identifier JSType
+              -> Includes
+              -> SortedMap Identifier JSType
+        mixin ts (MkIncludes _ n incl) =
+          case lookup n ts of
+               Nothing => ts
+               Just js => let js2 = record {mixins $= (incl ::)} js
+                           in insert n js2 ts
+
+        jsTypes : SortedMap Identifier JSType
+        jsTypes = let types =  (ds >>= map dictToType . dictionaries)
+                            ++ (ds >>= map interfaceToType . interfaces)
+
+                      includes = ds >>= includeStatements
+
+                      initialMap = SortedMap.fromList types
+
+                   in foldl mixin initialMap includes
+
+--------------------------------------------------------------------------------
+--          Types
+--------------------------------------------------------------------------------
 
 mutual
   unaliasDist : Env -> CGDist -> (Either CGType CGDist)
@@ -115,7 +93,6 @@ mutual
                                   (Right x) => UD y (n $> x)
   unaliasMember e (UU y)   = UU $ map (unaliasUnion e) y
 
-  export
   unalias : Env -> CGType -> CGType
   unalias e Any = Any
   unalias e t@(D $ MaybeNull d) = either (const t) (D . MaybeNull) $ unaliasDist e d
@@ -123,46 +100,58 @@ mutual
   unalias e (U x) = U $ map (unaliasUnion e) x
   unalias e (Promise x) = Promise $ unalias e x
 
-kind : Env -> Identifier -> Kind
-kind e i = fromMaybe (KOther i) $ lookup i e.kinds
-
+-- calculate the aliased type from a type coming
+-- from the WebIDL parser
 tpe : Env -> IdlType -> AType
 tpe e t = let cgt = map (kind e) t
               al  = unalias e cgt
            in MkAType cgt (if al == cgt then Nothing else Just al)
 
+--------------------------------------------------------------------------------
+--          Arguments
+--------------------------------------------------------------------------------
+
+-- create an optional argument named "value" from
+-- a type coming from the parser
 optArg : Env -> IdlType -> Default -> CGArg
-optArg e t = OptionalArg (MkArgName "value") (tpe e t)
+optArg e t = Optional (MkArgName "value") (tpe e t)
 
+-- create an argument named "value" from
+-- a type coming from the parser
 valArg : Env -> IdlType -> CGArg
-valArg e t = Required (MkArgName "value") (tpe e t)
+valArg e t = Mandatory (MkArgName "value") (tpe e t)
 
+-- convert an argument coming from the parser
+-- to one to be used in the code generator
 arg : Env -> Arg -> CGArg
-arg e (MkArg _ t n) = Required n (tpe e t)
+arg e (MkArg _ t n) = Mandatory n (tpe e t)
 
+-- convert an argument coming from the parser
+-- to a vararg to be used in the code generator
 vararg : Env -> Arg -> CGArg
 vararg e (MkArg _ t n) = VarArg n (tpe e t)
 
+-- convert an argument coming from the parser
+-- to an optional arg to be used in the code generator
 opt : Env -> OptArg -> CGArg
-opt e (MkOptArg _ _ t n d) = OptionalArg n (tpe e t) d
+opt e (MkOptArg _ _ t n d) = Optional n (tpe e t) d
 
+-- convert an argument list coming from the parser
+-- to a list of codegen args
 toArgs : Env -> ArgumentList -> Args
 toArgs e (VarArg as v)    = map (arg e) as ++ [vararg e v]
 toArgs e (NoVarArg as os) = map (arg e) as ++ map (opt e) os
 
+-- convert an IDL type coming from the parser to
+-- a return type in the code generator
 rtpe : Env -> IdlType -> ReturnType
 rtpe _ (D $ NotNull $ P Undefined) = Undefined
 rtpe _ (D $ NotNull $ I $ MkIdent "void") = Undefined
 rtpe e t = FromIdl (tpe e t)
 
-||| The parent types and mixins of a type. This is
-||| used by the code generator to implement the
-||| `JS.Inheritance.JSType` instances.
-public export
-record Supertypes where
-  constructor MkSupertypes
-  parents : List Identifier
-  mixins  : List Identifier
+--------------------------------------------------------------------------------
+--          Inheritance
+--------------------------------------------------------------------------------
 
 objectOnly : Supertypes
 objectOnly = MkSupertypes [MkIdent "Object"] []
@@ -188,104 +177,6 @@ supertypes e = run e.maxInheritance
                Just $ MkJSType (Just parent) mixins =>
                  let MkSupertypes parents mixins2 = run k parent
                   in MkSupertypes (parent :: parents) (mixins ++ mixins2)
-
---------------------------------------------------------------------------------
---          Codegen Errors
---------------------------------------------------------------------------------
-
-public export
-data CodegenErr : Type where
-  CBInterfaceInvalidOps  : Domain -> Identifier -> Nat -> CodegenErr
-  InvalidGetter          : Domain -> Identifier -> CodegenErr
-  InvalidSetter          : Domain -> Identifier -> CodegenErr
-  RegularOpWithoutName   : Domain -> Identifier -> CodegenErr
-
-public export
-Codegen : Type -> Type
-Codegen = Either (List CodegenErr)
-
-public export
-CodegenV : Type -> Type
-CodegenV = Validated (List CodegenErr)
-
---------------------------------------------------------------------------------
---          Functions
---------------------------------------------------------------------------------
-
-||| A function, for which we will generate some code.
-public export
-data CGFunction : Type where
-  ||| An attribute setter.
-  AttributeSet :  (name : AttributeName)
-               -> (obj  : Kind)
-               -> (tpe  : CGArg)
-               -> CGFunction
-
-  ||| An attribute getter.
-  AttributeGet :  (name : AttributeName)
-               -> (obj  : Kind)
-               -> (tpe  : ReturnType)
-               -> CGFunction
-
-  ||| A static attribute setter.
-  StaticAttributeSet :  (name : AttributeName)
-                     -> (obj  : Kind)
-                     -> (tpe  : CGArg)
-                     -> CGFunction
-
-  ||| A static attribute getter.
-  StaticAttributeGet :  (name : AttributeName)
-                     -> (obj  : Kind)
-                     -> (tpe  : ReturnType)
-                     -> CGFunction
-
-  ||| An indexed getter.
-  Getter : (obj : Kind) -> (index : CGArg) -> (tpe : ReturnType) -> CGFunction
-
-  ||| An indexed setter.
-  Setter : (obj : Kind) -> (index : CGArg) -> (value : CGArg) -> CGFunction
-
-  ||| An interface constructor with (possibly) optional arguments.
-  Constructor  :  (obj : Kind) -> (args : Args) -> CGFunction
-
-  ||| An interface constructor with (possibly) optional arguments.
-  DictConstructor : (obj : Kind) -> (args : Args) -> CGFunction
-
-  ||| A regular function with (possibly) optional arguments.
-  Regular      :  OperationName
-               -> (obj : Kind)
-               -> Args
-               -> ReturnType
-               -> CGFunction
-
-  ||| A static function with (possibly) optional arguments.
-  Static       :  OperationName
-               -> (obj : Kind)
-               -> Args
-               -> ReturnType
-               -> CGFunction
-
-||| This is used for sorting lists of functions to
-||| the determine the order in which they appear
-||| in the generated code.
-|||
-||| Attributes will come first, sorted by name,
-||| setters, getters, and unsetter grouped together in
-||| that order.
-|||
-||| All other functions come later and will be sorted by name.
-export
-priority : CGFunction -> (Nat,String,Nat)
-priority (DictConstructor n _)       = (0,value (ident n),0)
-priority (Constructor n _)           = (0,value (ident n),0)
-priority (StaticAttributeSet n _ _)  = (1,show n,1)
-priority (StaticAttributeGet n _ _)  = (1,show n,0)
-priority (Static n o _ _)            = (2,n.value ++ value (ident o),0)
-priority (Getter _ _ _)              = (3,"",0)
-priority (Setter _ _ _)              = (3,"",1)
-priority (AttributeSet n _ _)        = (4,show n,1)
-priority (AttributeGet n _ _)        = (4,show n,0)
-priority (Regular n o _ _)           = (5,n.value ++ value (ident o),0)
 
 fromOp : Env -> Domain -> Identifier -> Op a -> CodegenV (List CGFunction)
 fromOp e dom ident (MkOp _ _ Nothing _) =
@@ -338,9 +229,9 @@ dictCon e o = go Nil Nil
   where go : Args -> Args -> List DictionaryMemberRest -> CGFunction
         go xs ys [] = DictConstructor o (reverse xs ++ reverse ys)
         go xs ys (Required _ t n :: zs) =
-          go (Required (MkArgName n.value) (tpe e t) :: xs) ys zs
+          go (Mandatory (MkArgName n.value) (tpe e t) :: xs) ys zs
         go xs ys (Optional t n d :: zs) =
-          go xs (OptionalArg (MkArgName n.value) (tpe e t) d :: ys) zs
+          go xs (Optional (MkArgName n.value) (tpe e t) d :: ys) zs
 
 dictFuns : Env -> Dictionary -> List CGFunction
 dictFuns e d = dictCon e (kind e d.name) (map snd d.members) ::
@@ -354,7 +245,7 @@ dictFuns e d = dictCon e (kind e d.name) (map snd d.members) ::
 
         fromMember (Optional t n def) =
           let an = MkAttributeName n.value
-              cgt = Optional (tpe e t) (Just def)
+              cgt = UndefOr (tpe e t) (Just def)
               ak  = kind e d.name
            in [ AttributeGet an ak cgt
               , AttributeSet an ak (optArg e t def)
@@ -431,56 +322,6 @@ mixinConstants (MkMixin _ _ ms) = mapMaybe (fromMember . snd) ms
 callbackConstants : CallbackInterface -> List Const
 callbackConstants (MkCallbackInterface _ _ ms) =
   mapMaybe (\(_,v) => extract Const v) ms
-
---------------------------------------------------------------------------------
---          Domain
---------------------------------------------------------------------------------
-
-public export
-record CGDict where
-  constructor MkDict
-  name      : Identifier
-  super     : Supertypes
-  functions : List CGFunction
-
-public export
-record CGIface where
-  constructor MkIface
-  name      : Identifier
-  super     : Supertypes
-  constants : List Const
-  functions : List CGFunction
-
-public export
-record CGMixin where
-  constructor MkMixin
-  name      : Identifier
-  constants : List Const
-  functions : List CGFunction
-
-public export
-record CGCallback where
-  constructor MkCallback
-  name      : Identifier
-  constants : List Const
-  type      : IdlType
-  args      : ArgumentList
-
-public export
-record CGDomain where
-  constructor MkDomain
-  name      : String
-  callbacks : List CGCallback
-  dicts     : List CGDict
-  enums     : List Enum
-  ifaces    : List CGIface
-  mixins    : List CGMixin
-
-export
-domainFunctions : CGDomain -> List CGFunction
-domainFunctions d =  (d.dicts  >>= functions)
-                  ++ (d.ifaces >>= functions)
-                  ++ (d.mixins >>= functions)
 
 export
 domain : Env -> Domain -> CodegenV CGDomain

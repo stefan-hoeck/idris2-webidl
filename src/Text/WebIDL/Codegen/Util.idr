@@ -5,41 +5,8 @@ import Data.Stream
 import public Data.String
 import public Data.Vect
 import public Text.PrettyPrint.Prettyprinter
+import public Text.WebIDL.Codegen.Types
 import public Text.WebIDL.Types
-
-import Generics.Derive
-
-%language ElabReflection
-
---------------------------------------------------------------------------------
---          Kinds
---------------------------------------------------------------------------------
-
-public export
-data Kind : Type where
-  KAlias      : Identifier -> Kind
-  KCallback   : Identifier -> Kind
-  KDictionary : Identifier -> Kind
-  KEnum       : Identifier -> Kind
-  KInterface  : Identifier -> Kind
-  KMixin      : Identifier -> Kind
-  KOther      : Identifier -> Kind
-
-%runElab derive "Kind" [Generic,Meta,Eq,Show]
-
-public export
-ident : Kind -> Identifier
-ident (KAlias x)      = x
-ident (KCallback x)   = x
-ident (KDictionary x) = x
-ident (KEnum x)       = x
-ident (KInterface x)  = x
-ident (KMixin x)      = x
-ident (KOther x)      = x
-
-public export
-kindToString : Kind -> String
-kindToString = value . ident
 
 export
 mapFirstChar : (Char -> Char) -> String -> String

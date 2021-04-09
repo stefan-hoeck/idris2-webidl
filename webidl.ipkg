@@ -14,7 +14,9 @@ executable = generateDomBindings
 modules = Data.Bitraversable
         , Data.Functor.Const
         , Data.Traversable
+
         , Text.WebIDL.Codegen
+        , Text.WebIDL.Codegen.Args
         , Text.WebIDL.Codegen.Definitions
         , Text.WebIDL.Codegen.Enum
         , Text.WebIDL.Codegen.Members

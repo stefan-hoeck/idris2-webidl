@@ -113,10 +113,24 @@ CGMember : Type
 CGMember = UnionMemberTypeF ExtAttributeList Kind
 
 public export
+record AType where
+  constructor MkAType
+  type  : CGType
+  alias : Maybe CGType
+
+export
+isIndex : AType -> Bool
+isIndex t = maybe (isIndex t.type) isIndex t.alias
+
+export
+Pretty AType where
+  prettyPrec p = prettyPrec p . type
+
+public export
 data CGArg : Type where
-  Required    : ArgumentName -> CGType -> CGArg
-  OptionalArg : ArgumentName -> CGType -> Default -> CGArg
-  VarArg      : ArgumentName -> CGType -> CGArg
+  Required    : ArgumentName -> AType -> CGArg
+  OptionalArg : ArgumentName -> AType -> Default -> CGArg
+  VarArg      : ArgumentName -> AType -> CGArg
 
 export
 argName : CGArg -> ArgumentName
@@ -128,6 +142,12 @@ export
 argIdent : CGArg -> IdrisIdent
 argIdent = fromString . value . argName
 
+export
+argType : CGArg -> AType
+argType (Required _ y) = y
+argType (OptionalArg _ y _) = y
+argType (VarArg _ y) = y
+
 public export
 Args : Type
 Args = List CGArg
@@ -135,12 +155,17 @@ Args = List CGArg
 public export
 data ReturnType : Type where
   Undefined : ReturnType
-  Optional  : CGType -> Maybe Default -> ReturnType
-  FromIdl   : CGType -> ReturnType
+  Optional  : AType -> Maybe Default -> ReturnType
+  FromIdl   : AType -> ReturnType
+
+public export
+isUndefined : ReturnType -> Bool
+isUndefined Undefined = True
+isUndefined _         = False
 
 export
 fromKind : Kind -> ReturnType
-fromKind = FromIdl . identToType
+fromKind k = FromIdl $ MkAType (identToType k) Nothing
 
 export
 Pretty ReturnType where

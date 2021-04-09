@@ -72,6 +72,7 @@ env k ds = let ts = jsTypes ds
                      ++ (ds >>= pairs name KDictionary . dictionaries)
                      ++ (ds >>= pairs name KCallback . callbackInterfaces)
                      ++ (ds >>= pairs name KCallback . callbacks)
+                     ++ (ds >>= pairs name KAlias . typedefs)
 
             in MkEnv k kinds ts (aliases kinds $ ds >>= typedefs)
   where pairs :  (a -> Identifier)
@@ -90,38 +91,8 @@ env k ds = let ts = jsTypes ds
                 mkPair : Typedef -> (Identifier,CGType)
                 mkPair (MkTypedef _ _ t n) = (n, map kind t)
 
-kind : Env -> Identifier -> Kind
-kind e i = fromMaybe (KOther i) $ lookup i e.kinds
-
-tpe : Env -> IdlType -> CGType
-tpe e = map (kind e)
-
-optArg : Env -> IdlType -> Default -> CGArg
-optArg e t = OptionalArg (MkArgName "value") (tpe e t)
-
-valArg : Env -> IdlType -> CGArg
-valArg e t = Required (MkArgName "value") (tpe e t)
-
-arg : Env -> Arg -> CGArg
-arg e (MkArg _ t n) = Required n (tpe e t)
-
-vararg : Env -> Arg -> CGArg
-vararg e (MkArg _ t n) = VarArg n (tpe e t)
-
-opt : Env -> OptArg -> CGArg
-opt e (MkOptArg _ _ t n d) = OptionalArg n (tpe e t) d
-
-toArgs : Env -> ArgumentList -> Args
-toArgs e (VarArg as v)    = map (arg e) as ++ [vararg e v]
-toArgs e (NoVarArg as os) = map (arg e) as ++ map (opt e) os
-
-rtpe : Env -> IdlType -> ReturnType
-rtpe _ (D $ NotNull $ P Undefined) = Undefined
-rtpe _ (D $ NotNull $ I $ MkIdent "void") = Undefined
-rtpe e t = FromIdl (tpe e t)
-
 mutual
-  unaliasDist : Env -> CGDist -> Either CGType CGDist
+  unaliasDist : Env -> CGDist -> (Either CGType CGDist)
   unaliasDist e i@(I $ KAlias x) =
     case lookup x e.aliases of
          Nothing              => Right i
@@ -151,6 +122,38 @@ mutual
   unalias e (D $ NotNull d) = either id (D . NotNull) $ unaliasDist e d
   unalias e (U x) = U $ map (unaliasUnion e) x
   unalias e (Promise x) = Promise $ unalias e x
+
+kind : Env -> Identifier -> Kind
+kind e i = fromMaybe (KOther i) $ lookup i e.kinds
+
+tpe : Env -> IdlType -> AType
+tpe e t = let cgt = map (kind e) t
+              al  = unalias e cgt
+           in MkAType cgt (if al == cgt then Nothing else Just al)
+
+optArg : Env -> IdlType -> Default -> CGArg
+optArg e t = OptionalArg (MkArgName "value") (tpe e t)
+
+valArg : Env -> IdlType -> CGArg
+valArg e t = Required (MkArgName "value") (tpe e t)
+
+arg : Env -> Arg -> CGArg
+arg e (MkArg _ t n) = Required n (tpe e t)
+
+vararg : Env -> Arg -> CGArg
+vararg e (MkArg _ t n) = VarArg n (tpe e t)
+
+opt : Env -> OptArg -> CGArg
+opt e (MkOptArg _ _ t n d) = OptionalArg n (tpe e t) d
+
+toArgs : Env -> ArgumentList -> Args
+toArgs e (VarArg as v)    = map (arg e) as ++ [vararg e v]
+toArgs e (NoVarArg as os) = map (arg e) as ++ map (opt e) os
+
+rtpe : Env -> IdlType -> ReturnType
+rtpe _ (D $ NotNull $ P Undefined) = Undefined
+rtpe _ (D $ NotNull $ I $ MkIdent "void") = Undefined
+rtpe e t = FromIdl (tpe e t)
 
 ||| The parent types and mixins of a type. This is
 ||| used by the code generator to implement the
@@ -323,16 +326,18 @@ ifaceFuns : Env -> Domain -> Interface -> CodegenV (List CGFunction)
 ifaceFuns e dom i = concat <$> traverse (fromMember . snd) i.members
   where getter : IdlType -> ArgumentList -> CodegenV (List CGFunction)
         getter t (NoVarArg [a] Nil) =
-          if isIndex a.type
-             then Valid [Getter (kind e i.name) (arg e a) (rtpe e t)]
-             else Invalid [InvalidGetter dom i.name]
+          let ag = arg e a
+           in if isIndex (argType ag)
+                   then Valid [Getter (kind e i.name) ag (rtpe e t)]
+                   else Invalid [InvalidGetter dom i.name]
         getter _ _ = Invalid [InvalidGetter dom i.name]
 
         setter : IdlType -> ArgumentList -> CodegenV (List CGFunction)
         setter t (NoVarArg [a,r] Nil) =
-          if isIndex a.type && isUndefined t
-             then Valid [Setter (kind e i.name) (arg e a) (arg e r)]
-             else Invalid [InvalidSetter dom i.name]
+          let ag = arg e a
+           in if isIndex (argType ag) && isUndefined (rtpe e t)
+                 then Valid [Setter (kind e i.name) ag (arg e r)]
+                 else Invalid [InvalidSetter dom i.name]
         setter _ _ = Invalid [InvalidSetter dom i.name]
 
         fromMember : InterfaceMember -> CodegenV (List CGFunction)

@@ -7,6 +7,10 @@ import public Data.Vect
 import public Text.PrettyPrint.Prettyprinter
 import public Text.WebIDL.Types
 
+import Generics.Derive
+
+%language ElabReflection
+
 --------------------------------------------------------------------------------
 --          Kinds
 --------------------------------------------------------------------------------
@@ -20,6 +24,8 @@ data Kind : Type where
   KInterface  : Identifier -> Kind
   KMixin      : Identifier -> Kind
   KOther      : Identifier -> Kind
+
+%runElab derive "Kind" [Generic,Meta,Eq,Show]
 
 public export
 ident : Kind -> Identifier
@@ -233,20 +239,20 @@ ix Z = ""
 ix k = show k
 
 export
-primSetter : IdrisIdent
-primSetter = Prim "set"
+primSetter : Nat -> IdrisIdent
+primSetter k = Prim . fromString $ "set" ++ ix k
 
 export
-setter : IdrisIdent
-setter = "set"
+setter : Nat -> IdrisIdent
+setter k = fromString $ "set" ++ ix k
 
 export
-primGetter : IdrisIdent
-primGetter = Prim "get"
+primGetter : Nat -> IdrisIdent
+primGetter k = Prim . fromString $ "get" ++ ix k
 
 export
-getter : IdrisIdent
-getter = "get"
+getter : Nat -> IdrisIdent
+getter k = fromString $ "get" ++ ix k
 
 export
 primAttrSetter : Nat -> AttributeName -> IdrisIdent

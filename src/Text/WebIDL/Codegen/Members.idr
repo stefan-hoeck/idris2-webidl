@@ -65,7 +65,7 @@ constants = map (show . const) . sortBy (comparing name)
 --------------------------------------------------------------------------------
 
 obj : Kind -> CGArg
-obj = Required (MkArgName "obj") . identToType
+obj k = Required (MkArgName "obj") (MkAType (identToType k) Nothing)
 
 prettyArgType : CGArg -> Doc ()
 prettyArgType (Required _ t)      = pretty t
@@ -132,8 +132,11 @@ op k n o as t =
 --------------------------------------------------------------------------------
 
 function : (Nat,CGFunction) -> String
-function (k,Getter o i t) = fun o getter primGetter [obj o, i] t
-function (k,Setter o i v) = fun o setter primSetter [obj o, i, v] Undefined
+function (k,Getter o i t) = fun o (getter k) (primGetter k) [obj o, i] t
+
+function (k,Setter o i v) =
+  fun o (setter k) (primSetter k) [obj o, i, v] Undefined
+
 function (k,Regular n o args t) = op k n o args t
 
 function (k,AttributeSet n o t) =
@@ -149,8 +152,8 @@ function (k,Constructor o as) =
   fun o (constr k) (primConstr k) as (fromKind o)
 
 prim : (Nat,CGFunction) -> String
-prim (k,Getter o i t) = primFun primGetter getterFFI [obj o, i] t
-prim (k,Setter o i v) = primFun primSetter setterFFI [obj o, i, v] Undefined
+prim (k,Getter o i t) = primFun (primGetter k) getterFFI [obj o, i] t
+prim (k,Setter o i v) = primFun (primSetter k) setterFFI [obj o, i, v] Undefined
 prim (k,Regular n o args t) = opImpl k n o args t
 
 prim (k,AttributeSet n o t) =

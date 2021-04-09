@@ -150,7 +150,7 @@ prim (k,Getter o i t) = primFun (primGetter k) getterFFI [obj o, i] t
 prim (k,Setter o i v) = primFun (primSetter k) setterFFI [obj o, i, v] Undefined
 prim (k,Regular n o args t) =
   let as = obj o :: args
-   in primFun (primOp k n) (funFFI n $ length as) as t
+   in primFun (primOp k n) (funFFI n $ length args) as t
 
 prim (k,Static n o as t) =
   primFun (primOp k n) (staticFunFFI o n $ length as) as t

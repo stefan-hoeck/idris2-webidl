@@ -30,7 +30,7 @@ Parsers and (eventually) Idris code generator for WebIDL documents
     - [ ] Optional attribute unsetters
     - [ ] Optional attribute getters supporting a default return value
     - [x] Regular functions (no optional arguments or variadic argument)
-    - [ ] Functions with optional arguments
+    - [x] Functions with optional arguments
           (including a second version with the optional arguments
           missing)
     - [ ] Functions with a variadic argument (not sure yet how

@@ -148,6 +148,11 @@ argType (Required _ y) = y
 argType (OptionalArg _ y _) = y
 argType (VarArg _ y) = y
 
+export
+isOptional : CGArg -> Bool
+isOptional (OptionalArg _ _ _) = True
+isOptional _                   = False
+
 public export
 Args : Type
 Args = List CGArg

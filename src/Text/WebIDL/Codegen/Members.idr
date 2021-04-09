@@ -91,15 +91,28 @@ primFun name impl as t =
                          , primType name as t
                          ]
 
+funType : (name : IdrisIdent) -> (t : ReturnType) -> (args : Args) -> Doc ()
+funType name t args = typeDecl name (returnType t) (map prettyArg args)
+
 fun :  (ns : Kind)
     -> (name : IdrisIdent)
     -> (prim : IdrisIdent)
     -> Args
     -> ReturnType
     -> String
-fun ns name prim args t = show . indent 2 $ vsep ["","export",funType,funImpl] 
-  where funType : Doc ()
-        funType = typeDecl name (returnType t) (map prettyArg args)
+fun ns name prim args t =
+  show . indent 2 $ vsep (["","export",funType name t args,funImpl] ++ defFun)
+  where nonOptArgs : Args
+        nonOptArgs = filter (not . isOptional) args
+
+        lenDiff : Nat
+        lenDiff = length args `minus` length nonOptArgs
+
+        name' : IdrisIdent
+        name' = case name of
+                     (II v prf)     => fromString $ v ++ "'"
+                     (Prim v)       => Prim (v ++ "'")
+                     (Underscore v) => fromString $ v ++ "'"
 
         primNS : Doc ()
         primNS = pretty ns <+> "." <+> pretty prim
@@ -112,6 +125,19 @@ fun ns name prim args t = show . indent 2 $ vsep ["","export",funType,funImpl]
                                  , align (sep $ map pretty vs)
                                  ]
                    in lhs <++> "=" <++> rhs
+
+        defImpl : Doc ()
+        defImpl = let vs  = take (length nonOptArgs) (unShadowingArgNames name)
+                      as  = vs ++ replicate lenDiff "undef"
+                      lhs = hsep (pretty name' :: map pretty vs)
+                      rhs = hsep [ pretty name
+                                 , align (sep $ map pretty as)
+                                 ]
+                   in lhs <++> "=" <++> rhs
+        defFun : List $ Doc ()
+        defFun = if lenDiff /= Z
+                    then ["","export",funType name' t nonOptArgs,defImpl]
+                    else []
 
 --------------------------------------------------------------------------------
 --          Attributes

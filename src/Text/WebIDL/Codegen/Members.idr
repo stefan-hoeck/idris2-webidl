@@ -79,13 +79,25 @@ primType : (name : IdrisIdent) -> Args -> ReturnType -> Doc ()
 primType name as t =
   typeDecl name (primReturnType t) (map prettyArgType as)
 
+primFun :  (name : IdrisIdent)
+        -> (impl : String)
+        -> (args : Args)
+        -> (tpe  : ReturnType)
+        -> String
+primFun name impl as t =
+  show . indent 2 $ vsep [ ""
+                         , "export"
+                         , pretty impl
+                         , primType name as t
+                         ]
+
 fun :  (ns : Kind)
     -> (name : IdrisIdent)
     -> (prim : IdrisIdent)
     -> Args
     -> ReturnType
-    -> Doc ()
-fun ns name prim args t = indent 2 $ vsep ["","export",funType,funImpl] 
+    -> String
+fun ns name prim args t = show . indent 2 $ vsep ["","export",funType,funImpl] 
   where funType : Doc ()
         funType = typeDecl name (returnType t) (map prettyArg args)
 
@@ -101,26 +113,6 @@ fun ns name prim args t = indent 2 $ vsep ["","export",funType,funImpl]
                                  ]
                    in lhs <++> "=" <++> rhs
 
---------------------------------------------------------------------------------
---          Attributes
---------------------------------------------------------------------------------
-
-setAttributeImpl : Nat -> AttributeName -> Kind -> CGArg -> String
-setAttributeImpl k n o t =
-   show . indent 2 $ vsep [ ""
-                          , "export"
-                          , pretty $ attrSetFFI n
-                          , primType (primSetter k n) [obj o, t] Undefined
-                          ]
-
-getAttributeImpl : Nat -> AttributeName -> Kind -> ReturnType -> String
-getAttributeImpl k n o t =
-   show . indent 2 $ vsep [ ""
-                          , "export"
-                          , pretty $ attrGetFFI n
-                          , primType (primGetter k n) [obj o] t
-                          ]
-
 opImpl : Nat -> OperationName -> Kind -> Args -> ReturnType -> String
 opImpl k n o as t =
   let args = obj o :: as
@@ -130,57 +122,52 @@ opImpl k n o as t =
                              , primType (primOp k n) args t
                              ]
 
-constructorImpl : Nat -> Kind -> Args -> String
-constructorImpl k o args =
-  show . indent 2 $ vsep [ ""
-                         , "export"
-                         , pretty $ conFFI o (length args)
-                         , primType (primConstructor k) args (FromIdl $ identToType o)
-                         ]
-
-dictConImpl : Nat -> Kind -> Args -> String
-dictConImpl k o args =
-  show . indent 2 $ vsep [ ""
-                         , "export"
-                         , pretty $ dictConFFI (map argName args)
-                         , primType (primConstructor k) args (FromIdl $ identToType o)
-                         ]
-
-attributeSet : Nat -> AttributeName -> Kind -> CGArg -> String
-attributeSet k n o a =
-  show $ fun o (setter k n) (primSetter k n) [obj o, a] Undefined
-
-attributeGet : Nat -> AttributeName -> Kind -> ReturnType -> String
-attributeGet k n o t =
-  show $ fun o (getter k n) (primGetter k n) [obj o] t
-
 op : Nat -> OperationName -> Kind -> Args -> ReturnType -> String
 op k n o as t =
   let args = obj o :: as
-   in show $ fun o (op k n) (primOp k n) args t
+   in fun o (op k n) (primOp k n) args t
 
-constr : Nat -> Kind -> Args -> String
-constr k o as =
-  show $ fun o (constr k) (primConstructor k) as (FromIdl $ identToType o)
+--------------------------------------------------------------------------------
+--          Attributes
+--------------------------------------------------------------------------------
 
-function : (Nat,CGFunction) -> Maybe String
-function (k,AttributeSet n o t)     = Just $ attributeSet k n o t
-function (k,AttributeGet n o t)     = Just $ attributeGet k n o t
-function (k,Getter _ _ _ _)         = Nothing
-function (k,Setter _ _ _ _)         = Nothing
-function (k,DictConstructor o args) = Just $ constr k o args
-function (k,Constructor o args)     = Just $ constr k o args
-function (k,Regular n o args t)     = Just $ op k n o args t
+function : (Nat,CGFunction) -> String
+function (k,Getter o i t) = fun o getter primGetter [obj o, i] t
+function (k,Setter o i v) = fun o setter primSetter [obj o, i, v] Undefined
+function (k,Regular n o args t) = op k n o args t
 
-prim : (Nat,CGFunction) -> Maybe String
-prim (k,AttributeSet n o a)     = Just $ setAttributeImpl k n o a
-prim (k,AttributeGet n o t)     = Just $ getAttributeImpl k n o t
-prim (k,Getter _ _ _ _)         = Nothing
-prim (k,Setter _ _ _ _)         = Nothing
-prim (k,DictConstructor n args) = Just $ dictConImpl k n args
-prim (k,Constructor n args)     = Just $ constructorImpl k n args
-prim (k,Regular n o args t)     = Just $ opImpl k n o args t
+function (k,AttributeSet n o t) =
+  fun o (attrSetter k n) (primAttrSetter k n) [obj o, t] Undefined
 
+function (k,AttributeGet n o t) =
+  fun o (attrGetter k n) (primAttrGetter k n) [obj o] t
+
+function (k,DictConstructor o as) =
+  fun o (constr k) (primConstr k) as (fromKind o)
+
+function (k,Constructor o as) =
+  fun o (constr k) (primConstr k) as (fromKind o)
+
+prim : (Nat,CGFunction) -> String
+prim (k,Getter o i t) = primFun primGetter getterFFI [obj o, i] t
+prim (k,Setter o i v) = primFun primSetter setterFFI [obj o, i, v] Undefined
+prim (k,Regular n o args t) = opImpl k n o args t
+
+prim (k,AttributeSet n o t) =
+  primFun (primAttrSetter k n) (attrSetFFI n) [obj o, t] Undefined
+
+prim (k,AttributeGet n o t) =
+  primFun (primAttrGetter k n) (attrGetFFI n) [obj o] t
+
+prim (k,DictConstructor o as) =
+  primFun (primConstr k) (dictConFFI $ map argName as) as (fromKind o)
+
+prim (k,Constructor o as)  =
+  primFun (primConstr k) (conFFI o $ length as) as (fromKind o)
+
+-- Tags functions with an index if several function of the
+-- same priority (same kind of function and same name) exist,
+-- as these would lead to overloading issues.
 tagFunctions : List CGFunction -> List (Nat,CGFunction)
 tagFunctions = go 0
   where go : Nat -> List CGFunction -> List (Nat,CGFunction)
@@ -193,8 +180,8 @@ tagFunctions = go 0
 
 export
 functions : List CGFunction -> List String
-functions = mapMaybe function . tagFunctions . sortBy (comparing priority)
+functions = map function . tagFunctions . sortBy (comparing priority)
 
 export
 primFunctions : List CGFunction -> List String
-primFunctions = mapMaybe prim . tagFunctions . sortBy (comparing priority)
+primFunctions = map prim . tagFunctions . sortBy (comparing priority)

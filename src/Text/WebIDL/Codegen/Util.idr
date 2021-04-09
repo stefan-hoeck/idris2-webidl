@@ -13,20 +13,22 @@ import public Text.WebIDL.Types
 
 public export
 data Kind : Type where
-  KEnum       : Identifier -> Kind
-  KMixin      : Identifier -> Kind
-  KInterface  : Identifier -> Kind
-  KDictionary : Identifier -> Kind
+  KAlias      : Identifier -> Kind
   KCallback   : Identifier -> Kind
+  KDictionary : Identifier -> Kind
+  KEnum       : Identifier -> Kind
+  KInterface  : Identifier -> Kind
+  KMixin      : Identifier -> Kind
   KOther      : Identifier -> Kind
 
 public export
 ident : Kind -> Identifier
-ident (KEnum x)       = x
-ident (KMixin x)      = x
-ident (KInterface x)  = x
-ident (KDictionary x) = x
+ident (KAlias x)      = x
 ident (KCallback x)   = x
+ident (KDictionary x) = x
+ident (KEnum x)       = x
+ident (KInterface x)  = x
+ident (KMixin x)      = x
 ident (KOther x)      = x
 
 public export
@@ -231,21 +233,37 @@ ix Z = ""
 ix k = show k
 
 export
-primSetter : Nat -> AttributeName -> IdrisIdent
-primSetter k n =
+primSetter : IdrisIdent
+primSetter = Prim "set"
+
+export
+setter : IdrisIdent
+setter = "set"
+
+export
+primGetter : IdrisIdent
+primGetter = Prim "get"
+
+export
+getter : IdrisIdent
+getter = "get"
+
+export
+primAttrSetter : Nat -> AttributeName -> IdrisIdent
+primAttrSetter k n =
   Prim $ fromString ("set" ++ mapFirstChar toUpper n.value ++ ix k)
 
 export
-setter : Nat -> AttributeName -> IdrisIdent
-setter k n = fromString $ "set" ++ mapFirstChar toUpper n.value ++ ix k
+attrSetter : Nat -> AttributeName -> IdrisIdent
+attrSetter k n = fromString $ "set" ++ mapFirstChar toUpper n.value ++ ix k
 
 export
-primGetter : Nat -> AttributeName -> IdrisIdent
-primGetter k n = Prim $ fromString (n.value ++ ix k)
+primAttrGetter : Nat -> AttributeName -> IdrisIdent
+primAttrGetter k n = Prim $ fromString (n.value ++ ix k)
 
 export
-getter : Nat -> AttributeName -> IdrisIdent
-getter k n = fromString $ n.value ++ ix k
+attrGetter : Nat -> AttributeName -> IdrisIdent
+attrGetter k n = fromString $ n.value ++ ix k
 
 export
 primOp : Nat -> OperationName -> IdrisIdent
@@ -256,8 +274,8 @@ op : Nat -> OperationName -> IdrisIdent
 op k n = fromString (n.value ++ ix k)
 
 export
-primConstructor : Nat -> IdrisIdent
-primConstructor k = Prim $ fromString ("new" ++ ix k)
+primConstr : Nat -> IdrisIdent
+primConstr k = Prim $ fromString ("new" ++ ix k)
 
 export
 constr : Nat -> IdrisIdent
@@ -309,4 +327,3 @@ getterFFI = foreignBrowser "(o,x)=>o[x]"
 export
 setterFFI : String
 setterFFI = foreignBrowser "(o,x,v)=>o[x] = v"
-

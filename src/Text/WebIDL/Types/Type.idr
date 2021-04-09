@@ -224,6 +224,25 @@ export
 undefined : IdlTypeF a b
 undefined = D $ NotNull $ P Undefined
 
+export
+isUndefined : IdlTypeF a b -> Bool
+isUndefined (D $ NotNull $ P Undefined) = True
+isUndefined _                           = False
+
+export
+domString : IdlTypeF a b
+domString = D $ NotNull $ S DOMString
+
+export
+ulong : IdlTypeF a b
+ulong = D $ NotNull $ P $ Unsigned Long
+
+export
+isIndex : IdlTypeF a b -> Bool
+isIndex (D $ NotNull $ S DOMString)       = True
+isIndex (D $ NotNull $ P $ Unsigned Long) = True
+isIndex _                                 = False
+
 --------------------------------------------------------------------------------
 --          Implementations
 --------------------------------------------------------------------------------

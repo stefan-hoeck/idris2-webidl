@@ -59,14 +59,36 @@ record Env where
   maxInheritance : Nat
   kinds          : SortedMap Identifier Kind
   jsTypes        : JSTypes
+  aliases        : SortedMap Identifier CGType
 
 export
 env : Nat -> List Domain -> Env
 env k ds = let ts = jsTypes ds
-               kinds = SortedMap.fromList
-                     $  (ds >>= map (\v => (v.name, KEnum v.name)) . enums)
-            in MkEnv k kinds ts
 
+               kinds = SortedMap.fromList
+                     $  (ds >>= pairs name KEnum . enums)
+                     ++ (ds >>= pairs name KMixin . mixins)
+                     ++ (ds >>= pairs name KInterface . interfaces)
+                     ++ (ds >>= pairs name KDictionary . dictionaries)
+                     ++ (ds >>= pairs name KCallback . callbackInterfaces)
+                     ++ (ds >>= pairs name KCallback . callbacks)
+
+            in MkEnv k kinds ts (aliases kinds $ ds >>= typedefs)
+  where pairs :  (a -> Identifier)
+              -> (Identifier -> Kind)
+              -> List a
+              -> List (Identifier,Kind)
+        pairs name knd = map \v => (name v, knd $ name v)
+
+        aliases :  SortedMap Identifier Kind
+                -> List Typedef
+                -> SortedMap Identifier CGType
+        aliases ks = SortedMap.fromList . map mkPair
+          where kind : Identifier -> Kind
+                kind i = fromMaybe (KOther i) $ lookup i ks
+
+                mkPair : Typedef -> (Identifier,CGType)
+                mkPair (MkTypedef _ _ t n) = (n, map kind t)
 
 kind : Env -> Identifier -> Kind
 kind e i = fromMaybe (KOther i) $ lookup i e.kinds
@@ -97,6 +119,38 @@ rtpe : Env -> IdlType -> ReturnType
 rtpe _ (D $ NotNull $ P Undefined) = Undefined
 rtpe _ (D $ NotNull $ I $ MkIdent "void") = Undefined
 rtpe e t = FromIdl (tpe e t)
+
+mutual
+  unaliasDist : Env -> CGDist -> Either CGType CGDist
+  unaliasDist e i@(I $ KAlias x) =
+    case lookup x e.aliases of
+         Nothing              => Right i
+         Just (D $ NotNull v) => Right v
+         Just x               => Left x
+
+  unaliasDist e (Sequence x y) = Right (Sequence x $ unalias e y)
+  unaliasDist e (FrozenArray x y) = Right (FrozenArray x $ unalias e y)
+  unaliasDist e (ObservableArray x y) = Right (ObservableArray x $ unalias e y)
+  unaliasDist e (Record x y z) = Right (Record x y $ unalias e z)
+  unaliasDist _ d = Right d
+
+  unaliasUnion : Env -> CGUnion -> CGUnion
+  unaliasUnion e (UT f s r) =
+    UT (unaliasMember e f) (unaliasMember e s) (map (unaliasMember e) r)
+
+  unaliasMember : Env -> CGMember -> CGMember
+  unaliasMember e (UD y n) = case unaliasDist e (nullVal n) of
+                                  (Left _)  => UD y n -- no other way to break out
+                                  (Right x) => UD y (n $> x)
+  unaliasMember e (UU y)   = UU $ map (unaliasUnion e) y
+
+  export
+  unalias : Env -> CGType -> CGType
+  unalias e Any = Any
+  unalias e t@(D $ MaybeNull d) = either (const t) (D . MaybeNull) $ unaliasDist e d
+  unalias e (D $ NotNull d) = either id (D . NotNull) $ unaliasDist e d
+  unalias e (U x) = U $ map (unaliasUnion e) x
+  unalias e (Promise x) = Promise $ unalias e x
 
 ||| The parent types and mixins of a type. This is
 ||| used by the code generator to implement the
@@ -171,18 +225,10 @@ data CGFunction : Type where
                -> CGFunction
 
   ||| An indexed getter.
-  Getter       :  (name  : Maybe OperationName)
-               -> (obj   : Kind)
-               -> (index : CGArg)
-               -> (tpe   : ReturnType)
-               -> CGFunction
+  Getter : (obj : Kind) -> (index : CGArg) -> (tpe : ReturnType) -> CGFunction
 
   ||| An indexed setter.
-  Setter       :  (name  : Maybe OperationName)
-               -> (obj   : Kind)
-               -> (index : CGArg)
-               -> (value : CGArg)
-               -> CGFunction
+  Setter : (obj : Kind) -> (index : CGArg) -> (value : CGArg) -> CGFunction
 
   ||| An interface constructor with (possibly) optional arguments.
   Constructor  :  (obj : Kind) -> (args : Args) -> CGFunction
@@ -210,21 +256,17 @@ export
 priority : CGFunction -> (Nat,String,Nat)
 priority (DictConstructor n _) = (0,value (ident n),0)
 priority (Constructor n _)     = (0,value (ident n),0)
-priority (Getter n _ _ _)      = (1,show n,0)
-priority (Setter n _ _ _)      = (1,show n,1)
+priority (Getter _ _ _)        = (1,"",0)
+priority (Setter _ _ _)        = (1,"",1)
 priority (AttributeSet n _ _)  = (2,show n,1)
 priority (AttributeGet n _ _)  = (2,show n,0)
 priority (Regular n o _ _)     = (3,n.value ++ value (ident o),0)
 
-fromRegular :  Env
-            -> Domain
-            -> Identifier
-            -> RegularOperation
-            -> CodegenV (List CGFunction)
-fromRegular e dom ident (MkOp () _ Nothing _) =
+fromOp : Env -> Domain -> Identifier -> Op a -> CodegenV (List CGFunction)
+fromOp e dom ident (MkOp _ _ Nothing _) =
   Invalid [RegularOpWithoutName dom ident]
 
-fromRegular e dom ident (MkOp () t (Just op) args) = 
+fromOp e dom ident (MkOp _ t (Just op) args) = 
   Valid [Regular op (kind e ident) (toArgs e args) (rtpe e t)]
 
 fromConstructor : Env -> Identifier -> ArgumentList -> CodegenV (List CGFunction)
@@ -272,43 +314,40 @@ mixinFuns : Env -> Domain -> Mixin -> CodegenV (List CGFunction)
 mixinFuns e dom m = concat <$> traverse (fromMember . snd) m.members
   where fromMember : MixinMember -> CodegenV (List CGFunction)
         fromMember (MConst _)   = Valid Nil
-        fromMember (MOp op)     = fromRegular e dom m.name op
+        fromMember (MOp op)     = fromOp e dom m.name op
         fromMember (MStr _)     = Valid Nil
         fromMember (MAttrRO ro) = fromAttrRO e m.name ro
         fromMember (MAttr at)   = fromAttr e m.name at
 
-longIndex : IdlTypeF a b
-longIndex = D $ NotNull $ P $ Unsigned Long
-
-stringIndex : IdlTypeF a b
-stringIndex = D $ NotNull $ S DOMString
-
-isIndex : Eq a => Eq b => IdlTypeF a b -> Bool
-isIndex t = t == longIndex || t == stringIndex
-
 ifaceFuns : Env -> Domain -> Interface -> CodegenV (List CGFunction)
 ifaceFuns e dom i = concat <$> traverse (fromMember . snd) i.members
-  where getter :  Maybe OperationName
-               -> IdlType
-               -> ArgumentList
-               -> CodegenV (List CGFunction)
-        getter op t (NoVarArg [a] Nil) =
+  where getter : IdlType -> ArgumentList -> CodegenV (List CGFunction)
+        getter t (NoVarArg [a] Nil) =
           if isIndex a.type
-             then Valid [Getter op (kind e i.name) (arg e a) (rtpe e t)]
+             then Valid [Getter (kind e i.name) (arg e a) (rtpe e t)]
              else Invalid [InvalidGetter dom i.name]
-        getter _ _ _ = Invalid [InvalidGetter dom i.name]
+        getter _ _ = Invalid [InvalidGetter dom i.name]
+
+        setter : IdlType -> ArgumentList -> CodegenV (List CGFunction)
+        setter t (NoVarArg [a,r] Nil) =
+          if isIndex a.type && isUndefined t
+             then Valid [Setter (kind e i.name) (arg e a) (arg e r)]
+             else Invalid [InvalidSetter dom i.name]
+        setter _ _ = Invalid [InvalidSetter dom i.name]
 
         fromMember : InterfaceMember -> CodegenV (List CGFunction)
         fromMember (Z $ MkConstructor args) = fromConstructor e i.name args
         fromMember (S $ Z $ IConst x)       = Valid Nil
 
+        -- getters and setters without a name are treated as indexed
+        -- versions (special syntax in the FFI), all others are treated
+        -- as regular operations
         fromMember (S $ Z $ IOp x)          =
           case x of
-               MkOp Nothing t n args => fromRegular e dom i.name
-                                     $  MkOp () t n args
-               MkOp (Just Getter) _ _ _   => ?foo_1 --Valid Nil
-               MkOp (Just Setter) _ _ _   => ?foo_2 --Valid Nil
-               MkOp (Just Deleter) _ _ _   => Valid Nil
+               MkOp (Just Getter)  t Nothing as => getter t as
+               MkOp (Just Setter)  t Nothing as => setter t as
+               MkOp (Just Deleter) _ _       _  => Valid Nil
+               MkOp _              t n       as => fromOp e dom i.name x
 
         fromMember (S $ Z $ IStr x)        = Valid Nil
         fromMember (S $ Z $ IStatic x)     = Valid Nil

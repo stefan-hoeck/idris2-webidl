@@ -101,6 +101,18 @@ CGType : Type
 CGType = IdlTypeF ExtAttributeList Kind
 
 public export
+CGDist : Type
+CGDist = DistinguishableF ExtAttributeList Kind
+
+public export
+CGUnion : Type
+CGUnion = UnionTypeF ExtAttributeList Kind
+
+public export
+CGMember : Type
+CGMember = UnionMemberTypeF ExtAttributeList Kind
+
+public export
 data CGArg : Type where
   Required    : ArgumentName -> CGType -> CGArg
   OptionalArg : ArgumentName -> CGType -> Default -> CGArg
@@ -125,6 +137,10 @@ data ReturnType : Type where
   Undefined : ReturnType
   Optional  : CGType -> Maybe Default -> ReturnType
   FromIdl   : CGType -> ReturnType
+
+export
+fromKind : Kind -> ReturnType
+fromKind = FromIdl . identToType
 
 export
 Pretty ReturnType where

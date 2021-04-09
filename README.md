@@ -17,12 +17,12 @@ Parsers and (eventually) Idris code generator for WebIDL documents
     - [x] Interface constructors
     - [x] Dictionary constructors
     - [x] Static functions
+    - [ ] Iterables
     - [ ] Namespace members
     - [x] Setters and Getters
-    - [ ] Stringifiers
-    - [ ] Iterables
-    - [ ] Setlikes
-    - [ ] Maplikes
+    - [x] Stringifiers
+    - [ ] Setlikes (no instance in spec)
+    - [ ] Maplikes (no instance in spec)
   - [ ] API function implementations
     - [x] Attribute getters
     - [x] Attribute setters
@@ -35,12 +35,12 @@ Parsers and (eventually) Idris code generator for WebIDL documents
     - [ ] Functions with a variadic argument (not sure yet how
           to handle these).
     - [x] Static functions
+    - [ ] Iterables
     - [ ] Namespace members
     - [x] Setters and Getters
-    - [ ] Stringifiers
-    - [ ] Iterables
-    - [ ] Setlikes
-    - [ ] Maplikes
+    - [x] Stringifiers
+    - [ ] Setlikes (no instance in spec)
+    - [ ] Maplikes (no instance in spec)
   - [ ] Marshalling
     - [ ] from enum types to `String` and back
     - [ ] from `Maybe` to `Nullable` and back

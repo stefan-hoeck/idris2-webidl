@@ -325,11 +325,6 @@ record Env where
   jsTypes        : SortedMap Identifier JSType
   aliases        : SortedMap Identifier CGType
 
-||| Lookup the kind of an identifier from the environment
-export
-kind : Env -> Identifier -> Kind
-kind e i = fromMaybe (KOther i) $ lookup i e.kinds
-
 --------------------------------------------------------------------------------
 --          Codegen Errors
 --------------------------------------------------------------------------------

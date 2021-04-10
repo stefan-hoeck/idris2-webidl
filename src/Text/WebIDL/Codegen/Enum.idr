@@ -39,6 +39,14 @@ enum (MkEnum _ name vs) =
                        , "{auto 0 _ : IsJust (" <+> pn  <+> ".read s)}"
                        ]
                    , "fromString s = fromJust $ read s"
+                   , ""
+                   , "export"
+                   , "ToFFI" <++> pn <++> "String where"
+                   , indent 2 "toFFI = show"
+                   , ""
+                   , "export"
+                   , "FromFFI" <++> pn <++> "String where"
+                   , indent 2 "fromFFI = read"
                    ]
 
    in vsep ["", "namespace" <++> pn, indent 2 code]

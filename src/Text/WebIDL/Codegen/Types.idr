@@ -289,6 +289,12 @@ record CGCallback where
   args      : ArgumentList
 
 public export
+record CGTypedef where
+  constructor MkTypedef
+  name      : Identifier
+  type      : CGType
+
+public export
 record CGDomain where
   constructor MkDomain
   name      : String
@@ -297,6 +303,7 @@ record CGDomain where
   enums     : List Enum
   ifaces    : List CGIface
   mixins    : List CGMixin
+  typedefs  : List CGTypedef
 
 export
 domainFunctions : CGDomain -> List CGFunction

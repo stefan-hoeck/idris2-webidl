@@ -88,7 +88,7 @@ loadDef f = let mn = moduleName
                    d <- toProg (pure $ parseIdl partsAndDefs s)
                    pure (mn,d)
 
-typesGen : Config -> List Domain -> Prog ()
+typesGen : Config -> List CGDomain -> Prog ()
 typesGen c ds =
   let typesFile = c.outDir ++ "/Web/Internal/Types.idr"
    in writeDoc typesFile (typedefs ds)
@@ -116,7 +116,7 @@ run args = do config <- toProg (pure $ applyArgs args)
               doms   <- fromCodegen (traverse (domain e) ds)
 
               traverse_ (codegen config) doms
-              typesGen config ds
+              typesGen config doms
               pure ()
 
 main : IO ()

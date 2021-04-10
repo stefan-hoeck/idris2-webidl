@@ -118,7 +118,7 @@ primMixins = mixins' (primFunctions . functions)
 --------------------------------------------------------------------------------
 
 export
-typedefs : List Domain -> String
+typedefs : List CGDomain -> String
 typedefs ds =
   let ts   = concatMap typedefs ds
       docs =  map toTypedef (sortBy (comparing name) ts)
@@ -152,11 +152,11 @@ typedefs ds =
       \#{sect}
       """#
       
-  where toTypedef : Typedef -> Doc ()
+  where toTypedef : CGTypedef -> Doc ()
         toTypedef t = vsep [ ""
                            , "public export"
-                           , "0" <++> pretty t.name.value <++> ": Type"
-                           , pretty t.name.value <++> "=" <++> pretty t.type
+                           , pretty t.name.value <++> ": Type"
+                           , pretty t.name.value <++> "=" <++> idl Open FFI t.type
                            ]
 
 --------------------------------------------------------------------------------

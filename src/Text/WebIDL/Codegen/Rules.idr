@@ -348,11 +348,15 @@ parameters (e : Env, dom : Domain)
                        (pure dom.enums)
                        (traverse iface dom.interfaces)
                        (traverse mixin dom.mixins)
+                       (traverse typedef dom.typedefs)
            |]
 
     where dict : Dictionary -> CodegenV CGDict
           dict v@(MkDictionary _ n i _) =
             Valid $ MkDict n  (supertypes n) (dictFuns v)
+
+          typedef : Typedef -> CodegenV CGTypedef
+          typedef (MkTypedef _ _ t n) = Valid $ MkTypedef n (map kind t)
 
           iface : Interface -> CodegenV CGIface
           iface v@(MkInterface _ n i _) =

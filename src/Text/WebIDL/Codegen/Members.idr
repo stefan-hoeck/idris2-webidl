@@ -57,7 +57,7 @@ constants = map (show . const) . sortBy (comparing name)
         const (MkConst t n v) =
           indent 2 $ vsep [ ""
                           , "public export"
-                          , pretty n.value <++> ":" <++> pretty t
+                          , pretty n.value <++> ":" <++> constTpe Open t
                           , pretty n.value <++> "=" <++> pretty v
                           ]
 
@@ -67,82 +67,6 @@ constants = map (show . const) . sortBy (comparing name)
 
 obj : Kind -> CGArg
 obj k = Mandatory (MkArgName "obj") (MkAType (identToType k) Nothing)
-
-primArgType : CGArg -> Doc ()
-primArgType (Mandatory _ t)  = pretty t
-primArgType (Optional _ t _) = prettySingleCon Open "UndefOr" t
-primArgType (VarArg _ t)     = prettySingleCon Open "VarArg" t
-
-prettyArg : CGArg -> Doc ()
-prettyArg a = parens $ hsep [pretty (argIdent a), ":", primArgType a]
-
-primType : (name : IdrisIdent) -> Args -> ReturnType -> Doc ()
-primType name as t =
-  typeDecl name (primReturnType t) (map primArgType as)
-
-primFun :  (name : IdrisIdent)
-        -> (impl : String)
-        -> (args : Args)
-        -> (tpe  : ReturnType)
-        -> String
-primFun name impl as t =
-  show . indent 2 $ vsep [ ""
-                         , "export"
-                         , pretty impl
-                         , primType name as t
-                         ]
-
-funType : (name : IdrisIdent) -> (t : ReturnType) -> (args : Args) -> Doc ()
-funType name t args = typeDecl name (returnType t) (map prettyArg args)
-
-fun :  (ns : Kind)
-    -> (name : IdrisIdent)
-    -> (prim : IdrisIdent)
-    -> Args
-    -> ReturnType
-    -> String
-fun ns name prim args t =
-  show . indent 2 $ vsep (["","export",funType name t args,funImpl] ++ defFun)
-  where nonOptArgs : Args
-        nonOptArgs = filter (not . isOptional) args
-
-        lenDiff : Nat
-        lenDiff = length args `minus` length nonOptArgs
-
-        name' : IdrisIdent
-        name' = case name of
-                     (II v prf)     => fromString $ v ++ "'"
-                     (Prim v)       => Prim (v ++ "'")
-                     (Underscore v) => fromString $ v ++ "'"
-
-        primNS : Doc ()
-        primNS = pretty ns <+> "." <+> pretty prim
-
-        funImpl : Doc ()
-        funImpl = let vs  = take (length args) (unShadowingArgNames name)
-                      lhs = hsep (pretty name :: map pretty vs)
-                      rhs = hsep [ "primJS $"
-                                 , primNS
-                                 , align (sep $ map pretty vs)
-                                 ]
-                   in lhs <++> "=" <++> rhs
-
-        defImpl : Doc ()
-        defImpl = let vs  = take (length nonOptArgs) (unShadowingArgNames name)
-                      as  = vs ++ replicate lenDiff "undef"
-                      lhs = hsep (pretty name' :: map pretty vs)
-                      rhs = hsep [ pretty name
-                                 , align (sep $ map pretty as)
-                                 ]
-                   in lhs <++> "=" <++> rhs
-        defFun : List $ Doc ()
-        defFun = if lenDiff /= Z
-                    then ["","export",funType name' t nonOptArgs,defImpl]
-                    else []
-
---------------------------------------------------------------------------------
---          Attributes
---------------------------------------------------------------------------------
 
 function : (Nat,CGFunction) -> String
 function (k,Getter o i t) = fun o (getter k) (primGetter k) [obj o, i] t
@@ -173,32 +97,32 @@ function (k,Constructor o as) =
   fun o (constr k) (primConstr k) as (fromKind o)
 
 prim : (Nat,CGFunction) -> String
-prim (k,Getter o i t) = primFun (primGetter k) getterFFI [obj o, i] t
-prim (k,Setter o i v) = primFun (primSetter k) setterFFI [obj o, i, v] Undefined
+prim (k,Getter o i t) = funFFI (primGetter k) getterFFI [obj o, i] t
+prim (k,Setter o i v) = funFFI (primSetter k) setterFFI [obj o, i, v] Undefined
 prim (k,Regular n o args t) =
   let as = obj o :: args
-   in primFun (primOp k n) (funFFI n $ length args) as t
+   in funFFI (primOp k n) (funFFI n $ length args) as t
 
 prim (k,Static n o as t) =
-  primFun (primOp k n) (staticFunFFI o n $ length as) as t
+  funFFI (primOp k n) (staticFunFFI o n $ length as) as t
 
 prim (k,AttributeSet n o t) =
-  primFun (primAttrSetter k n) (attrSetFFI n) [obj o, t] Undefined
+  funFFI (primAttrSetter k n) (attrSetFFI n) [obj o, t] Undefined
 
 prim (k,AttributeGet n o t) =
-  primFun (primAttrGetter k n) (attrGetFFI n) [obj o] t
+  funFFI (primAttrGetter k n) (attrGetFFI n) [obj o] t
 
 prim (k,StaticAttributeSet n o t) =
-  primFun (primAttrSetter k n) (staticAttrSetFFI o n) [t] Undefined
+  funFFI (primAttrSetter k n) (staticAttrSetFFI o n) [t] Undefined
 
 prim (k,StaticAttributeGet n o t) =
-  primFun (primAttrGetter k n) (staticAttrGetFFI o n) [] t
+  funFFI (primAttrGetter k n) (staticAttrGetFFI o n) [] t
 
 prim (k,DictConstructor o as) =
-  primFun (primConstr k) (dictConFFI $ map argName as) as (fromKind o)
+  funFFI (primConstr k) (dictConFFI $ map argName as) as (fromKind o)
 
 prim (k,Constructor o as)  =
-  primFun (primConstr k) (conFFI o $ length as) as (fromKind o)
+  funFFI (primConstr k) (conFFI o $ length as) as (fromKind o)
 
 -- Tags functions with an index if several function of the
 -- same priority (same kind of function and same name) exist,

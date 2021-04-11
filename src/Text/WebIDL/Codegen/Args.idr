@@ -123,8 +123,7 @@ mutual
              (prettyCon p "NS I" [brkt])
 
   um : Prec -> CGMember -> PrettyType
-  um p (UD _ x) = nullable dist p x
-  um p (UU x)   = nullable (\p => same . ffi . un p) p x
+  um p (MkUnionMember _ t) = dist p t
 
   export
   idl : Prec -> CGType -> PrettyType

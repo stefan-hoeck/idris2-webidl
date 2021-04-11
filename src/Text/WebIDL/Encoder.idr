@@ -193,8 +193,7 @@ mutual
 
   export
   unionMember : Encoder UnionMemberType
-  unionMember (UD a x) = attributed (nullable distinguishable) (a,x)
-  unionMember (UU x)   = nullable union x
+  unionMember (MkUnionMember a x) = attributed distinguishable (a,x)
 
   export
   union : Encoder UnionType

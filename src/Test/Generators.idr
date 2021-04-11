@@ -257,10 +257,9 @@ mutual
              in [| UT um um (linList 2 um) |]
 
   unionMember : Nat -> Gen UnionMemberType
-  unionMember 0     = [| UD attributes (distinguishable 0) |]
-  unionMember (S k) = choice [ [| UD attributes (distinguishable k) |]
-                             , map UU (nullable $ union k)
-                             ]
+  unionMember 0     = [| MkUnionMember attributes (dist 0) |]
+  unionMember (S k) = [| MkUnionMember attributes (dist k) |]
+
 idlType' : Gen IdlType
 idlType' = idlType 4
 

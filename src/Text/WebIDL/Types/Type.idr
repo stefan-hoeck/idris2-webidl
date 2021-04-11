@@ -114,6 +114,19 @@ nullVal : Nullable a -> a
 nullVal (MaybeNull x) = x
 nullVal (NotNull x)   = x
 
+export
+nullable : Nullable a -> Nullable a
+nullable = MaybeNull . nullVal
+
+export
+notNullable : Nullable a -> Nullable a
+notNullable = NotNull . nullVal
+
+export
+isNullable : Nullable a -> Bool
+isNullable (MaybeNull _) = True
+isNullable (NotNull _)   = False
+
 mutual
   ||| Type ::
   |||     SingleType

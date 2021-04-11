@@ -338,6 +338,10 @@ data CodegenErr : Type where
   InvalidGetter          : Domain -> Identifier -> CodegenErr
   InvalidSetter          : Domain -> Identifier -> CodegenErr
   RegularOpWithoutName   : Domain -> Identifier -> CodegenErr
+  AnyInUnion             : Domain -> CodegenErr
+  PromiseInUnion         : Domain -> CodegenErr
+  NullableAny            : Domain -> CodegenErr
+  NullablePromise        : Domain -> CodegenErr
 
 public export
 Codegen : Type -> Type

@@ -229,10 +229,20 @@ mutual
           <|> map D distinguishableType
           <|> (nullable flatUnion >>= map U . fromFlatUnion)
 
-    where fromFlatUnion :  Nullable (List1 $ Attributed $ Nullable Distinguishable)
+    where um : Attributed $ Nullable Distinguishable -> UnionMemberType
+          um (a, MaybeNull x) = MkUnionMember a x
+          um (a, NotNull x)   = MkUnionMember a x
+
+          fromFlatUnion :  Nullable (List1 $ Attributed $ Nullable Distinguishable)
                         -> IdlGrammar' (Nullable UnionType)
-          fromFlatUnion (MaybeNull $ a ::: b :: t) = ?foo_3
-          fromFlatUnion (NotNull   $ a ::: b :: t) = ?foo_2
+          fromFlatUnion (MaybeNull $ a ::: b :: t) =
+            pure . MaybeNull $ UT (um a) (um b) (map um t)
+
+          fromFlatUnion (NotNull   $ a ::: b :: t) =
+            if any (isNullable . snd) (a::b::t)
+               then pure . MaybeNull $ UT (um a) (um b) (map um t)
+               else pure . NotNull   $ UT (um a) (um b) (map um t)
+
           fromFlatUnion _                          = fail "no enough union members"
 
   -- TypeWithExtendedAttributes ::
@@ -290,24 +300,6 @@ mutual
   --     UnionType Null
   flatMember : IdlGrammar (List1 $ Attributed $ Nullable Distinguishable)
   flatMember = map singleton (attributed distinguishableType) <|> flatUnion
-
-  -- UnionType ::
-  --     ( UnionMemberType or UnionMemberType UnionMemberTypes )
-  --
-  -- UnionMemberTypes ::
-  --     or UnionMemberType UnionMemberTypes
-  --     ε
-  union : IdlGrammar UnionType
-  union = inParens $ do (a :: b :: t) <- sepBy (key "or") unionMember
-                          | _ => fail "Non enough Union members"
-                        pure (UT a b t)
-
-  -- UnionMemberType ::
-  --     ExtendedAttributeList DistinguishableType
-  --     UnionType Null
-  unionMember : IdlGrammar UnionMemberType
-  unionMember =   [| UD attributes distinguishableType |]
-              <|> map UU (nullable union)
 
 optionalType : IdlGrammar' OptionalType
 optionalType = optional (symbol ',' *> attributed idlType)

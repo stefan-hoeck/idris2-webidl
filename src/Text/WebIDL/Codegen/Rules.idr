@@ -83,68 +83,87 @@ parameters (e : Env, dom : Domain)
     -- we return the corresponding type wrapped in a `Left`.
     -- Otherwise we keep the distinguishable type
     -- (but keep unaliasing inner types, if any)
-    uaD : CGDist -> (Either CGType CGDist)
+    uaD : CGDist -> Codegen CGType
     uaD i@(I $ KAlias x) =
       case lookup x e.aliases of
-           Nothing              => Right i
-           Just (D $ NotNull v) => uaD v
-           Just x               => Left $ unalias x
+           Nothing              => Right (D $ NotNull i)
+           Just x               => unalias x
+    uaD (Sequence x y)        = D . NotNull . Sequence x <$> unalias y
+    uaD (FrozenArray x y)     = D . NotNull . FrozenArray x <$> unalias y
+    uaD (ObservableArray x y) = D . NotNull . ObservableArray x <$> unalias y
+    uaD (Record x y z)        = D . NotNull . Record x y <$> unalias z
+    uaD d                     = Right (D $ NotNull d)
   
-    uaD (Sequence x y)        = Right (Sequence x $ unalias y)
-    uaD (FrozenArray x y)     = Right (FrozenArray x $ unalias y)
-    uaD (ObservableArray x y) = Right (ObservableArray x $ unalias y)
-    uaD (Record x y z)        = Right (Record x y $ unalias z)
-    uaD d                     = Right d
-  
-    -- boring: We just unalias the members
-    uaU : CGUnion -> CGUnion
-    uaU (UT f s r) = UT (uaM f) (uaM s) (map uaM r)
+    uaU : CGUnion -> Codegen (Nullable CGUnion)
+    uaU (UT f s r) = do (hf ::: tf) <- uaM f
+                        (hs ::: ts) <- map join (traverse uaM (s ::: r))
+
+                        let rest : List1 (Nullable CGDist)
+                            rest =
+                              case tf of
+                               []        => hs ::: ts
+                               (x :: xs) => x  ::: (xs ++ (hs :: ts))
+
+                            ut : CGUnion
+                            ut = U (nullVal hf)
+                                   (nullVal $ head rest)
+                                   (map nullVal $ tail rest)
+
+                        if any isNullable (hf :: forget rest)
+                           -- the result is nullable
+                           then MaybeNull ut
+                           -- the result is non-nullable
+                           else NotNull ut
+
   
     -- in case of a wrapped distinguishable type,
     -- we unalias it using `uaD` but keep the unaliased
     -- version only, if it is again distinguishable.
-    uaM : CGMember -> CGMember
+    uaM : CGMember -> Codegen $ List1 (Nullable CGDist)
     uaM (MkUnionMember a t) =
-      case uaD t of
-           Left Any               => UD y n -- no other way to break out
-           Left $ D _             => UD y n -- no other way to break out
-           Left $ U $ MaybeNull x => UU (MaybeNull x)
-           Left $ U $ NotNull x   => UU (n $> x)
-           Left $ Promise x       => UD y n -- no other way to break out
-           Right x                => UD y (n $> x)
+      do t2 <- uaD t
+         case t2 of
+              Any       => Left [AnyInUnion dom]
+              Promise x => Left [PromiseInUnion dom]
+              D x       => Right (singleton x)
+              U $ MaybeNull $ UT f s r =>
+                do h ::: t <- uaM f
+                   r2      <- traverse (map forget . uaM) (s :: r)
+                   pure . map nullable $ h ::: (t ++ join r2)
+              U $ NotNull $ UT f s r =>
+                do h ::: t <- uaM f
+                   r2      <- traverse (map forget . uaM) (s :: r)
+                   pure $ h ::: (t ++ join r2)
   
-    -- nullable types are only unliased, if the unaliase
-    -- type is distinguishable. non-nullable types are always
-    -- fully unaliased.
-    unalias : CGType -> CGType
-    unalias Any = Any
-    unalias (D $ NotNull d) = either id (D . NotNull) $ uaD d
-    unalias (U x) = U $ map uaU x
-    unalias (Promise x) = Promise $ unalias x
+    unalias : CGType -> Codegen CGType
+    unalias Any               = Right Any
+    unalias (D $ NotNull d)   = uaD d
+    unalias (U $ NotNull d)   = U <$> uaU d
+    unalias (U $ MaybeNull d) = U . nullable <$> uaU d
+    unalias (Promise x)       = Promise <$> unalias x
     unalias t@(D $ MaybeNull d) =
-      case uaD d of
-           Left Any               => t
-           Left $ D _             => t
-           Left $ U $ MaybeNull _ => t
-           Left $ U $ NotNull x   => U $ MaybeNull x
-           Left $ Promise x       => t
-           Right x                => D $ MaybeNull x
+      do res <- uaD d
+         case res of
+              Any         => Left [NullableAny dom]
+              (D x)       => pure . D $ nullable x
+              (U x)       => pure . U $ nullable x
+              (Promise x) => Left [NullablePromise dom]
   
   -- calculate the aliased type from a type coming
   -- from the WebIDL parser
   -- the unaliased version of the type is only kept (in a `Just`)
   -- if it differs from the original type.
-  tpe : IdlType -> AType
+  tpe : IdlType -> CodegenV AType
   tpe t = let cgt = map kind t
-              al  = unalias cgt
-           in MkAType al (if al == cgt then Nothing else Just cgt)
+              al  = fromEither $ unalias cgt
+           in map (\t => MkAType t (if t == cgt then Nothing else Just cgt)) al
   
   -- convert an IDL type coming from the parser to
   -- a return type in the code generator
-  rtpe : IdlType -> ReturnType
-  rtpe (D $ NotNull $ P Undefined) = Undefined
-  rtpe (D $ NotNull $ I $ MkIdent "void") = Undefined
-  rtpe t = FromIdl (tpe t)
+  rtpe : IdlType -> CodegenV ReturnType
+  rtpe (D $ NotNull $ P Undefined)        = Valid Undefined
+  rtpe (D $ NotNull $ I $ MkIdent "void") = Valid Undefined
+  rtpe t = FromIdl <$> tpe t
 
 --------------------------------------------------------------------------------
 --          Arguments
@@ -152,34 +171,34 @@ parameters (e : Env, dom : Domain)
 
   -- create an optional argument named "value" from
   -- a type coming from the parser
-  optArg : IdlType -> Default -> CGArg
-  optArg t = Optional (MkArgName "value") (tpe t)
+  optArg : IdlType -> Default -> CodegenV CGArg
+  optArg t d = [| Optional (pure $ MkArgName "value") (tpe t) (pure d) |]
   
   -- create an argument named "value" from
   -- a type coming from the parser
-  valArg : IdlType -> CGArg
-  valArg t = Mandatory (MkArgName "value") (tpe t)
+  valArg : IdlType -> CodegenV CGArg
+  valArg t = Mandatory (MkArgName "value") <$> tpe t
   
   -- convert an argument coming from the parser
   -- to one to be used in the code generator
-  arg : Arg -> CGArg
-  arg (MkArg _ t n) = Mandatory n (tpe t)
+  arg : Arg -> CodegenV CGArg
+  arg (MkArg _ t n) = Mandatory n <$> tpe t
   
   -- convert an argument coming from the parser
   -- to a vararg to be used in the code generator
-  vararg : Arg -> CGArg
-  vararg (MkArg _ t n) = VarArg n (tpe t)
+  vararg : Arg -> CodegenV CGArg
+  vararg (MkArg _ t n) = VarArg n <$> tpe t
   
   -- convert an argument coming from the parser
   -- to an optional arg to be used in the code generator
-  opt : OptArg -> CGArg
-  opt (MkOptArg _ _ t n d) = Optional n (tpe t) d
+  opt : OptArg -> CodegenV CGArg
+  opt (MkOptArg _ _ t n d) = [| Optional (pure n) (tpe t) (pure d) |]
   
   -- convert an argument list coming from the parser
   -- to a list of codegen args
-  toArgs : ArgumentList -> Args
-  toArgs (VarArg as v)    = map arg as ++ [vararg v]
-  toArgs (NoVarArg as os) = map arg as ++ map opt os
+  toArgs : ArgumentList -> CodegenV Args
+  toArgs (VarArg as v)    = [| snoc (traverse arg as) (vararg v) |]
+  toArgs (NoVarArg as os) = [| traverse arg as ++ traverse opt os |]
 
 --------------------------------------------------------------------------------
 --          Inheritance
@@ -216,22 +235,27 @@ parameters (e : Env, dom : Domain)
 
   op : Identifier -> Op a -> CodegenV (List CGFunction)
   op n (MkOp _ _ Nothing _)   = Invalid [RegularOpWithoutName dom n]
-  op n (MkOp _ t (Just o) as) = Valid [Regular o (kind n) (toArgs as) (rtpe t)]
+  op n (MkOp _ t (Just o) as) =
+    map pure [| Regular (pure o) (pure $ kind n) (toArgs as) (rtpe t) |]
 
   static : Identifier -> Op a -> CodegenV (List CGFunction)
   static n (MkOp _ _ Nothing _)   = Invalid [RegularOpWithoutName dom n]
-  static n (MkOp _ t (Just o) a) = Valid [Static o (kind n) (toArgs a) (rtpe t)]
+  static n (MkOp _ t (Just o) a) =
+    map pure [| Static (pure o) (pure $ kind n) (toArgs a) (rtpe t) |]
 
   constr : Identifier -> ArgumentList -> CodegenV (List CGFunction)
-  constr name args = Valid [Constructor (kind name) $ toArgs args]
+  constr name args = pure . Constructor (kind name) <$> toArgs args
 
   attrRO : Identifier -> Readonly Attribute -> CodegenV (List CGFunction)
-  attrRO o (MkRO $ MkAttribute _ t n) = Valid [AttributeGet n (kind o) (rtpe t)]
+  attrRO o (MkRO $ MkAttribute _ t n) =
+    pure . AttributeGet n (kind o) <$> rtpe t
 
   attr : Identifier -> Attribute -> CodegenV (List CGFunction)
   attr obj (MkAttribute _ t n) =
     let ak  = kind obj
-     in Valid [AttributeGet n ak (rtpe t), AttributeSet n ak (valArg t)]
+     in sequence [ AttributeGet n ak <$> (rtpe t)
+                 , AttributeSet n ak <$> (valArg t)
+                 ]
 
   str : Identifier -> Stringifier -> CodegenV (List CGFunction)
   str o (Z v)              = attr o v
@@ -243,37 +267,44 @@ parameters (e : Env, dom : Domain)
 
   staticAttrRO : Identifier -> Readonly Attribute -> CodegenV (List CGFunction)
   staticAttrRO o (MkRO $ MkAttribute _ t n) =
-    Valid [StaticAttributeGet n (kind o) $ (rtpe t)]
+    pure . StaticAttributeGet n (kind o) <$> rtpe t
 
   staticAttr : Identifier -> Attribute -> CodegenV (List CGFunction)
   staticAttr obj (MkAttribute _ t n) =
-    let cgt = rtpe t
-        ak  = kind obj
-     in Valid [StaticAttributeGet n ak cgt, StaticAttributeSet n ak (valArg t)]
+    let ak  = kind obj
+     in sequence [ StaticAttributeGet n ak <$> rtpe t
+                 , StaticAttributeSet n ak <$> valArg t
+                 ]
 
-  dictCon : Kind -> List DictionaryMemberRest -> CGFunction
-  dictCon o = go Nil Nil
-    where go : Args -> Args -> List DictionaryMemberRest -> CGFunction
-          go xs ys [] = DictConstructor o (reverse xs ++ reverse ys)
+  dictCon : Kind -> List DictionaryMemberRest -> CodegenV CGFunction
+  dictCon o = fromEither . go Nil Nil
+    where go : Args -> Args -> List DictionaryMemberRest -> Codegen CGFunction
+          go xs ys [] = pure $ DictConstructor o (reverse xs ++ reverse ys)
           go xs ys (Required _ t n :: zs) =
-            go (Mandatory (MkArgName n.value) (tpe t) :: xs) ys zs
+            do t2 <- toEither $ tpe t
+               go (Mandatory (MkArgName n.value) t2 :: xs) ys zs
           go xs ys (Optional t n d :: zs) =
-            go xs (Optional (MkArgName n.value) (tpe t) d :: ys) zs
+            do t2 <- toEither $ tpe t
+               go xs (Optional (MkArgName n.value) t2 d :: ys) zs
 
-  dictFuns : Dictionary -> List CGFunction
-  dictFuns d = dictCon (kind d.name) (map snd d.members) ::
-                 (d.members >>= fromMember . snd)
-    where fromMember : DictionaryMemberRest -> List CGFunction
+  dictFuns : Dictionary -> CodegenV (List CGFunction)
+  dictFuns d = [| dictCon (kind d.name) (map snd d.members) ::
+                  (map join (traverse (fromMember . snd) d.members)) |]
+    where fromMember : DictionaryMemberRest -> CodegenV (List CGFunction)
           fromMember (Required _ t n) =
             let an = MkAttributeName n.value
                 ak  = kind d.name
-             in [ AttributeGet an ak (rtpe t) , AttributeSet an ak (valArg t) ]
+             in sequence [ AttributeGet an ak <$> rtpe t
+                         , AttributeSet an ak <$> valArg t
+                         ]
 
           fromMember (Optional t n def) =
             let an = MkAttributeName n.value
-                cgt = UndefOr (tpe t) (Just def)
+                cgt = map (\x => UndefOr x (Just def)) (tpe t)
                 ak  = kind d.name
-             in [ AttributeGet an ak cgt , AttributeSet an ak (optArg t def) ]
+             in sequence [ AttributeGet an ak <$> cgt
+                         , AttributeSet an ak <$> optArg t def
+                         ]
 
   mixinFuns : Mixin -> CodegenV (List CGFunction)
   mixinFuns m = concat <$> traverse (fromMember . snd) m.members
@@ -288,19 +319,22 @@ parameters (e : Env, dom : Domain)
   ifaceFuns i = concat <$> traverse (fromMember . snd) i.members
     where getter : IdlType -> ArgumentList -> CodegenV (List CGFunction)
           getter t (NoVarArg [a] Nil) =
-            let ag = arg a
-             in if isIndex (argType ag)
-                     then Valid [Getter (kind i.name) ag (rtpe t)]
-                     else Invalid [InvalidGetter dom i.name]
+             fromEither $ do ag <- toEither $ arg a
+                             rt <- toEither $ rtpe t
+                             if isIndex (argType ag)
+                                then Right [Getter (kind i.name) ag rt]
+                                else Left [InvalidGetter dom i.name]
 
           getter _ _ = Invalid [InvalidGetter dom i.name]
 
           setter : IdlType -> ArgumentList -> CodegenV (List CGFunction)
           setter t (NoVarArg [a,r] Nil) =
-            let ag = arg a
-             in if isIndex (argType ag) && isUndefined (rtpe t)
-                   then Valid [Setter (kind i.name) ag (arg r)]
-                   else Invalid [InvalidSetter dom i.name]
+            fromEither $ do ag <- toEither $ arg a
+                            rt <- toEither $ rtpe t
+                            rg <- toEither $ arg r
+                            if isIndex (argType ag) && isUndefined rt
+                               then Right [Setter (kind i.name) ag rg]
+                               else Left [InvalidSetter dom i.name]
 
           setter _ _ = Invalid [InvalidSetter dom i.name]
 
@@ -364,7 +398,7 @@ parameters (e : Env, dom : Domain)
 
     where dict : Dictionary -> CodegenV CGDict
           dict v@(MkDictionary _ n i _) =
-            Valid $ MkDict n  (supertypes n) (dictFuns v)
+            MkDict n  (supertypes n) <$> dictFuns v
 
           typedef : Typedef -> CodegenV CGTypedef
           typedef (MkTypedef _ _ t n) = Valid $ MkTypedef n (map kind t)

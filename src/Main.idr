@@ -72,6 +72,10 @@ fromCodegen = toProgWith (fastUnlines . map err) . pure . toEither
           #"Invalid getter in \#{x.domain}: \#{y.value}"#
         err (InvalidSetter x y) =
           #"Invalid setter in \#{x.domain}: \#{y.value}"#
+        err (AnyInUnion x) = #"\"Any\" type in a union type in \#{x.domain}"#
+        err (PromiseInUnion x) = #"\"Promise\" type in a union type in \#{x.domain}"#
+        err (NullableAny x) = #"Nullable \"Any\" type in \#{x.domain}"#
+        err (NullablePromise x) = #"Nullable \"Promise\" type in \#{x.domain}"#
 
 
 writeDoc : String -> String -> Prog ()

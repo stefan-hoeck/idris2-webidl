@@ -164,9 +164,9 @@ mutual
   idl p (Promise x) = sameFalse $ prettyCon p "Promise" [ffi $ idl App x]
 
 export
-constTpe : Prec -> ConstTypeF Identifier -> Doc ()
+constTpe : Prec -> CGConstType -> Doc ()
 constTpe p (CP x) = api $ prim p x
-constTpe p (CI x) = pretty $ x.value
+constTpe p (CI x) = pretty $ kindToString x
 
 atype : Prec -> AType -> PrettyType
 atype p = idl p . type
@@ -180,7 +180,7 @@ returnType (UndefOr x _) =
                        ("JSIO $ Optional" <++> api)
          else diffFalse ("PrimIO $ UndefOr" <++> ffi)
                         ("JSIO $ Optional" <++> ffi)
-                       ("JSIO $ Optional" <++> ret)
+                        ("JSIO $ Optional" <++> ret)
 
 returnType (FromIdl x)   =
   let MkPrettyType ffi api ret b sc = atype App x

@@ -51,9 +51,9 @@ jsType n (MkSupertypes parents ms) =
 --------------------------------------------------------------------------------
 
 export
-constants : List Const -> List String
+constants : List CGConst -> List String
 constants = map (show . const) . sortBy (comparing name)
-  where const : Const -> Doc ()
+  where const : CGConst -> Doc ()
         const (MkConst t n v) =
           indent 2 $ vsep [ ""
                           , "public export"

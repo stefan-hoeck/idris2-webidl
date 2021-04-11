@@ -76,6 +76,7 @@ fromCodegen = toProgWith (fastUnlines . map err) . pure . toEither
         err (PromiseInUnion x) = #"\"Promise\" type in a union type in \#{x.domain}"#
         err (NullableAny x) = #"Nullable \"Any\" type in \#{x.domain}"#
         err (NullablePromise x) = #"Nullable \"Promise\" type in \#{x.domain}"#
+        err (InvalidConstType x) = #"Invalid constant type in \#{x.domain}"#
 
 
 writeDoc : String -> String -> Prog ()
@@ -92,10 +93,10 @@ loadDef f = let mn = moduleName
                    d <- toProg (pure $ parseIdl partsAndDefs s)
                    pure (mn,d)
 
-typesGen : Config -> List CGDomain -> Prog ()
-typesGen c ds =
+typesGen : Config -> Prog ()
+typesGen c =
   let typesFile = c.outDir ++ "/Web/Internal/Types.idr"
-   in writeDoc typesFile (typedefs ds)
+   in writeDoc typesFile typedefs
 
 codegen : Config -> CGDomain -> Prog ()
 codegen c d =
@@ -120,8 +121,7 @@ run args = do config <- toProg (pure $ applyArgs args)
               doms   <- fromCodegen (traverse (domain e) ds)
 
               traverse_ (codegen config) doms
-              typesGen config doms
-              pure ()
+              typesGen config
 
 main : IO ()
 main = do (pn :: args) <- getArgs

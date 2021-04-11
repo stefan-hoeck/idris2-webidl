@@ -125,14 +125,9 @@ primMixins = mixins' (primFunctions . functions)
 --------------------------------------------------------------------------------
 
 export
-typedefs : List CGDomain -> String
-typedefs ds =
-  let ts   = concatMap typedefs ds
-      docs =  map toTypedef (sortBy (comparing name) ts)
-
-      sect = section "Typedefs" $
-               ["", "mutual"] ++ map (show . indent 2) docs
-   in #"""
+typedefs : String
+typedefs =
+      #"""
       module Web.Internal.Types
       
       import JS
@@ -156,23 +151,7 @@ typedefs ds =
       import public Web.Internal.WebglTypes as Types
       import public Web.Internal.WebidlTypes as Types
       import public Web.Internal.XhrTypes as Types
-      \#{sect}
       """#
-      
-  where lines : String -> Doc () -> List $ Doc ()
-        lines n tpe = [ ""
-                      , "public export"
-                      , pretty n <++> ": Type"
-                      , pretty n <++> "=" <++> tpe
-                      ]
-
-        toTypedef : CGTypedef -> Doc ()
-        toTypedef t = 
-          let MkPrettyType ffi api _ same _ = idl Open t.type
-           in if same
-                 then vsep $ lines t.name.value ffi
-                 else vsep $  lines (t.name.value ++ "FFI") ffi
-                           ++ lines t.name.value api
 
 --------------------------------------------------------------------------------
 --          Codegen

@@ -107,6 +107,18 @@ export
 fromKind : Kind -> ReturnType
 fromKind k = FromIdl $ MkAType (identToType k) Nothing
 
+public export
+CGConstType : Type
+CGConstType = ConstTypeF Kind
+
+public export
+record CGConst where
+  constructor MkConst
+  type  : CGConstType
+  name  : Identifier
+  value : ConstValue
+
+
 --------------------------------------------------------------------------------
 --          Arguments
 --------------------------------------------------------------------------------
@@ -266,21 +278,21 @@ record CGIface where
   constructor MkIface
   name      : Identifier
   super     : Supertypes
-  constants : List Const
+  constants : List CGConst
   functions : List CGFunction
 
 public export
 record CGMixin where
   constructor MkMixin
   name      : Identifier
-  constants : List Const
+  constants : List CGConst
   functions : List CGFunction
 
 public export
 record CGCallback where
   constructor MkCallback
   name      : Identifier
-  constants : List Const
+  constants : List CGConst
   type      : IdlType
   args      : ArgumentList
 
@@ -342,6 +354,7 @@ data CodegenErr : Type where
   PromiseInUnion         : Domain -> CodegenErr
   NullableAny            : Domain -> CodegenErr
   NullablePromise        : Domain -> CodegenErr
+  InvalidConstType       : Domain -> CodegenErr
 
 public export
 Codegen : Type -> Type

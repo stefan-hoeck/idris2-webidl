@@ -164,6 +164,18 @@ parameters (e : Env, dom : Domain)
   rtpe (D $ NotNull $ I $ MkIdent "void") = Valid Undefined
   rtpe t = FromIdl <$> tpe t
 
+  constTpe : ConstType -> CodegenV CGConstType
+  constTpe (CI i) = case uaD (I $ kind i) of
+                         Left x                    => Invalid x
+                         Right (D $ NotNull $ P x) => Valid $ CP x
+                         Right (D $ NotNull $ I x) => Valid $ CI x
+                         Right _     => Invalid [InvalidConstType dom]
+
+  constTpe (CP p) = Valid $ CP p
+
+  const : Const -> CodegenV CGConst
+  const (MkConst t n v) = map (\t2 => MkConst t2 n v) (constTpe t)
+
 --------------------------------------------------------------------------------
 --          Arguments
 --------------------------------------------------------------------------------
@@ -368,21 +380,25 @@ parameters (e : Env, dom : Domain)
           fromMember (S $ Z p)              = fromPart p
           fromMember (S $ S x) impossible
 
-  ifaceConsts : Interface -> List Const
-  ifaceConsts (MkInterface _ _ _ ms) = mapMaybe (fromMember . snd) ms
-    where fromMember : InterfaceMember -> Maybe Const
-          fromMember (S $ Z $ IConst x) = Just x
-          fromMember _                  = Nothing
+  ifaceConsts : Interface -> CodegenV (List CGConst)
+  ifaceConsts (MkInterface _ _ _ ms) = join <$> traverse (fromMember . snd) ms
+    where fromMember : InterfaceMember -> CodegenV (List CGConst)
+          fromMember (S $ Z $ IConst x) = map pure $ const x
+          fromMember _                  = Valid []
 
-  mixinConsts : Mixin -> List Const
-  mixinConsts (MkMixin _ _ ms) = mapMaybe (fromMember . snd) ms
-    where fromMember : MixinMember -> Maybe Const
-          fromMember (MConst x) = Just x
-          fromMember _          = Nothing
+  mixinConsts : Mixin -> CodegenV (List CGConst)
+  mixinConsts (MkMixin _ _ ms) = join <$> traverse (fromMember . snd) ms
+    where fromMember : MixinMember -> CodegenV (List CGConst)
+          fromMember (MConst x) = map pure $ const x
+          fromMember _          = Valid []
 
-  callbackConsts : CallbackInterface -> List Const
+  callbackConsts : CallbackInterface -> CodegenV (List CGConst)
   callbackConsts (MkCallbackInterface _ _ ms) =
-    mapMaybe (\(_,v) => extract Const v) ms
+    join <$> traverse (fromMember . snd) ms
+    where fromMember : CallbackInterfaceMember -> CodegenV (List CGConst)
+          fromMember v = case extract Const v of
+                              Nothing => Valid []
+                              Just x  => map pure $ const x
 
   export
   domain : CodegenV CGDomain
@@ -404,10 +420,11 @@ parameters (e : Env, dom : Domain)
 
           iface : Interface -> CodegenV CGIface
           iface v@(MkInterface _ n i _) =
-            MkIface n (supertypes n) (ifaceConsts v) <$> ifaceFuns v
+            [| MkIface (pure n) (pure $ supertypes n)
+                       (ifaceConsts v) (ifaceFuns v) |]
 
           mixin : Mixin -> CodegenV CGMixin
-          mixin m = MkMixin m.name (mixinConsts m) <$> mixinFuns m
+          mixin m = [| MkMixin (pure m.name) (mixinConsts m) (mixinFuns m) |]
 
           callback : Callback -> CodegenV CGCallback
           callback c = Valid $ MkCallback c.name Nil c.type c.args
@@ -415,7 +432,8 @@ parameters (e : Env, dom : Domain)
           callbackIface : CallbackInterface -> CodegenV CGCallback
           callbackIface v@(MkCallbackInterface _ n ms) =
             case mapMaybe (\(_,m)   => extract RegularOperation m) ms of
-                 [MkOp () t _ a] => Valid $ MkCallback n (callbackConsts v) t a
+                 [MkOp () t _ a] => 
+                   [| MkCallback (pure n) (callbackConsts v) (pure t) (pure a) |]
                  xs => Invalid [CBInterfaceInvalidOps dom n (length xs)]
 
           callbacks : CodegenV (List CGCallback)

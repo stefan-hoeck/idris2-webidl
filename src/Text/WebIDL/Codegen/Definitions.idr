@@ -38,16 +38,16 @@ extern d = fastUnlines [ section "Interfaces" $ exts ext name d.ifaces
   where extNoCast : String -> String
         extNoCast s = #"""
                       export data \#{s} : Type where [external]
-
+                        
                       export
                       ToFFI \#{s} \#{s} where toFFI = id
-
+                        
                       export
                       FromFFI \#{s} \#{s} where fromFFI = Just
                       """#
 
         ext : String -> String
-        ext s = extNoCast s++ "\n\n" ++
+        ext s = extNoCast s ++ "\n\n" ++
                 #"""
                 export
                 SafeCast \#{s} where

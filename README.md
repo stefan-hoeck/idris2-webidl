@@ -44,10 +44,10 @@ Parsers and (eventually) Idris code generator for WebIDL documents
     - [ ] Setlikes (no instance in spec)
     - [ ] Maplikes (no instance in spec)
   - [ ] Marshalling
-    - [*] from enum types to `String` and back
-    - [*] from `Maybe` to `Nullable` and back
-    - [*] from `Union` to `NS I` (from `Data.SOP.NS`) and back
-    - [*] from `UndefOr` to an appropriate Idris2 ADT
+    - [x] from enum types to `String` and back
+    - [x] from `Maybe` to `Nullable` and back
+    - [x] from `Union` to `NS I` (from `Data.SOP.NS`) and back
+    - [x] from `UndefOr` to an appropriate Idris2 ADT
     - [ ] from Idris2 functions to callback types
 
 ## Codegen Notes

@@ -150,9 +150,10 @@ mutual
   |||     ExtendedAttributeList DistinguishableType
   |||     UnionType Null
   public export
-  data UnionMemberTypeF : (a : Type) -> (b : Type) -> Type where
-    UD : a -> Nullable (DistinguishableF a b) -> UnionMemberTypeF a b
-    UU : Nullable (UnionTypeF a b) -> UnionMemberTypeF a b
+  record UnionMemberTypeF (a : Type) (b : Type) where
+    constructor MkUnionMember
+    attr : a
+    type : DistinguishableF a b
 
   ||| DistinguishableType ::
   |||     PrimitiveType Null
@@ -308,8 +309,8 @@ mutual
 
   export
   Bitraversable UnionMemberTypeF where
-    bitraverse f g (UD x y) = [| UD (f x) (traverse (bitraverse f g) y) |]
-    bitraverse f g (UU x) = UU <$> traverse (bitraverse f g) x
+    bitraverse f g (MkUnionMember a t) =
+      [| MkUnionMember (f a) (bitraverse f g t) |]
 
   export
   Functor (UnionMemberTypeF a) where map = bimap id

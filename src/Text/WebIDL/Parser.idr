@@ -227,7 +227,13 @@ mutual
   idlType =   (key "any" $> Any)
           <|> map Promise (key "Promise" *> inAngles idlType)
           <|> map D distinguishableType
-          <|> map U (nullable union)
+          <|> (nullable flatUnion >>= map U . fromFlatUnion)
+
+    where fromFlatUnion :  Nullable (List1 $ Attributed $ Nullable Distinguishable)
+                        -> IdlGrammar' (Nullable UnionType)
+          fromFlatUnion (MaybeNull $ a ::: b :: t) = ?foo_3
+          fromFlatUnion (NotNull   $ a ::: b :: t) = ?foo_2
+          fromFlatUnion _                          = fail "no enough union members"
 
   -- TypeWithExtendedAttributes ::
   --     ExtendedAttributeList Type
@@ -267,6 +273,23 @@ mutual
 
   distinguishableType : IdlGrammar (Nullable Distinguishable)
   distinguishableType = nullable distinguishable
+
+  -- UnionType ::
+  --     ( UnionMemberType or UnionMemberType UnionMemberTypes )
+  --
+  -- UnionMemberTypes ::
+  --     or UnionMemberType UnionMemberTypes
+  --     ε
+  flatUnion : IdlGrammar (List1 $ Attributed $ Nullable Distinguishable)
+  flatUnion = inParens $ do (a :: b :: t) <- sepBy (key "or") flatMember
+                              | _ => fail "Non enough Union members"
+                            pure (join $ a ::: b :: t)
+
+  -- UnionMemberType ::
+  --     ExtendedAttributeList DistinguishableType
+  --     UnionType Null
+  flatMember : IdlGrammar (List1 $ Attributed $ Nullable Distinguishable)
+  flatMember = map singleton (attributed distinguishableType) <|> flatUnion
 
   -- UnionType ::
   --     ( UnionMemberType or UnionMemberType UnionMemberTypes )

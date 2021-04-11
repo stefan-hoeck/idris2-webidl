@@ -104,14 +104,14 @@ parameters (e : Env, dom : Domain)
     -- we unalias it using `uaD` but keep the unaliased
     -- version only, if it is again distinguishable.
     uaM : CGMember -> CGMember
-    uaM (UU y)   = UU $ map uaU y
-    uaM (UD y n) = case uaD (nullVal n) of
-                        Left Any               => UD y n -- no other way to break out
-                        Left $ D _             => UD y n -- no other way to break out
-                        Left $ U $ MaybeNull x => UU (MaybeNull x)
-                        Left $ U $ NotNull x   => UU (n $> x)
-                        Left $ Promise x       => UD y n -- no other way to break out
-                        Right x                => UD y (n $> x)
+    uaM (MkUnionMember a t) =
+      case uaD t of
+           Left Any               => UD y n -- no other way to break out
+           Left $ D _             => UD y n -- no other way to break out
+           Left $ U $ MaybeNull x => UU (MaybeNull x)
+           Left $ U $ NotNull x   => UU (n $> x)
+           Left $ Promise x       => UD y n -- no other way to break out
+           Right x                => UD y (n $> x)
   
     -- nullable types are only unliased, if the unaliase
     -- type is distinguishable. non-nullable types are always

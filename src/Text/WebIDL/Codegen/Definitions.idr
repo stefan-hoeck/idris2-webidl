@@ -35,17 +35,24 @@ extern d = fastUnlines [ section "Interfaces" $ exts ext name d.ifaces
                        , section "Mixins" $ exts extNoCast name d.mixins
                        , section "Callbacks" $ exts extNoCast name d.callbacks
                        ]
-  where ext : String -> String
-        ext s = #"""
-                export data \#{s} : Type where [external]
-                
+  where extNoCast : String -> String
+        extNoCast s = #"""
+                      export data \#{s} : Type where [external]
+
+                      export
+                      ToFFI \#{s} \#{s} where toFFI = id
+
+                      export
+                      FromFFI \#{s} \#{s} where fromFFI = Just
+                      """#
+
+        ext : String -> String
+        ext s = extNoCast s++ "\n\n" ++
+                #"""
                 export
                 SafeCast \#{s} where
                   safeCast = unsafeCastOnPrototypeName "\#{s}"
                 """#
-
-        extNoCast : String -> String
-        extNoCast s = #"export data \#{s} : Type where [external]"#
 
         exts :  (f : String -> String)
              -> (a -> Identifier)
@@ -152,12 +159,20 @@ typedefs ds =
       \#{sect}
       """#
       
-  where toTypedef : CGTypedef -> Doc ()
-        toTypedef t = vsep [ ""
-                           , "public export"
-                           , pretty t.name.value <++> ": Type"
-                           , pretty t.name.value <++> "=" <++> idl Open FFI t.type
-                           ]
+  where lines : String -> Doc () -> List $ Doc ()
+        lines n tpe = [ ""
+                      , "public export"
+                      , pretty n <++> ": Type"
+                      , pretty n <++> "=" <++> tpe
+                      ]
+
+        toTypedef : CGTypedef -> Doc ()
+        toTypedef t = 
+          let MkPrettyType ffi api same = idl Open t.type
+           in if same
+                 then vsep $ lines t.name.value ffi
+                 else vsep $  lines (t.name.value ++ "FFI") ffi
+                           ++ lines t.name.value api
 
 --------------------------------------------------------------------------------
 --          Codegen

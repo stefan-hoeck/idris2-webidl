@@ -15,6 +15,18 @@ mapFirstChar f x = case fastUnpack x of
                         (h :: t) => fastPack (f h :: t)
 
 --------------------------------------------------------------------------------
+--          Pretty Utils
+--------------------------------------------------------------------------------
+
+export %inline
+pretty' : Pretty a => a -> Doc ()
+pretty' = pretty
+
+export %inline
+prettyPrec' : Pretty a => Prec -> a -> Doc ()
+prettyPrec' = prettyPrec
+
+--------------------------------------------------------------------------------
 --          Sorted Lists
 --------------------------------------------------------------------------------
 
@@ -161,26 +173,6 @@ prettyParens False = id
 export
 prettyCon : Prec -> (con : Doc ann) -> (args : List (Doc ann)) -> Doc ann
 prettyCon p con args = prettyParens (p >= App) (con <++> align (sep args))
-
-export
-prettySingleCon : Pretty arg => Prec -> (con : Doc ann) -> arg -> Doc ann
-prettySingleCon p con arg = prettyCon p con [prettyPrec App arg]
-
-export
-io : Pretty arg => Prec -> arg -> Doc ann
-io p = prettySingleCon p "IO"
-
-export
-jsio : Pretty arg => Prec -> arg -> Doc ann
-jsio p = prettySingleCon p "JSIO"
-
-export
-primIO : Pretty arg => Prec -> arg -> Doc ann
-primIO p = prettySingleCon p "PrimIO"
-
-export
-prettyArg : (name : IdrisIdent) -> Doc ann -> Doc ann
-prettyArg name tpe = parens $ hsep [pretty name,":",tpe]
 
 --------------------------------------------------------------------------------
 --          Foreign Function Implementations

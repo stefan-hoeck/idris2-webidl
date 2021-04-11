@@ -72,15 +72,15 @@ CGMember = UnionMemberTypeF ExtAttributeList Kind
 public export
 record AType where
   constructor MkAType
-  type  : CGType
-  alias : Maybe CGType
+  type           : CGType
+  aliasedVersion : Maybe CGType
 
 ||| True, if the type can be used as an index in a
 ||| WebIDL `Getter` or `Setter`, that is, it corresponds
 ||| to either an `unsigned long` or a `DOMString`.
 export
 isIndex : AType -> Bool
-isIndex t = maybe (isIndex t.type) isIndex t.alias
+isIndex = isIndex . type
 
 ||| A function's return type.
 public export
@@ -129,10 +129,6 @@ argName : CGArg -> ArgumentName
 argName (Mandatory x _)  = x
 argName (Optional x _ _) = x
 argName (VarArg x _)     = x
-
-export
-argIdent : CGArg -> IdrisIdent
-argIdent = fromString . value . argName
 
 export
 argType : CGArg -> AType

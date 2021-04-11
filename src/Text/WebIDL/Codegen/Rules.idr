@@ -87,8 +87,8 @@ parameters (e : Env, dom : Domain)
     uaD i@(I $ KAlias x) =
       case lookup x e.aliases of
            Nothing              => Right i
-           Just (D $ NotNull v) => Right v
-           Just x               => Left x
+           Just (D $ NotNull v) => uaD v
+           Just x               => Left $ unalias x
   
     uaD (Sequence x y)        = Right (Sequence x $ unalias y)
     uaD (FrozenArray x y)     = Right (FrozenArray x $ unalias y)
@@ -106,18 +106,29 @@ parameters (e : Env, dom : Domain)
     uaM : CGMember -> CGMember
     uaM (UU y)   = UU $ map uaU y
     uaM (UD y n) = case uaD (nullVal n) of
-                        (Left _)  => UD y n -- no other way to break out
-                        (Right x) => UD y (n $> x)
+                        Left Any               => UD y n -- no other way to break out
+                        Left $ D _             => UD y n -- no other way to break out
+                        Left $ U $ MaybeNull x => UU (MaybeNull x)
+                        Left $ U $ NotNull x   => UU (n $> x)
+                        Left $ Promise x       => UD y n -- no other way to break out
+                        Right x                => UD y (n $> x)
   
     -- nullable types are only unliased, if the unaliase
     -- type is distinguishable. non-nullable types are always
     -- fully unaliased.
     unalias : CGType -> CGType
     unalias Any = Any
-    unalias t@(D $ MaybeNull d) = either (const t) (D . MaybeNull) $ uaD d
     unalias (D $ NotNull d) = either id (D . NotNull) $ uaD d
     unalias (U x) = U $ map uaU x
     unalias (Promise x) = Promise $ unalias x
+    unalias t@(D $ MaybeNull d) =
+      case uaD d of
+           Left Any               => t
+           Left $ D _             => t
+           Left $ U $ MaybeNull _ => t
+           Left $ U $ NotNull x   => U $ MaybeNull x
+           Left $ Promise x       => t
+           Right x                => D $ MaybeNull x
   
   -- calculate the aliased type from a type coming
   -- from the WebIDL parser
@@ -126,7 +137,7 @@ parameters (e : Env, dom : Domain)
   tpe : IdlType -> AType
   tpe t = let cgt = map kind t
               al  = unalias cgt
-           in MkAType cgt (if al == cgt then Nothing else Just al)
+           in MkAType al (if al == cgt then Nothing else Just cgt)
   
   -- convert an IDL type coming from the parser to
   -- a return type in the code generator

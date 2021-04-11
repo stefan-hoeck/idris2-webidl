@@ -168,7 +168,7 @@ typedefs ds =
 
         toTypedef : CGTypedef -> Doc ()
         toTypedef t = 
-          let MkPrettyType ffi api same = idl Open t.type
+          let MkPrettyType ffi api _ same _ = idl Open t.type
            in if same
                  then vsep $ lines t.name.value ffi
                  else vsep $  lines (t.name.value ++ "FFI") ffi

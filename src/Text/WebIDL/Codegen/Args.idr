@@ -14,18 +14,32 @@ import Text.WebIDL.Codegen.Types
 import Text.WebIDL.Codegen.Util
 import Text.WebIDL.Types
 
+||| Prettyfied types in the codegen plus two boolean flags,
+||| indicating, whether the two types are identical (and therefore,
+||| there is no need for marshalling from or to the FFI),
+||| and whether the type has a `SafeCast` instance (only if this
+||| is set to true are we allowed to marshall a return type
+||| from the FFI).
 public export
 record PrettyType where
   constructor MkPrettyType
   ffi      : Doc ()
   api      : Doc ()
+  ret      : Doc ()
   sameType : Bool
+  safeCast : Bool
 
-same : Doc () -> PrettyType
-same d = MkPrettyType d d True
+sameTrue : Doc () -> PrettyType
+sameTrue d = MkPrettyType d d d True True
 
-diff : Doc () -> Doc () -> PrettyType
-diff f a = MkPrettyType f a False
+sameFalse : Doc () -> PrettyType
+sameFalse d = MkPrettyType d d d True False
+
+diffTrue : Doc () -> Doc () -> PrettyType
+diffTrue d a = MkPrettyType d a a False True
+
+diffFalse : Doc () -> Doc () -> Doc () -> PrettyType
+diffFalse f a r = MkPrettyType f a r False False
 
 public export
 record PrettyArg where
@@ -33,6 +47,7 @@ record PrettyArg where
   name     : ArgumentName
   ffi      : Doc ()
   api      : Doc ()
+  ret      : Doc ()
   sameType : Bool
 
 export
@@ -48,68 +63,79 @@ PrettyArgs = List PrettyArg
 --------------------------------------------------------------------------------
 
 kind : Prec -> Kind -> PrettyType
-kind _ (KEnum y) = diff "String" (pretty $ y.value)
-kind _ k         = same . pretty . value $ ident k
+kind _ (KAlias y)      = sameFalse (pretty $ y.value)
+kind _ (KCallback y)   = sameFalse (pretty $ y.value)
+kind _ (KDictionary y) = sameTrue (pretty $ y.value)
+kind _ (KEnum y)       = diffTrue "String" (pretty $ y.value)
+kind _ (KInterface y)  = sameTrue (pretty $ y.value)
+kind _ (KMixin y)      = sameFalse (pretty $ y.value)
+kind _ (KOther y)      = sameFalse (pretty $ y.value)
 
 --------------------------------------------------------------------------------
 --          Types
 --------------------------------------------------------------------------------
 
 buff : Prec -> BufferRelatedType -> PrettyType
-buff _ Uint8Array        = same "UInt8Array"
-buff _ Uint16Array       = same "UInt8Array"
-buff _ Uint32Array       = same "UInt8Array"
-buff _ Uint8ClampedArray = same "UInt8ClampedArray"
-buff _ x                 = same . pretty $ show x
+buff _ Uint8Array        = sameFalse "UInt8Array"
+buff _ Uint16Array       = sameFalse "UInt8Array"
+buff _ Uint32Array       = sameFalse "UInt8Array"
+buff _ Uint8ClampedArray = sameFalse "UInt8ClampedArray"
+buff _ x                 = sameFalse . pretty $ show x
 
 -- booleans are marshalled from Idris2 `Bool` to JS `Boolean`
 -- and back
 prim : Prec -> PrimitiveType -> PrettyType
-prim _ Boolean             = diff "Boolean" "Bool"
-prim _ (Unsigned Short)    = same "UInt16"
-prim _ (Unsigned Long)     = same "UInt32"
-prim _ (Unsigned LongLong) = same "UInt64"
-prim _ (Signed Short)      = same "Int16"
-prim _ (Signed Long)       = same "Int32"
-prim _ (Signed LongLong)   = same "Int64"
-prim _ (Unrestricted x)    = same "Double"
-prim _ (Restricted x)      = same "Double"
-prim _ Undefined           = same "Undefined"
-prim _ Byte                = same "Int8"
-prim _ Octet               = same "UInt8"
-prim _ BigInt              = same "Integer"
+prim _ Boolean             = diffTrue "Boolean" "Bool"
+prim _ (Unsigned Short)    = sameTrue "UInt16"
+prim _ (Unsigned Long)     = sameTrue "UInt32"
+prim _ (Unsigned LongLong) = sameTrue "UInt64"
+prim _ (Signed Short)      = sameTrue "Int16"
+prim _ (Signed Long)       = sameTrue "Int32"
+prim _ (Signed LongLong)   = sameTrue "Int64"
+prim _ (Unrestricted x)    = sameTrue "Double"
+prim _ (Restricted x)      = sameTrue "Double"
+prim _ Undefined           = sameTrue "Undefined"
+prim _ Byte                = sameTrue "Int8"
+prim _ Octet               = sameTrue "UInt8"
+prim _ BigInt              = sameTrue "Integer"
 
 string : Prec -> StringType -> PrettyType
-string _ ByteString = same "ByteString"
-string _ DOMString  = same "String"
-string _ USVString  = same "String"
+string _ ByteString = sameFalse "ByteString"
+string _ DOMString  = sameTrue "String"
+string _ USVString  = sameTrue "String"
 
 nullable :  (Prec -> a -> PrettyType) -> Prec -> Nullable a -> PrettyType
 nullable f p (MaybeNull x) = 
-  let MkPrettyType ffi api _ = f App x
-   in diff (prettyCon p "Nullable" [ffi]) (prettyCon p "Maybe" [api])
+  let MkPrettyType ffi api ret _ b = f App x
+   in if b 
+         then diffTrue (prettyCon p "Nullable" [ffi])
+                       (prettyCon p "Maybe" [api])
+         else diffFalse (prettyCon p "Nullable" [ffi])
+                        (prettyCon p "Maybe" [api])
+                        (prettyCon p "Maybe" [ret])
 nullable f p (NotNull x)   = f p x
 
 mutual
   -- types wrapped in `Sequence` or similar are
   -- kept in their FFI form.
   dist : Prec -> CGDist -> PrettyType
-  dist _ Object                = same "Object"
-  dist _ Symbol                = same "Symbol"
+  dist _ Object                = sameTrue "Object"
+  dist _ Symbol                = sameTrue "Symbol"
   dist p (P x)                 = prim p x
   dist p (S x)                 = string p x
   dist p (I x)                 = kind p x
   dist p (B x)                 = buff p x
-  dist p (Sequence _ x)        = same $ prettyCon p "Array" [ffi $ idl App x]
-  dist p (FrozenArray _ x)     = same $ prettyCon p "Array" [ffi $ idl App x]
-  dist p (ObservableArray _ x) = same $ prettyCon p "Array" [ffi $ idl App x]
+  dist p (Sequence _ x)        = sameFalse $ prettyCon p "Array" [ffi $ idl App x]
+  dist p (FrozenArray _ x)     = sameFalse $ prettyCon p "Array" [ffi $ idl App x]
+  dist p (ObservableArray _ x) = sameFalse $ prettyCon p "Array" [ffi $ idl App x]
   dist p (Record s _ x) =
-    same $ prettyCon p "Record" [ffi $ string App s, ffi $ idl App x]
+    sameFalse $ prettyCon p "Record" [ffi $ string App s, ffi $ idl App x]
 
   un : Prec -> CGUnion -> PrettyType
   un p (UT fst snd rest) =
     let -- ffi repr
-        argsFFI = map (ffi . um App) (fst :: snd :: rest)
+        args    = map (um App) (fst :: snd :: rest)
+        argsFFI = map ffi args
         conFFI  = "Union" ++ show (length argsFFI)
 
         -- api repr
@@ -119,18 +145,23 @@ mutual
                               ++ map ("," <++>) argsAPI
                               ++ ["]"]
 
-     in diff (prettyCon p (pretty conFFI) argsFFI)
-             (prettyCon p "NS I" [brkt])
+        canSafelyCast = all PrettyType.safeCast args
+        prettyFFI = prettyCon p (pretty conFFI) argsFFI
+        prettyAPI = prettyCon p "NS I" [brkt]
+
+     in if canSafelyCast
+           then diffTrue prettyFFI prettyAPI
+           else diffFalse prettyFFI prettyAPI prettyFFI
 
   um : Prec -> CGMember -> PrettyType
   um p (MkUnionMember _ t) = dist p t
 
   export
   idl : Prec -> CGType -> PrettyType
-  idl p Any         = same "AnyPtr"
+  idl p Any         = sameFalse "AnyPtr"
   idl p (D x)       = nullable dist p x
   idl p (U x)       = nullable un p x
-  idl p (Promise x) = same $ prettyCon p "Promise" [ffi $ idl App x]
+  idl p (Promise x) = sameFalse $ prettyCon p "Promise" [ffi $ idl App x]
 
 export
 constTpe : Prec -> ConstTypeF Identifier -> Doc ()
@@ -141,14 +172,21 @@ atype : Prec -> AType -> PrettyType
 atype p = idl p . type
 
 returnType : ReturnType -> PrettyType
-returnType Undefined     = MkPrettyType "PrimIO ()" "JSIO ()" True
+returnType Undefined     = MkPrettyType "PrimIO ()" "JSIO ()" "JSIO ()" True True
 returnType (UndefOr x _) = 
-  let MkPrettyType ffi api _ = atype App x
-   in diff ("PrimIO $ UndefOr" <++> ffi) ("JSIO $ Optional" <++> api)
+  let MkPrettyType ffi api ret _ b = atype App x
+   in if b
+         then diffTrue ("PrimIO $ UndefOr" <++> ffi)
+                       ("JSIO $ Optional" <++> api)
+         else diffFalse ("PrimIO $ UndefOr" <++> ffi)
+                        ("JSIO $ Optional" <++> ffi)
+                       ("JSIO $ Optional" <++> ret)
 
 returnType (FromIdl x)   =
-  let MkPrettyType ffi api b = atype App x
-   in MkPrettyType ("PrimIO" <++> ffi) ("JSIO" <++> api) b
+  let MkPrettyType ffi api ret b sc = atype App x
+   in MkPrettyType ("PrimIO" <++> ffi)
+                   ("JSIO" <++> api)
+                   ("JSIO" <++> ret) b sc
 
 --------------------------------------------------------------------------------
 --          Arguments
@@ -156,17 +194,21 @@ returnType (FromIdl x)   =
 
 argType : CGArg -> PrettyType
 argType (Mandatory _ t)  = atype Open t
-argType (VarArg _ t)     = same $ "VarArg"  <++> (ffi $ atype App t)
+argType (VarArg _ t)     = sameFalse $ "VarArg"  <++> (ffi $ atype App t)
 argType (Optional _ t _) = 
-  let MkPrettyType ffi api _ = atype App t
-   in diff ("UndefOr" <++> ffi) ("Optional" <++> api)
+  let MkPrettyType ffi api ret _ b = atype App t
+   in if b
+         then diffTrue ("UndefOr" <++> ffi) ("Optional" <++> api)
+         else diffFalse ("UndefOr" <++> ffi)
+                        ("Optional" <++> api)
+                        ("Optional" <++> ret)
 
 arg : PrettyArg -> Doc ()
 arg a = parens $ hsep [pretty (argIdent a), ":", a.api]
 
 prettyArg : CGArg -> PrettyArg
-prettyArg a = let MkPrettyType ffi arg same = argType a
-               in MkPrettyArg (argName a) ffi arg same
+prettyArg a = let MkPrettyType ffi api ret same _ = argType a
+               in MkPrettyArg (argName a) ffi api ret same
 
 --------------------------------------------------------------------------------
 --          Functions
@@ -176,7 +218,7 @@ funTypeFFI : (name : IdrisIdent) -> ReturnType -> Args -> Doc ()
 funTypeFFI n t as = typeDecl n (ffi $ returnType t) (map (ffi . prettyArg) as)
 
 funType : (name : IdrisIdent) -> PrettyType -> PrettyArgs -> Doc ()
-funType n t as = typeDecl n t.api (map arg as)
+funType n t as = typeDecl n t.ret (map arg as)
 
 export
 funFFI :  (name : IdrisIdent)
@@ -234,9 +276,9 @@ fun ns name prim as t =
         nameNS = hcat ["\"",pretty $ kindToString ns,".",pretty name,"\""]
 
         primCall : PrettyType -> Doc ()
-        primCall (MkPrettyType _ _ True)  = "primJS $"
-        primCall (MkPrettyType _ _ False) = "tryJS" <++> nameNS <++> "$"
+        primCall (MkPrettyType _ _ _ False _) = "tryJS" <++> nameNS <++> "$"
+        primCall (MkPrettyType _ _ _ True _)  = "primJS $"
 
         adjVal : String -> PrettyArg -> Doc ()
-        adjVal v (MkPrettyArg _ _ _ True)  = pretty v
-        adjVal v (MkPrettyArg _ _ _ False) = parens ("toFFI" <++> pretty v)
+        adjVal v (MkPrettyArg _ _ _ _ True)  = pretty v
+        adjVal v (MkPrettyArg _ _ _ _ False) = parens ("toFFI" <++> pretty v)

@@ -69,6 +69,9 @@ env k ds = let kinds = SortedMap.fromList
 --          Types
 --------------------------------------------------------------------------------
 
+member : Attributed (Nullable CGDist) -> CGMember
+member (a, n) = MkUnionMember a $ nullVal n
+
 parameters (e : Env, dom : Domain)
 
   -- Lookup the kind of an identifier from the environment
@@ -95,41 +98,37 @@ parameters (e : Env, dom : Domain)
     uaD d                     = Right (D $ NotNull d)
   
     uaU : CGUnion -> Codegen (Nullable CGUnion)
-    uaU (UT f s r) = do (hf ::: tf) <- uaM f
-                        (hs ::: ts) <- map join (traverse uaM (s ::: r))
+    uaU (UT f s r) =
+      do (hf ::: tf) <- uaM f
+         rest        <- map join (traverse uaM (s ::: r))
 
-                        let rest : List1 (Nullable CGDist)
-                            rest =
-                              case tf of
-                               []        => hs ::: ts
-                               (x :: xs) => x  ::: (xs ++ (hs :: ts))
+         let (h ::: t) = case tf of
+                              []        => rest
+                              (x :: xs) => x  ::: (xs ++ forget rest)
 
-                            ut : CGUnion
-                            ut = U (nullVal hf)
-                                   (nullVal $ head rest)
-                                   (map nullVal $ tail rest)
+             ut = UT (member hf) (member h) (member <$> t)
 
-                        if any isNullable (hf :: forget rest)
-                           -- the result is nullable
-                           then MaybeNull ut
-                           -- the result is non-nullable
-                           else NotNull ut
+         if any (isNullable . snd) (hf :: h :: t)
+            -- the result is nullable
+            then pure $ MaybeNull ut
+            -- the result is non-nullable
+            else pure $ NotNull ut
 
-  
+
     -- in case of a wrapped distinguishable type,
     -- we unalias it using `uaD` but keep the unaliased
     -- version only, if it is again distinguishable.
-    uaM : CGMember -> Codegen $ List1 (Nullable CGDist)
+    uaM : CGMember -> Codegen $ List1 (Attributed $ Nullable CGDist)
     uaM (MkUnionMember a t) =
       do t2 <- uaD t
          case t2 of
               Any       => Left [AnyInUnion dom]
               Promise x => Left [PromiseInUnion dom]
-              D x       => Right (singleton x)
+              D x       => Right (singleton (a,x))
               U $ MaybeNull $ UT f s r =>
                 do h ::: t <- uaM f
                    r2      <- traverse (map forget . uaM) (s :: r)
-                   pure . map nullable $ h ::: (t ++ join r2)
+                   pure . map (map nullable) $ h ::: (t ++ join r2)
               U $ NotNull $ UT f s r =>
                 do h ::: t <- uaM f
                    r2      <- traverse (map forget . uaM) (s :: r)

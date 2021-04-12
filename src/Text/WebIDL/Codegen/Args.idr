@@ -13,6 +13,7 @@ import Data.List
 import Text.WebIDL.Codegen.Types
 import Text.WebIDL.Codegen.Util
 import Text.WebIDL.Types
+import Text.WebIDL.Encoder as E
 
 ||| Prettyfied types in the codegen plus two boolean flags,
 ||| indicating, whether the two types are identical (and therefore,
@@ -158,7 +159,7 @@ mutual
 
   export
   idl : Prec -> CGType -> PrettyType
-  idl p Any         = sameFalse "AnyPtr"
+  idl p Any         = diffTrue "AnyPtr" "Any"
   idl p (D x)       = nullable dist p x
   idl p (U x)       = nullable un p x
   idl p (Promise x) = sameFalse $ prettyCon p "Promise" [ffi $ idl App x]
@@ -191,25 +192,94 @@ returnType : ReturnType -> PrettyType
 returnType = returnType' "PrimIO"
 
 --------------------------------------------------------------------------------
+--          Default Arg
+--------------------------------------------------------------------------------
+
+export
+Pretty StringLit where
+  pretty v = pretty v.value
+
+export
+Pretty FloatLit where
+  pretty v = pretty $ E.floatLit v
+
+export
+Pretty IntLit where
+  pretty (Hex k) = pretty $ E.toDigits "0x" 16 k
+  pretty (Oct 0) = pretty "0"
+  pretty (Oct k) = pretty $ E.toDigits "0o" 8 k
+  pretty (I x)   = pretty x
+
+export
+Pretty ConstValue where
+  pretty (B x) = pretty x
+  pretty (F x) = pretty x
+  pretty (I x) = pretty x
+
+defltD : Prec -> CGDist -> Default -> Maybe (Doc ())
+defltD p (P $ Unsigned x)     (C $ I y) = Just $ pretty y
+defltD p (P $ Signed x)       (C $ I y) = Just $ pretty y
+defltD p (P $ Unrestricted x) (C $ I y) = Just $ pretty y
+defltD p (P $ Restricted x)   (C $ I y) = Just $ pretty y
+defltD p (P $ Unrestricted x) (C $ F y) = Just $ pretty y
+defltD p (P $ Restricted x)   (C $ F y) = Just $ pretty y
+defltD p (P Boolean)          (C $ B y) = Just $ pretty y
+defltD p (P Byte)             (C $ I y) = Just $ pretty y
+defltD p (P Octet)            (C $ I y) = Just $ pretty y
+defltD p (P BigInt)           (C $ I y) = Just $ pretty y
+defltD p (S DOMString)        (S x)     = Just $ pretty x
+defltD p (S USVString)        (S x)     = Just $ pretty x
+defltD _ _ _                            = Nothing
+
+unionD : Prec -> CGUnion -> Default -> Maybe (Doc ())
+unionD p (UT f s r) d =
+  let m = choiceMap (\u => defltD App u.type d) (the (List _) (f :: s :: r))
+   in map (\x => prettyCon p "inject" [x]) m
+
+export
+deflt : Bool -> Prec -> CGType -> Default -> Maybe (Doc ())
+deflt _ p Any Null  = Just $ prettyCon p "MkAny" ["$ null {a = ()}"]
+deflt _ p Any (S x) = Just $ prettyCon p "MkAny" [pretty x]
+deflt _ p Any (C x) = Just $ prettyCon p "MkAny" [pretty x]
+deflt _ p (D $ MaybeNull x) Null = Just "Nothing"
+
+deflt _ p (D $ MaybeNull x) d =
+  map (\v => prettyCon p "Just" [v]) (defltD App x d)
+
+deflt _ p (D $ NotNull x) d = defltD p x d
+
+deflt _ p (U $ MaybeNull x) Null = Just "Nothing"
+
+deflt True p (U $ MaybeNull x) d =
+  map (\v => prettyCon p "Just" [v]) (unionD App x d)
+
+deflt True p (U $ NotNull x) d = unionD p x d
+deflt _ _ _ _ = Nothing
+
+--------------------------------------------------------------------------------
 --          Arguments
 --------------------------------------------------------------------------------
 
-argType : CGArg -> PrettyType
-argType (Mandatory _ t)  = atype Open t
-argType (VarArg _ t)     = sameFalse $ "VarArg"  <++> (ffi $ atype App t)
-argType (Optional _ t _) = 
+argType : Prec -> CGArg -> PrettyType
+argType p (Mandatory _ t)  = atype p t
+
+argType p (VarArg _ t)     = sameFalse 
+                           $ prettyCon p "VarArg" [ffi $ atype App t]
+
+argType p (Optional _ t _) = 
   let MkPrettyType ffi api ret _ b = atype App t
    in if b
-         then diffTrue ("UndefOr" <++> ffi) ("Optional" <++> api)
-         else diffFalse ("UndefOr" <++> ffi)
-                        ("Optional" <++> api)
-                        ("Optional" <++> ret)
+         then diffTrue (prettyCon p "UndefOr" [ffi])
+                       (prettyCon p "Optional" [api])
+         else diffFalse (prettyCon p "UndefOr" [ffi])
+                        (prettyCon p "Optional" [api])
+                        (prettyCon p "Optional" [ret])
 
 arg : PrettyArg -> Doc ()
 arg a = parens $ hsep [pretty (argIdent a), ":", a.api]
 
 prettyArg : CGArg -> PrettyArg
-prettyArg a = let MkPrettyType ffi api ret same _ = argType a
+prettyArg a = let MkPrettyType ffi api ret same _ = argType Open a
                in MkPrettyArg (argName a) ffi api ret same
 
 --------------------------------------------------------------------------------
@@ -271,6 +341,10 @@ funFFI :  (name : IdrisIdent)
 funFFI n impl as t =
    show . indent 2 $ vsep ["", "export", pretty impl, funTypeFFI n t as ]
 
+export
+namespacedIdent : (ns : Kind) -> (name : IdrisIdent) -> String
+namespacedIdent ns n = fastConcat ["\"",kindToString ns,".",show n,"\""]
+
 fun' :  (ns         : Kind)
      -> (name       : IdrisIdent)
      -> (prim       : IdrisIdent)
@@ -286,11 +360,11 @@ fun' ns name prim as us rt =
       appVs   = align . sep $  zipWith adjVal vs (map prettyArg as)
                             ++ map pretty' us
 
-      nameNS = fastConcat ["\"",kindToString ns,".",show name,"\""]
-
       primNS  = kindToString ns ++ "." ++ show prim
 
-      primCall = if rt.sameType then "primJS" else "tryJS " ++ nameNS
+      primCall = if rt.sameType
+                    then "primJS"
+                    else "tryJS " ++ namespacedIdent ns name
 
       lhs     = pretty' . fastConcat . intersperse " " $ show name :: vs
       
@@ -328,3 +402,45 @@ fun ns name prim as t =
                      II v prf     => fromString $ v ++ "'"
                      Prim v       => Prim (v ++ "'")
                      Underscore v => fromString $ v ++ "'"
+
+--------------------------------------------------------------------------------
+--          Attribute
+--------------------------------------------------------------------------------
+
+export
+attrImpl:  (msg : Doc())
+        -> (set : Doc())
+        -> (get : Doc())
+        -> (arg : CGArg)
+        -> (Doc (), Doc())
+attrImpl msg s g (Mandatory _ (MkAType (D $ MaybeNull x) _)) =
+  ( "Attribute False Maybe" <++> ret (idl App $ D $ NotNull x)
+  , "fromNullablePrim" <++> align (sep [msg,s,g])
+  )
+
+attrImpl msg s g (Mandatory _ (MkAType (U $ MaybeNull x) _)) =
+  ( "Attribute False Maybe" <++> ret (idl App $ U $ NotNull x)
+  , "fromNullablePrim" <++> align (sep [msg,s,g])
+  )
+
+attrImpl msg s g (Mandatory _ t) =
+  ( "Attribute True I" <++> ret (atype App t)
+  , "fromPrim" <++> align (sep [msg,s,g])
+  )
+
+attrImpl msg s g (VarArg _ t) =
+  ( "Attribute True I" <++> prettyCon App "VarArg" [ffi $ atype App t]
+  , "fromPrim" <++> align (sep [msg,s,g])
+  )
+
+attrImpl msg s g (Optional _ t d) =
+  let MkPrettyType api ffi ret _ sc = atype App t
+   in case deflt sc App t.type d of
+        Nothing  =>
+          ( "Attribute False Optional" <++> ret
+          , "fromUndefOrPrimNoDefault" <++> align (sep [msg,s,g])
+          )
+        Just x =>
+          ( "Attribute True Optional" <++> ret
+          , "fromUndefOrPrim" <++> align (sep [msg,s,g,x])
+          )

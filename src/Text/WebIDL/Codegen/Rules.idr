@@ -263,10 +263,7 @@ parameters (e : Env, dom : Domain)
 
   attr : Identifier -> Attribute -> CodegenV (List CGFunction)
   attr obj (MkAttribute _ t n) =
-    let ak  = kind obj
-     in sequence [ AttributeGet n ak <$> (rtpe t)
-                 , AttributeSet n ak <$> (valArg t)
-                 ]
+     map pure [| Attribute (pure n) (pure $ kind obj) (valArg t) (rtpe t) |]
 
   str : Identifier -> Stringifier -> CodegenV (List CGFunction)
   str o (Z v)              = attr o v
@@ -303,19 +300,15 @@ parameters (e : Env, dom : Domain)
                   (map join (traverse (fromMember . snd) d.members)) |]
     where fromMember : DictionaryMemberRest -> CodegenV (List CGFunction)
           fromMember (Required _ t n) =
-            let an = MkAttributeName n.value
-                ak  = kind d.name
-             in sequence [ AttributeGet an ak <$> rtpe t
-                         , AttributeSet an ak <$> valArg t
-                         ]
+            let an = Valid $ MkAttributeName n.value
+             in map pure [| Attribute an (pure $ kind d.name)
+                                      (valArg t) (rtpe t) |]
 
           fromMember (Optional t n def) =
-            let an = MkAttributeName n.value
-                cgt = map (\x => UndefOr x (Just def)) (tpe t)
-                ak  = kind d.name
-             in sequence [ AttributeGet an ak <$> cgt
-                         , AttributeSet an ak <$> optArg t def
-                         ]
+            let an = Valid $ MkAttributeName n.value
+                cgt = map (`UndefOr` Just def) (tpe t)
+                ak  = Valid $ kind d.name
+             in map pure [| Attribute an ak (optArg t def) cgt |]
 
   mixinFuns : Mixin -> CodegenV (List CGFunction)
   mixinFuns m = concat <$> traverse (fromMember . snd) m.members

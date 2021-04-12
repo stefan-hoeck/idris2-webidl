@@ -6,24 +6,6 @@ import Text.WebIDL.Codegen.Rules
 import Text.WebIDL.Codegen.Types
 import Text.WebIDL.Codegen.Util
 import Text.WebIDL.Types
-import Text.WebIDL.Encoder as E
-
-export
-Pretty FloatLit where
-  pretty v = pretty $ E.floatLit v
-
-export
-Pretty IntLit where
-  pretty (Hex k) = pretty $ E.toDigits "0x" 16 k
-  pretty (Oct 0) = pretty "0"
-  pretty (Oct k) = pretty $ E.toDigits "0o" 8 k
-  pretty (I x)   = pretty x
-
-export
-Pretty ConstValue where
-  pretty (B x) = pretty x
-  pretty (F x) = pretty x
-  pretty (I x) = pretty x
 
 --------------------------------------------------------------------------------
 --          Subtyping
@@ -76,6 +58,29 @@ callback (MkCallback n _ t as) =
   callbackAPI n (marshallCallback n) (primMarshallCallback n) as t
 
 --------------------------------------------------------------------------------
+--          Attribute
+--------------------------------------------------------------------------------
+
+attrRW :  Nat
+       -> AttributeName
+       -> Kind
+       -> CGArg
+       -> ReturnType
+       -> String
+attrRW k n o t rt =
+  let implName   = pretty' $ attrGetter k n
+      primGet    = pretty' $ primAttrGetter k n
+      primSet    = pretty' $ primAttrSetter k n
+      msg        = pretty' $ namespacedIdent o (fromString $ "get" ++ n.value)
+      po         = pretty' $ kindToString o
+      (tpe,impl) = attrImpl msg primGet primSet t
+   in show . indent 2 $ vsep [ ""
+                             , "export"
+                             , hsep [implName,":",po,"->",tpe]
+                             , hsep [implName,"=",impl]
+                             ]
+
+--------------------------------------------------------------------------------
 --          Functions
 --------------------------------------------------------------------------------
 
@@ -92,8 +97,7 @@ function (k,Regular n o as t) = fun o (op k n) (primOp k n) (obj o :: as) t
 
 function (k,Static n o as t) = fun o (op k n) (primOp k n) as t
 
-function (k,AttributeSet n o t) =
-  fun o (attrSetter k n) (primAttrSetter k n) [obj o, t] Undefined
+function (k,Attribute n o t rt) = attrRW k n o t rt
 
 function (k,AttributeGet n o t) =
   fun o (attrGetter k n) (primAttrGetter k n) [obj o] t
@@ -120,8 +124,12 @@ prim (k,Regular n o args t) =
 prim (k,Static n o as t) =
   funFFI (primOp k n) (staticFunFFI o n $ length as) as t
 
-prim (k,AttributeSet n o t) =
-  funFFI (primAttrSetter k n) (attrSetFFI n) [obj o, t] Undefined
+prim (k,Attribute n o t rt) =
+  fastUnlines
+    [ funFFI (primAttrGetter k n) (attrGetFFI n) [obj o] rt
+    , ""
+    , funFFI (primAttrSetter k n) (attrSetFFI n) [obj o, t] Undefined
+    ]
 
 prim (k,AttributeGet n o t) =
   funFFI (primAttrGetter k n) (attrGetFFI n) [obj o] t

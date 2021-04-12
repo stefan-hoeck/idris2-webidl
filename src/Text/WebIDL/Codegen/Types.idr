@@ -164,11 +164,12 @@ Args = List CGArg
 ||| A function, for which we will generate some code.
 public export
 data CGFunction : Type where
-  ||| An attribute setter.
-  AttributeSet :  (name : AttributeName)
-               -> (obj  : Kind)
-               -> (tpe  : CGArg)
-               -> CGFunction
+  ||| A read-write attribute
+  Attribute :  (name : AttributeName)
+            -> (obj  : Kind)
+            -> (tpe  : CGArg)
+            -> (ret  : ReturnType)
+            -> CGFunction
 
   ||| An attribute getter.
   AttributeGet :  (name : AttributeName)
@@ -232,8 +233,8 @@ priority (StaticAttributeGet n _ _)  = (1,show n,0)
 priority (Static n o _ _)            = (2,n.value ++ value (ident o),0)
 priority (Getter _ _ _)              = (3,"",0)
 priority (Setter _ _ _)              = (3,"",1)
-priority (AttributeSet n _ _)        = (4,show n,1)
-priority (AttributeGet n _ _)        = (4,show n,0)
+priority (Attribute n _ _ _)         = (4,show n,0)
+priority (AttributeGet n _ _)        = (4,show n,1)
 priority (Regular n o _ _)           = (5,n.value ++ value (ident o),0)
 
 --------------------------------------------------------------------------------

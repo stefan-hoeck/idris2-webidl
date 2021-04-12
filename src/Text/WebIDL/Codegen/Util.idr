@@ -332,4 +332,4 @@ export
 callbackFFI : Nat -> String
 callbackFFI n =
   let vs = fastConcat $ intersperse "," $ take n argNames
-   in foreignBrowser #"x=>{(\#{vs})=>x(\#{vs})()}"#
+   in foreignBrowser #"x=>(\#{vs})=>x(\#{vs})()"#

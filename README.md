@@ -27,8 +27,8 @@ Parsers and (eventually) Idris code generator for WebIDL documents
   - [ ] API function implementations
     - [x] Attribute getters
     - [x] Attribute setters
-    - [ ] Optional attribute unsetters
-    - [ ] Optional attribute getters supporting a default return value
+    - [x] Optional attribute unsetters
+    - [x] Optional attribute getters supporting a default return value
     - [x] Regular functions (no optional arguments or variadic argument)
     - [x] Functions with optional arguments
           (including a second version with the optional arguments

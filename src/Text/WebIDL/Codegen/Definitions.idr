@@ -64,15 +64,18 @@ extern d = fastUnlines [ section "Interfaces" $ exts ext name d.ifaces
 --          CallbackInterfaces
 --------------------------------------------------------------------------------
 
-callback : CGCallback -> String
-callback (MkCallback n cs _ _) =
-   namespaced n $ constants cs
+cbacks : (CGCallback -> List String) -> CGDomain -> String
+cbacks f = section "Callbacks" . map ns . sortBy (comparing name) . callbacks
+  where ns : CGCallback -> String
+        ns i = namespaced i.name (f i)
 
 callbacks : CGDomain -> String
-callbacks = section "Callbacks"
-          . map callback
-          . sortBy (comparing name) 
-          . callbacks
+callbacks = cbacks go
+  where go : CGCallback -> List String
+        go cb = callback cb :: constants cb.constants
+
+primCallbacks : CGDomain -> String
+primCallbacks = cbacks (pure . primCallback)
 
 --------------------------------------------------------------------------------
 --          Interfaces
@@ -180,6 +183,7 @@ primitives d =
   \#{primIfaces d}
   \#{primMixins d}
   \#{primDicts d}
+  \#{primCallbacks d}
   """#
 
 export

@@ -171,22 +171,24 @@ constTpe p (CI x) = pretty $ kindToString x
 atype : Prec -> AType -> PrettyType
 atype p = idl p . type
 
-returnType : ReturnType -> PrettyType
-returnType Undefined     = MkPrettyType "PrimIO ()" "JSIO ()" "JSIO ()" True True
-returnType (UndefOr x _) = 
+returnType' : (primIO : Doc ()) -> ReturnType -> PrettyType
+returnType' p Undefined     =
+  MkPrettyType (p <++> "()") "JSIO ()" "JSIO ()" True True
+returnType' p (UndefOr x _) = 
   let MkPrettyType ffi api ret _ b = atype App x
    in if b
-         then diffTrue ("PrimIO $ UndefOr" <++> ffi)
+         then diffTrue (p <++> "$ UndefOr" <++> ffi)
                        ("JSIO $ Optional" <++> api)
-         else diffFalse ("PrimIO $ UndefOr" <++> ffi)
+         else diffFalse (p <++> "$ UndefOr" <++> ffi)
                         ("JSIO $ Optional" <++> ffi)
                         ("JSIO $ Optional" <++> ret)
 
-returnType (FromIdl x)   =
+returnType' p (FromIdl x)   =
   let MkPrettyType ffi api ret b sc = atype App x
-   in MkPrettyType ("PrimIO" <++> ffi)
-                   ("JSIO" <++> api)
-                   ("JSIO" <++> ret) b sc
+   in MkPrettyType (p <++> ffi) ("JSIO" <++> api) ("JSIO" <++> ret) b sc
+
+returnType : ReturnType -> PrettyType
+returnType = returnType' "PrimIO"
 
 --------------------------------------------------------------------------------
 --          Arguments
@@ -219,6 +221,46 @@ funTypeFFI n t as = typeDecl n (ffi $ returnType t) (map (ffi . prettyArg) as)
 
 funType : (name : IdrisIdent) -> PrettyType -> PrettyArgs -> Doc ()
 funType n t as = typeDecl n t.ret (map arg as)
+
+export
+callbackFFI :  (obj  : Identifier)
+            -> (name : IdrisIdent)
+            -> (impl : String)
+            -> (args : Args)
+            -> (tpe  : ReturnType)
+            -> String
+callbackFFI o n impl as t =
+  let cbTpe  = functionTypeOnly (ffi $ returnType' "IO" t)
+                                (map (ffi . prettyArg) as)
+
+      retTpe = "PrimIO" <++> pretty' (o.value)
+
+   in show . indent 2 $ vsep [ ""
+                             , "export"
+                             , pretty' impl
+                             , typeDecl n retTpe [cbTpe]
+                             ]
+
+export
+callbackAPI :  (obj  : Identifier)
+            -> (name : IdrisIdent)
+            -> (prim : IdrisIdent)
+            -> (args : Args)
+            -> (tpe  : ReturnType)
+            -> String
+callbackAPI o n prim as t =
+  let cbTpe  = functionTypeOnly (ffi $ returnType' "IO" t)
+                                (map (ffi . prettyArg) as)
+
+      retTpe = "JSIO" <++> pretty' (o.value)
+      impl   = pretty' n <++> "cb = primJS $" <++> pretty prim <++> "cb"
+
+   in show . indent 2 $ vsep [ ""
+                             , "export"
+                             , typeDecl n retTpe [cbTpe]
+                             , impl
+                             ]
+
 
 export
 funFFI :  (name : IdrisIdent)

@@ -115,6 +115,14 @@ namespaced n ds = fastUnlines $ "" :: #"namespace \#{n.value}"# :: ds
 --------------------------------------------------------------------------------
 
 export
+functionTypeOnly : (res : Doc ()) -> (args : List $ Doc ()) -> Doc()
+functionTypeOnly res []       = parens $ "() ->" <++> res
+functionTypeOnly res (h :: t) =
+  let h' = "(" <++> flatAlt (" "  <+> h) h
+      args = h' :: map ("->" <++>) (t ++ [res]) ++ [")"]
+   in align (sep args)
+
+export
 functionTypeWithImplicits :  (name : IdrisIdent)
                           -> (sep : Char)
                           -> (res : Doc ())
@@ -175,23 +183,8 @@ prettyCon : Prec -> (con : Doc ann) -> (args : List (Doc ann)) -> Doc ann
 prettyCon p con args = prettyParens (p >= App) (con <++> align (sep args))
 
 --------------------------------------------------------------------------------
---          Foreign Function Implementations
+--          Function Names
 --------------------------------------------------------------------------------
-
-export
-argNames : Stream String
-argNames = "a" :: "b" :: "c" :: "d" :: "e" :: "f" :: "g" ::
-           "h" :: "i" :: "j" :: "k" :: "l" :: "m" :: "n" :: 
-           "o" :: "p" :: "q" :: "r" :: "s" :: "t" :: "u" :: 
-           "v" :: "w" :: "y" :: "z" :: 
-           map (\v => "x" ++ show v) [the Integer 1 ..]
-
-export
-unShadowingArgNames : IdrisIdent -> Stream String
-unShadowingArgNames i = go (show i) argNames
-  where go : String -> Stream String -> Stream String
-        go s (h :: t) = if s == h then t else h :: go s t
-
 
 ix : Nat -> String
 ix Z = ""
@@ -245,6 +238,32 @@ primConstr k = Prim $ fromString ("new" ++ ix k)
 export
 constr : Nat -> IdrisIdent
 constr k = fromString ("new" ++ ix k)
+
+export
+marshallCallback : Identifier -> IdrisIdent
+marshallCallback i = fromString $ "to" ++ i.value
+
+export
+primMarshallCallback : Identifier -> IdrisIdent
+primMarshallCallback i = Prim . fromString $ "to" ++ i.value
+
+--------------------------------------------------------------------------------
+--          Foreign Function Implementations
+--------------------------------------------------------------------------------
+
+export
+argNames : Stream String
+argNames = "a" :: "b" :: "c" :: "d" :: "e" :: "f" :: "g" ::
+           "h" :: "i" :: "j" :: "k" :: "l" :: "m" :: "n" :: 
+           "o" :: "p" :: "q" :: "r" :: "s" :: "t" :: "u" :: 
+           "v" :: "w" :: "y" :: "z" :: 
+           map (\v => "x" ++ show v) [the Integer 1 ..]
+
+export
+unShadowingArgNames : IdrisIdent -> Stream String
+unShadowingArgNames i = go (show i) argNames
+  where go : String -> Stream String -> Stream String
+        go s (h :: t) = if s == h then t else h :: go s t
 
 foreignBrowser : String -> String
 foreignBrowser s = "%foreign \"browser:lambda:" ++ s ++ "\""
@@ -311,3 +330,9 @@ getterFFI = foreignBrowser "(o,x)=>o[x]"
 export
 setterFFI : String
 setterFFI = foreignBrowser "(o,x,v)=>o[x] = v"
+
+export
+callbackFFI : Nat -> String
+callbackFFI n =
+  let vs = fastConcat $ intersperse "," $ take n argNames
+   in foreignBrowser #"x=>{(\#{vs})=>x(\#{vs})()}"#

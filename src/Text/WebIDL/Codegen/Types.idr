@@ -293,8 +293,8 @@ record CGCallback where
   constructor MkCallback
   name      : Identifier
   constants : List CGConst
-  type      : IdlType
-  args      : ArgumentList
+  type      : ReturnType
+  args      : Args
 
 public export
 record CGTypedef where

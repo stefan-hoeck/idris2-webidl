@@ -62,6 +62,20 @@ constants = map (show . const) . sortBy (comparing name)
                           ]
 
 --------------------------------------------------------------------------------
+--          Callback Conversion
+--------------------------------------------------------------------------------
+
+export
+primCallback : CGCallback -> String
+primCallback (MkCallback n _ t as) =
+  callbackFFI n (primMarshallCallback n) (callbackFFI $ length as) as t
+
+export
+callback : CGCallback -> String
+callback (MkCallback n _ t as) =
+  callbackAPI n (marshallCallback n) (primMarshallCallback n) as t
+
+--------------------------------------------------------------------------------
 --          Functions
 --------------------------------------------------------------------------------
 

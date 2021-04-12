@@ -427,13 +427,14 @@ parameters (e : Env, dom : Domain)
           mixin m = [| MkMixin (pure m.name) (mixinConsts m) (mixinFuns m) |]
 
           callback : Callback -> CodegenV CGCallback
-          callback c = Valid $ MkCallback c.name Nil c.type c.args
+          callback c = [| MkCallback (pure c.name) (pure Nil)
+                                     (rtpe c.type) (toArgs c.args) |]
 
           callbackIface : CallbackInterface -> CodegenV CGCallback
           callbackIface v@(MkCallbackInterface _ n ms) =
             case mapMaybe (\(_,m)   => extract RegularOperation m) ms of
                  [MkOp () t _ a] => 
-                   [| MkCallback (pure n) (callbackConsts v) (pure t) (pure a) |]
+                   [| MkCallback (pure n) (callbackConsts v) (rtpe t) (toArgs a) |]
                  xs => Invalid [CBInterfaceInvalidOps dom n (length xs)]
 
           callbacks : CodegenV (List CGCallback)

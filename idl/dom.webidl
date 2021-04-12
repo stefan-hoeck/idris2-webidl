@@ -1,5 +1,6 @@
 // Extracted from https://dom.spec.whatwg.org/ (16 March 2021)
 //            and https://w3c.github.io/hr-time/#idl-index
+//            and https://w3c.github.io/DOM-Parsing/
 
 [Exposed=(Window,Worker,AudioWorklet)]
 interface Event {
@@ -633,4 +634,26 @@ interface Performance : EventTarget {
 
 partial interface mixin WindowOrWorkerGlobalScope {
   [Replaceable] readonly attribute Performance performance;
+};
+
+[Exposed=Window]
+interface XMLSerializer {
+  constructor();
+  DOMString serializeToString(Node root);
+};
+
+interface mixin InnerHTML {
+  [CEReactions] attribute [LegacyNullToEmptyString] DOMString innerHTML;
+};
+
+Element includes InnerHTML;
+ShadowRoot includes InnerHTML;
+
+partial interface Element {
+  [CEReactions] attribute [LegacyNullToEmptyString] DOMString outerHTML;
+  [CEReactions] void insertAdjacentHTML(DOMString position, DOMString text);
+};
+
+partial interface Range {
+  [CEReactions, NewObject] DocumentFragment createContextualFragment(DOMString fragment);
 };

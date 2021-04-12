@@ -292,8 +292,7 @@ funFFI n Z = foreignBrowser #"x=>x.\#{n.value}()"#
 funFFI n k =
   let vs = take k argNames
       vals = fastConcat $ intersperse "," vs
-      args = fastConcat $ intersperse " " vs
-   in foreignBrowser #"(x,\#{vals})=>x.\#{n.value}(\#{args})"#
+   in foreignBrowser #"(x,\#{vals})=>x.\#{n.value}(\#{vals})"#
 
 export
 staticFunFFI : Kind -> OperationName -> Nat -> String
@@ -301,16 +300,14 @@ staticFunFFI o n Z = foreignBrowser #"x=>x.\#{n.value}()"#
 staticFunFFI o n k =
   let vs = take k argNames
       vals = fastConcat $ intersperse "," vs
-      args = fastConcat $ intersperse " " vs
-   in foreignBrowser #"(\#{vals})=>\#{kindToString o}.\#{n.value}(\#{args})"#
+   in foreignBrowser #"(\#{vals})=>\#{kindToString o}.\#{n.value}(\#{vals})"#
 
 export
 conFFI : Kind -> Nat -> String
 conFFI n k =
   let vs = take k argNames
       vals = fastConcat $ intersperse "," vs
-      args = fastConcat $ intersperse " " vs
-   in foreignBrowser #"(\#{vals})=> new \#{kindToString n}(\#{args})"#
+   in foreignBrowser #"(\#{vals})=> new \#{kindToString n}(\#{vals})"#
 
 export
 dictConFFI : List ArgumentName -> String

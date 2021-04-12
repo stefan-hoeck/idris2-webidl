@@ -271,40 +271,56 @@ funFFI :  (name : IdrisIdent)
 funFFI n impl as t =
    show . indent 2 $ vsep ["", "export", pretty impl, funTypeFFI n t as ]
 
+fun' :  (ns         : Kind)
+     -> (name       : IdrisIdent)
+     -> (prim       : IdrisIdent)
+     -> (args       : Args)
+     -> (undefs     : Nat)
+     -> (returnType : PrettyType)
+     -> List (Doc ())
+fun' ns name prim as us rt =
+  let args    = map prettyArg as
+
+      vs      = take (length as) (unShadowingArgNames name)
+
+      appVs   = align . sep $  zipWith adjVal vs (map prettyArg as)
+                            ++ replicate us "undef"
+
+      nameNS = fastConcat ["\"",kindToString ns,".",show name,"\""]
+
+      primNS  = kindToString ns ++ "." ++ show prim
+
+      primCall = if rt.sameType then "primJS" else "tryJS " ++ nameNS
+
+      lhs     = pretty' . fastConcat . intersperse " " $ show name :: vs
+      
+      impl    = lhs <++> (align . sep) [ "=" <++> pretty primCall
+                                       , "$" <++> pretty primNS <++> appVs
+                                       ]
+   in ["", "export", funType name rt args, impl]
+
+  where adjVal : String -> PrettyArg -> Doc ()
+        adjVal v (MkPrettyArg _ _ _ _ True)  = pretty v
+        adjVal v (MkPrettyArg _ _ _ _ False) = parens ("toFFI" <++> pretty v)
+
 export
-fun :  (ns : Kind)
+fun :  (ns   : Kind)
     -> (name : IdrisIdent)
     -> (prim : IdrisIdent)
     -> Args
     -> ReturnType
     -> String
 fun ns name prim as t =
-  let -- pretty retturn type
-      retType       = returnType t
+  let retType       = returnType t
 
-      -- pretty function arguments
-      args          = map prettyArg as
-
-      -- main function
-      funTpe        = funType name retType args
-      vs            = take (length args) (unShadowingArgNames name)
-      appVs         = zipWith adjVal vs args
-      primNS        = pretty' (kindToString ns) <+> "." <+> pretty prim
-      lhs           = hsep (pretty' name :: map pretty vs)
-      rhs           = hsep [primCall retType,primNS,align $ sep appVs]
-      funImpl       = ["","export",funTpe,lhs <++> "=" <++> rhs]
+      funImpl       = fun' ns name prim as 0 retType
 
       -- function without optional args
-      args2        = map prettyArg $ filter (not . isOptional) as
-      funTpe2      = funType name2 retType args2
-      vs2          = take (length args2) (unShadowingArgNames name2)
-      lenDiff      = length args `minus` length args2
-      appVs2       = vs2 ++ replicate lenDiff "Undef"
-      lhs2         = hsep (pretty' name2 :: map pretty vs2)
-      rhs2         = hsep [pretty' name, align (sep $ map pretty appVs2) ]
+      as2          = filter (not . isOptional) as
+      lenDiff      = length as `minus` length as2
       funImpl2     = if lenDiff == Z
                         then []
-                        else ["","export",funTpe2,lhs2 <++> "=" <++> rhs2]
+                        else fun' ns name2 prim as2 lenDiff retType
 
    in show . indent 2 $ vsep (funImpl ++ funImpl2)
 
@@ -313,14 +329,3 @@ fun ns name prim as t =
                      II v prf     => fromString $ v ++ "'"
                      Prim v       => Prim (v ++ "'")
                      Underscore v => fromString $ v ++ "'"
-
-        nameNS : Doc ()
-        nameNS = hcat ["\"",pretty $ kindToString ns,".",pretty name,"\""]
-
-        primCall : PrettyType -> Doc ()
-        primCall (MkPrettyType _ _ _ False _) = "tryJS" <++> nameNS <++> "$"
-        primCall (MkPrettyType _ _ _ True _)  = "primJS $"
-
-        adjVal : String -> PrettyArg -> Doc ()
-        adjVal v (MkPrettyArg _ _ _ _ True)  = pretty v
-        adjVal v (MkPrettyArg _ _ _ _ False) = parens ("toFFI" <++> pretty v)

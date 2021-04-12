@@ -275,7 +275,7 @@ fun' :  (ns         : Kind)
      -> (name       : IdrisIdent)
      -> (prim       : IdrisIdent)
      -> (args       : Args)
-     -> (undefs     : Nat)
+     -> (undefs     : List String)
      -> (returnType : PrettyType)
      -> List (Doc ())
 fun' ns name prim as us rt =
@@ -284,7 +284,7 @@ fun' ns name prim as us rt =
       vs      = take (length as) (unShadowingArgNames name)
 
       appVs   = align . sep $  zipWith adjVal vs (map prettyArg as)
-                            ++ replicate us "undef"
+                            ++ map pretty' us
 
       nameNS = fastConcat ["\"",kindToString ns,".",show name,"\""]
 
@@ -313,14 +313,13 @@ fun :  (ns   : Kind)
 fun ns name prim as t =
   let retType       = returnType t
 
-      funImpl       = fun' ns name prim as 0 retType
+      funImpl       = fun' ns name prim as [] retType
 
       -- function without optional args
-      as2          = filter (not . isOptional) as
-      lenDiff      = length as `minus` length as2
-      funImpl2     = if lenDiff == Z
-                        then []
-                        else fun' ns name2 prim as2 lenDiff retType
+      as2      = filter (not . isOptional) as
+      undefs   = replicate (length as `minus` length as2) "undef"
+      funImpl2 = if null undefs then []
+                 else fun' ns name2 prim as2 undefs retType
 
    in show . indent 2 $ vsep (funImpl ++ funImpl2)
 

@@ -49,38 +49,160 @@ kindToString = value . ident
 --          Types
 --------------------------------------------------------------------------------
 
-||| An idl type in the code generator pairs identifiers with
-||| their `Kind`.
-public export
-CGType : Type
-CGType = IdlTypeF ExtAttributeList Kind
+mutual
+  public export
+  data SimpleType : Type where
+    ||| The undefined type (or () if it is a return type)
+    Undef        : SimpleType
 
-public export
-CGDist : Type
-CGDist = DistinguishableF ExtAttributeList Kind
+    ||| `Boolean` at the FFI, `Bool` in the API.
+    Boolean      : SimpleType
 
-public export
-CGUnion : Type
-CGUnion = UnionTypeF ExtAttributeList Kind
+    ||| A dictionary or interface. This has an instance of `SafeCast`,
+    ||| and is being abstracted over when used in an argument
+    ||| list in the API.
+    ParentType   : Identifier  -> SimpleType
 
-public export
-CGMember : Type
-CGMember = UnionMemberTypeF ExtAttributeList Kind
+    ||| Primitive type or a wrapper of a primitive.
+    ||| This is the same at the FFI and API and
+    ||| has an instance of `SafeCast`.
+    Primitive : String      -> SimpleType
 
-||| A type paired with its unaliased from (if any).
-||| In the unaliased form, all type aliases are fully resolved.
-public export
-record AType where
-  constructor MkAType
-  type           : CGType
-  aliasedVersion : Maybe CGType
+    ||| Types that do not change between FFI and API
+    Unchangeable : String      -> SimpleType
+
+    ||| Enum type at the API, Strings at the FFI
+    Enum         : Identifier  -> SimpleType
+
+    ||| Some kind of Array
+    Array        : CGType      -> SimpleType
+
+    ||| Some kind of Record
+    Record       : String      -> CGType -> SimpleType
+
+  public export
+  data CGType : Type where
+    Any     : CGType
+    Promise : CGType                      -> CGType
+    Simple  : Nullable SimpleType         -> CGType
+    Union   : Nullable (List1 SimpleType) -> CGType
 
 ||| True, if the type can be used as an index in a
 ||| WebIDL `Getter` or `Setter`, that is, it corresponds
 ||| to either an `unsigned long` or a `DOMString`.
 export
-isIndex : AType -> Bool
-isIndex = isIndex . type
+isIndex : CGType -> Bool
+isIndex (Simple $ NotNull $ Unchangeable "String") = True
+isIndex (Simple $ NotNull $ Unchangeable "UInt32") = True
+isIndex _                                          = False
+
+namespace SimpleType
+  ||| True, if the FFI representation of the given type
+  ||| has a `SafeCast` implementation
+  export
+  safeCast : SimpleType -> Bool
+  safeCast Undef            = True
+  safeCast Boolean          = True
+  safeCast (ParentType x)   = True
+  safeCast (Primitive x)    = True
+  safeCast (Unchangeable x) = False
+  safeCast (Enum x)         = True
+  safeCast (Array x)        = False
+  safeCast (Record x y)     = False
+
+  ||| True, if the type uses the same representation in
+  ||| the FFI and the API as a function argument
+  export
+  sameArgType : SimpleType -> Bool
+  sameArgType Undef            = True
+  sameArgType Boolean          = False
+  sameArgType (ParentType x)   = False
+  sameArgType (Primitive x)    = True
+  sameArgType (Unchangeable x) = True
+  sameArgType (Enum x)         = False
+  sameArgType (Array x)        = True
+  sameArgType (Record x y)     = True
+
+  ||| True, if the type uses the same representation in
+  ||| the FFI and the API as a return value.
+  export
+  sameRetType : SimpleType -> Bool
+  sameRetType Undef            = True
+  sameRetType Boolean          = False
+  sameRetType (ParentType x)   = True
+  sameRetType (Primitive x)    = True
+  sameRetType (Unchangeable x) = True
+  sameRetType (Enum x)         = False
+  sameRetType (Array x)        = True
+  sameRetType (Record x y)     = True
+
+  export
+  isParent : SimpleType -> Bool
+  isParent (ParentType _) = True
+  isParent _              = False
+
+namespace CGType
+
+  public export
+  simple : SimpleType -> CGType
+  simple = Simple . NotNull
+
+  public export
+  unchangeable : String -> CGType
+  unchangeable = simple . Unchangeable
+
+  public export
+  parentType : Identifier -> CGType
+  parentType = simple . ParentType
+
+  ||| Wrapps the given kind in return type.
+  export
+  fromKind : Kind -> CGType
+  fromKind (KAlias x)      = unchangeable x.value
+  fromKind (KCallback x)   = unchangeable x.value
+  fromKind (KDictionary x) = parentType x
+  fromKind (KEnum x)       = Simple . NotNull $ Enum x
+  fromKind (KInterface x)  = parentType x
+  fromKind (KMixin x)      = unchangeable x.value
+  fromKind (KOther x)      = unchangeable x.value
+
+  ||| True, if the FFI representation of the given type
+  ||| has a `SafeCast` implementation
+  export
+  safeCast : CGType -> Bool
+  safeCast Any         = True
+  safeCast (Promise x) = False
+  safeCast (Simple x)  = safeCast $ nullVal x
+  safeCast (Union _)   = False
+
+  ||| True, if the given type is the same in the API and
+  ||| the FFI when used as an argument
+  export
+  sameArgType : CGType -> Bool
+  sameArgType Any                    = False
+  sameArgType (Promise x)            = True
+  sameArgType (Simple $ MaybeNull _) = False
+  sameArgType (Simple $ NotNull x)   = sameArgType x
+  sameArgType (Union  _)             = False
+
+  ||| True, if the given type is the same in the API and
+  ||| the FFI when used as a return value
+  export
+  sameRetType : CGType -> Bool
+  sameRetType Any                    = False
+  sameRetType (Promise x)            = True
+  sameRetType (Simple $ MaybeNull _) = False
+  sameRetType (Simple $ NotNull x)   = sameRetType x
+  sameRetType (Union  $ MaybeNull _) = False
+  sameRetType (Union  $ NotNull xs)  = not $ all safeCast xs
+
+  export
+  isParent : CGType -> Bool
+  isParent x = ?isParent_rhs
+
+--------------------------------------------------------------------------------
+--          ReturnType
+--------------------------------------------------------------------------------
 
 ||| A function's return type.
 public export
@@ -91,10 +213,10 @@ data ReturnType : Type where
   ||| The attribute in question might not be defined
   ||| The return type will be wrapped in `UndefOr` in
   ||| the code generator.
-  UndefOr  : AType -> Maybe Default -> ReturnType
+  UndefOr  : CGType -> Maybe Default -> ReturnType
 
   ||| Nothing special about the wrapped return type.
-  FromIdl   : AType -> ReturnType
+  Def      : CGType -> ReturnType
 
 ||| Checks if the return type is `Undefined`.
 public export
@@ -102,14 +224,48 @@ isUndefined : ReturnType -> Bool
 isUndefined Undefined = True
 isUndefined _         = False
 
-||| Wrapps the given kind in an unaliased return type.
-export
-fromKind : Kind -> ReturnType
-fromKind k = FromIdl $ MkAType (identToType k) Nothing
+namespace ReturnType
+  
+  public export
+  simple : SimpleType -> ReturnType
+  simple = Def . simple
+
+  public export
+  unchangeable : String -> ReturnType
+  unchangeable = Def . unchangeable
+
+  public export
+  parentType : Identifier -> ReturnType
+  parentType = Def . parentType
+
+  ||| Wrapps the given kind in return type.
+  export
+  fromKind : Kind -> ReturnType
+  fromKind = Def . fromKind
+
+  ||| True, if the given FFI type has a `SafeCast` instance
+  export
+  safeCast : ReturnType -> Bool
+  safeCast Undefined     = True
+  safeCast (UndefOr x _) = safeCast x
+  safeCast (Def x)       = safeCast x
+
+  ||| True, if the given return type is the same in the API and
+  ||| the FFI.
+  export
+  sameType : ReturnType -> Bool
+  sameType Undefined     = True
+  sameType (UndefOr _ _) = False
+  sameType (Def x)       = sameRetType x
+
+--------------------------------------------------------------------------------
+--          Constants
+--------------------------------------------------------------------------------
 
 public export
-CGConstType : Type
-CGConstType = ConstTypeF Kind
+record CGConstType where
+  constructor MkConstType
+  primitive : String
 
 public export
 record CGConst where
@@ -117,7 +273,6 @@ record CGConst where
   type  : CGConstType
   name  : Identifier
   value : ConstValue
-
 
 --------------------------------------------------------------------------------
 --          Arguments
@@ -127,14 +282,14 @@ record CGConst where
 public export
 data CGArg : Type where
   ||| A mandatory function argument
-  Mandatory : ArgumentName -> AType -> CGArg
+  Mandatory : ArgumentName -> CGType -> CGArg
 
   ||| An optional function argument together with its
   ||| default value if the argument is `undefined`.
-  Optional  : ArgumentName -> AType -> Default -> CGArg
+  Optional  : ArgumentName -> CGType -> Default -> CGArg
 
   ||| A variadic function argument
-  VarArg    : ArgumentName -> AType -> CGArg
+  VarArg    : ArgumentName -> CGType -> CGArg
 
 export
 argName : CGArg -> ArgumentName
@@ -143,7 +298,7 @@ argName (Optional x _ _) = x
 argName (VarArg x _)     = x
 
 export
-argType : CGArg -> AType
+argType : CGArg -> CGType
 argType (Mandatory _ y)  = y
 argType (Optional _ y _) = y
 argType (VarArg _ y)     = y
@@ -152,6 +307,23 @@ export
 isOptional : CGArg -> Bool
 isOptional (Optional _ _ _) = True
 isOptional _                = False
+
+namespace CGArg
+
+  ||| True, if the given FFI type has a `SafeCast` instance
+  export
+  safeCast : CGArg -> Bool
+  safeCast (Mandatory _ t)  = safeCast t
+  safeCast (Optional _ t _) = safeCast t
+  safeCast (VarArg _ _)     = False
+
+  ||| True, if the given argument type is the same in the API and
+  ||| the FFI.
+  export
+  sameType : CGArg -> Bool
+  sameType (Mandatory _ t)  = sameArgType t
+  sameType (Optional _ _ _) = False
+  sameType (VarArg _ _)     = True
 
 public export
 Args : Type
@@ -298,12 +470,6 @@ record CGCallback where
   args      : Args
 
 public export
-record CGTypedef where
-  constructor MkTypedef
-  name      : Identifier
-  type      : CGType
-
-public export
 record CGDomain where
   constructor MkDomain
   name      : String
@@ -312,7 +478,6 @@ record CGDomain where
   enums     : List Enum
   ifaces    : List CGIface
   mixins    : List CGMixin
-  typedefs  : List CGTypedef
 
 export
 domainFunctions : CGDomain -> List CGFunction
@@ -339,7 +504,7 @@ record Env where
   maxInheritance : Nat
   kinds          : SortedMap Identifier Kind
   jsTypes        : SortedMap Identifier JSType
-  aliases        : SortedMap Identifier CGType
+  aliases        : SortedMap Identifier (IdlTypeF ExtAttributeList Kind)
 
 --------------------------------------------------------------------------------
 --          Codegen Errors
@@ -347,15 +512,16 @@ record Env where
 
 public export
 data CodegenErr : Type where
+  AnyInUnion             : Domain -> CodegenErr
   CBInterfaceInvalidOps  : Domain -> Identifier -> Nat -> CodegenErr
+  InvalidConstType       : Domain -> CodegenErr
   InvalidGetter          : Domain -> Identifier -> CodegenErr
   InvalidSetter          : Domain -> Identifier -> CodegenErr
-  RegularOpWithoutName   : Domain -> Identifier -> CodegenErr
-  AnyInUnion             : Domain -> CodegenErr
-  PromiseInUnion         : Domain -> CodegenErr
   NullableAny            : Domain -> CodegenErr
   NullablePromise        : Domain -> CodegenErr
-  InvalidConstType       : Domain -> CodegenErr
+  PromiseInUnion         : Domain -> CodegenErr
+  RegularOpWithoutName   : Domain -> Identifier -> CodegenErr
+  UnresolvedAlias        : Domain -> Identifier -> CodegenErr
 
 public export
 Codegen : Type -> Type

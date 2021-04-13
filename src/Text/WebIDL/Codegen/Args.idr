@@ -9,47 +9,15 @@
 ||| in function implementations.
 module Text.WebIDL.Codegen.Args
 
-import Data.List
-import Text.WebIDL.Codegen.Types
+import Data.List1
 import Text.WebIDL.Codegen.Util
-import Text.WebIDL.Types
 import Text.WebIDL.Encoder as E
-
-||| Prettyfied types in the codegen plus two boolean flags,
-||| indicating, whether the two types are identical (and therefore,
-||| there is no need for marshalling from or to the FFI),
-||| and whether the type has a `SafeCast` instance (only if this
-||| is set to true are we allowed to marshall a return type
-||| from the FFI).
-public export
-record PrettyType where
-  constructor MkPrettyType
-  ffi      : Doc ()
-  api      : Doc ()
-  ret      : Doc ()
-  sameType : Bool
-  safeCast : Bool
-
-sameTrue : Doc () -> PrettyType
-sameTrue d = MkPrettyType d d d True True
-
-sameFalse : Doc () -> PrettyType
-sameFalse d = MkPrettyType d d d True False
-
-diffTrue : Doc () -> Doc () -> PrettyType
-diffTrue d a = MkPrettyType d a a False True
-
-diffFalse : Doc () -> Doc () -> Doc () -> PrettyType
-diffFalse f a r = MkPrettyType f a r False False
 
 public export
 record PrettyArg where
   constructor MkPrettyArg
-  name     : ArgumentName
-  ffi      : Doc ()
-  api      : Doc ()
-  ret      : Doc ()
-  sameType : Bool
+  name : ArgumentName
+  doc  : Doc ()
 
 export
 argIdent : PrettyArg -> IdrisIdent
@@ -60,136 +28,94 @@ PrettyArgs : Type
 PrettyArgs = List PrettyArg
 
 --------------------------------------------------------------------------------
---          Kinds
+--          FFI
 --------------------------------------------------------------------------------
 
-kind : Prec -> Kind -> PrettyType
-kind _ (KAlias y)      = sameFalse (pretty $ y.value)
-kind _ (KCallback y)   = sameFalse (pretty $ y.value)
-kind _ (KDictionary y) = sameTrue (pretty $ y.value)
-kind _ (KEnum y)       = diffTrue "String" (pretty $ y.value)
-kind _ (KInterface y)  = sameTrue (pretty $ y.value)
-kind _ (KMixin y)      = sameFalse (pretty $ y.value)
-kind _ (KOther y)      = sameFalse (pretty $ y.value)
-
---------------------------------------------------------------------------------
---          Types
---------------------------------------------------------------------------------
-
-buff : Prec -> BufferRelatedType -> PrettyType
-buff _ Uint8Array        = sameFalse "UInt8Array"
-buff _ Uint16Array       = sameFalse "UInt8Array"
-buff _ Uint32Array       = sameFalse "UInt8Array"
-buff _ Uint8ClampedArray = sameFalse "UInt8ClampedArray"
-buff _ x                 = sameFalse . pretty $ show x
-
--- booleans are marshalled from Idris2 `Bool` to JS `Boolean`
--- and back
-prim : Prec -> PrimitiveType -> PrettyType
-prim _ Boolean             = diffTrue "Boolean" "Bool"
-prim _ (Unsigned Short)    = sameTrue "UInt16"
-prim _ (Unsigned Long)     = sameTrue "UInt32"
-prim _ (Unsigned LongLong) = sameTrue "UInt64"
-prim _ (Signed Short)      = sameTrue "Int16"
-prim _ (Signed Long)       = sameTrue "Int32"
-prim _ (Signed LongLong)   = sameTrue "Int64"
-prim _ (Unrestricted x)    = sameTrue "Double"
-prim _ (Restricted x)      = sameTrue "Double"
-prim _ Undefined           = sameTrue "Undefined"
-prim _ Byte                = sameTrue "Int8"
-prim _ Octet               = sameTrue "UInt8"
-prim _ BigInt              = sameTrue "Integer"
-
-string : Prec -> StringType -> PrettyType
-string _ ByteString = sameFalse "ByteString"
-string _ DOMString  = sameTrue "String"
-string _ USVString  = sameTrue "String"
-
-nullable :  (Prec -> a -> PrettyType) -> Prec -> Nullable a -> PrettyType
-nullable f p (MaybeNull x) = 
-  let MkPrettyType ffi api ret _ b = f App x
-   in if b 
-         then diffTrue (prettyCon p "Nullable" [ffi])
-                       (prettyCon p "Maybe" [api])
-         else diffFalse (prettyCon p "Nullable" [ffi])
-                        (prettyCon p "Maybe" [api])
-                        (prettyCon p "Maybe" [ret])
-nullable f p (NotNull x)   = f p x
+nullableFFI :  (Prec -> a -> Doc ()) -> Prec -> Nullable a -> Doc ()
+nullableFFI f p (MaybeNull x) = prettyCon p "Nullable" [f App x] 
+nullableFFI f p (NotNull x)   = f p x
 
 mutual
-  -- types wrapped in `Sequence` or similar are
-  -- kept in their FFI form.
-  dist : Prec -> CGDist -> PrettyType
-  dist _ Object                = sameTrue "Object"
-  dist _ Symbol                = sameTrue "Symbol"
-  dist p (P x)                 = prim p x
-  dist p (S x)                 = string p x
-  dist p (I x)                 = kind p x
-  dist p (B x)                 = buff p x
-  dist p (Sequence _ x)        = sameFalse $ prettyCon p "Array" [ffi $ idl App x]
-  dist p (FrozenArray _ x)     = sameFalse $ prettyCon p "Array" [ffi $ idl App x]
-  dist p (ObservableArray _ x) = sameFalse $ prettyCon p "Array" [ffi $ idl App x]
-  dist p (Record s _ x) =
-    sameFalse $ prettyCon p "Record" [ffi $ string App s, ffi $ idl App x]
+  simpleFFI : Prec -> SimpleType -> Doc ()
+  simpleFFI p Undef            = "Undefined"
+  simpleFFI p Boolean          = "Boolean"
+  simpleFFI p (ParentType x)   = pretty x.value
+  simpleFFI p (Primitive x)    = pretty x
+  simpleFFI p (Unchangeable x) = pretty x
+  simpleFFI p (Enum x)         = "String"
+  simpleFFI p (Array x)        = prettyCon p "Array" [ffi App x]
+  simpleFFI p (Record x y)     = prettyCon p "Record" [pretty x, ffi App y]
 
-  un : Prec -> CGUnion -> PrettyType
-  un p (UT fst snd rest) =
-    let -- ffi repr
-        args    = map (um App) (fst :: snd :: rest)
-        argsFFI = map ffi args
-        conFFI  = "Union" ++ show (length argsFFI)
+  unionFFI : Prec -> List SimpleType -> Doc ()
+  unionFFI p ts = prettyCon p ("Union" <+> pretty (length ts))
+                              (map (simpleFFI App) ts)
 
-        -- api repr
-        fstAPI  = api $ um Open fst
-        argsAPI = map (api . um Open) (snd :: rest)
-        brkt    = align . sep $  ["[" <++> fstAPI]
-                              ++ map ("," <++>) argsAPI
-                              ++ ["]"]
+  ffi : Prec -> CGType -> Doc ()
+  ffi p Any         = "AnyPtr"
+  ffi p (Promise x) = prettyCon p "Promise" [ffi App x]
+  ffi p (Simple x)  = nullableFFI simpleFFI p x
+  ffi p (Union x)   = nullableFFI unionFFI p $ map forget x
 
-        canSafelyCast = all PrettyType.safeCast args
-        prettyFFI = prettyCon p (pretty conFFI) argsFFI
-        prettyAPI = prettyCon p "NS I" [brkt]
+--------------------------------------------------------------------------------
+--          API
+--------------------------------------------------------------------------------
 
-     in if canSafelyCast
-           then diffTrue prettyFFI prettyAPI
-           else diffFalse prettyFFI prettyAPI prettyFFI
+nullableAPI :  (Prec -> a -> Doc ()) -> Prec -> Nullable a -> Doc ()
+nullableAPI f p (MaybeNull x) = prettyCon p "Maybe" [f App x] 
+nullableAPI f p (NotNull x)   = f p x
 
-  um : Prec -> CGMember -> PrettyType
-  um p (MkUnionMember _ t) = dist p t
+mutual
+  simpleAPI : Maybe Nat -> Prec -> SimpleType -> Doc ()
+  simpleAPI Nothing  _ (ParentType x) = pretty x.value
+  simpleAPI (Just k) _ (ParentType x) = pretty "t" <+> pretty k
+  simpleAPI _ _ Undef            = "Undefined"
+  simpleAPI _ _ Boolean          = "Bool"
+  simpleAPI _ _ (Primitive x)    = pretty x
+  simpleAPI _ _ (Unchangeable x) = pretty x
+  simpleAPI _ _ (Enum x)         = pretty x.value
+  simpleAPI _ p (Array x)        = prettyCon p "Array" [ffi App x]
+  simpleAPI _ p (Record x y)     = prettyCon p "Record" [pretty x, ffi App y]
 
-  export
-  idl : Prec -> CGType -> PrettyType
-  idl p Any         = diffTrue "AnyPtr" "Any"
-  idl p (D x)       = nullable dist p x
-  idl p (U x)       = nullable un p x
-  idl p (Promise x) = sameFalse $ prettyCon p "Promise" [ffi $ idl App x]
+  unionAPI : Prec -> List1 SimpleType -> Doc ()
+  unionAPI p (h ::: t) =
+    let simple = simpleAPI Nothing Open
+        brkt   = align . sep $  ["[" <++> simple h]
+                             ++ map ("," <++>) (map simple t)
+                             ++ ["]"]
+     in prettyCon p "NS I" [brkt]
+
+  api : Maybe Nat -> Prec -> CGType -> Doc ()
+  api _ p Any         = "AnyPtr"
+  api _ p (Promise x) = prettyCon p "Promise" [ffi App x]
+  api k p (Simple x)  = nullableAPI (simpleAPI k) p x
+  api _ p (Union x)   = nullableAPI unionAPI p x
+
+--------------------------------------------------------------------------------
+--          Return Types
+--------------------------------------------------------------------------------
+
+
+ret : Prec -> CGType -> Doc ()
+ret p t@(Union x)   = if all safeCast $ nullVal x
+                         then api Nothing p t
+                         else ffi p t
+ret p t             = api Nothing p t
+
+returnTypeFFI : ReturnType -> Doc ()
+returnTypeFFI Undefined     = "PrimIO ()"
+returnTypeFFI (Def t)       = prettyCon Open "PrimIO" [ffi App t]
+returnTypeFFI (UndefOr t _) =
+  prettyCon Open "PrimIO" [prettyCon App "UndefOr" [ffi App t]]
+
+returnTypeAPI : ReturnType -> Doc ()
+returnTypeAPI Undefined     = "JSIO ()"
+returnTypeAPI (Def t)       = prettyCon Open "JSIO" [ret App t]
+returnTypeAPI (UndefOr t _) =
+  prettyCon Open "JSIO" [prettyCon App "Optional" [ret App t]]
 
 export
-constTpe : Prec -> CGConstType -> Doc ()
-constTpe p (CP x) = api $ prim p x
-constTpe p (CI x) = pretty $ kindToString x
-
-atype : Prec -> AType -> PrettyType
-atype p = idl p . type
-
-returnType' : (primIO : Doc ()) -> ReturnType -> PrettyType
-returnType' p Undefined     =
-  MkPrettyType (p <++> "()") "JSIO ()" "JSIO ()" True True
-returnType' p (UndefOr x _) = 
-  let MkPrettyType ffi api ret _ b = atype App x
-   in if b
-         then diffTrue (p <++> "$ UndefOr" <++> ffi)
-                       ("JSIO $ Optional" <++> api)
-         else diffFalse (p <++> "$ UndefOr" <++> ffi)
-                        ("JSIO $ Optional" <++> ffi)
-                        ("JSIO $ Optional" <++> ret)
-
-returnType' p (FromIdl x)   =
-  let MkPrettyType ffi api ret b sc = atype App x
-   in MkPrettyType (p <++> ffi) ("JSIO" <++> api) ("JSIO" <++> ret) b sc
-
-returnType : ReturnType -> PrettyType
-returnType = returnType' "PrimIO"
+constTpe : CGConstType -> Doc ()
+constTpe = pretty . primitive
 
 --------------------------------------------------------------------------------
 --          Default Arg
@@ -216,24 +142,15 @@ Pretty ConstValue where
   pretty (F x) = pretty x
   pretty (I x) = pretty x
 
-defltD : Prec -> CGDist -> Default -> Maybe (Doc ())
-defltD p (P $ Unsigned x)     (C $ I y) = Just $ pretty y
-defltD p (P $ Signed x)       (C $ I y) = Just $ pretty y
-defltD p (P $ Unrestricted x) (C $ I y) = Just $ pretty y
-defltD p (P $ Restricted x)   (C $ I y) = Just $ pretty y
-defltD p (P $ Unrestricted x) (C $ F y) = Just $ pretty y
-defltD p (P $ Restricted x)   (C $ F y) = Just $ pretty y
-defltD p (P Boolean)          (C $ B y) = Just $ pretty y
-defltD p (P Byte)             (C $ I y) = Just $ pretty y
-defltD p (P Octet)            (C $ I y) = Just $ pretty y
-defltD p (P BigInt)           (C $ I y) = Just $ pretty y
-defltD p (S DOMString)        (S x)     = Just $ pretty x
-defltD p (S USVString)        (S x)     = Just $ pretty x
-defltD _ _ _                            = Nothing
+defltS : SimpleType -> Default -> Maybe (Doc ())
+defltS Boolean (C $ B x)   = Just $ pretty x
+defltS (Primitive _) (S x) = Just $ pretty x
+defltS (Primitive _) (C x) = Just $ pretty x
+defltS _ _                 = Nothing
 
-unionD : Prec -> CGUnion -> Default -> Maybe (Doc ())
-unionD p (UT f s r) d =
-  let m = choiceMap (\u => defltD App u.type d) (the (List _) (f :: s :: r))
+unionD : Prec -> List1 SimpleType -> Default -> Maybe (Doc ())
+unionD p ts d =
+  let m = choiceMap (`defltS` d) ts
    in map (\x => prettyCon p "inject" [x]) m
 
 export
@@ -241,206 +158,209 @@ deflt : Bool -> Prec -> CGType -> Default -> Maybe (Doc ())
 deflt _ p Any Null  = Just $ prettyCon p "MkAny" ["$ null {a = ()}"]
 deflt _ p Any (S x) = Just $ prettyCon p "MkAny" [pretty x]
 deflt _ p Any (C x) = Just $ prettyCon p "MkAny" [pretty x]
-deflt _ p (D $ MaybeNull x) Null = Just "Nothing"
+deflt _ _ (Simple $ MaybeNull x) Null = Just "Nothing"
 
-deflt _ p (D $ MaybeNull x) d =
-  map (\v => prettyCon p "Just" [v]) (defltD App x d)
+deflt _ p (Simple $ MaybeNull x) d =
+  map (\v => prettyCon p "Just" [v]) (defltS x d)
 
-deflt _ p (D $ NotNull x) d = defltD p x d
+deflt _ _ (Simple $ NotNull x) d = defltS x d
 
-deflt _ p (U $ MaybeNull x) Null = Just "Nothing"
+deflt _ p (Union $ MaybeNull x) Null = Just "Nothing"
 
-deflt True p (U $ MaybeNull x) d =
+deflt True p (Union $ MaybeNull x) d =
   map (\v => prettyCon p "Just" [v]) (unionD App x d)
 
-deflt True p (U $ NotNull x) d = unionD p x d
+deflt True p (Union $ NotNull x) d = unionD p x d
 deflt _ _ _ _ = Nothing
 
 --------------------------------------------------------------------------------
 --          Arguments
 --------------------------------------------------------------------------------
 
-argType : Prec -> CGArg -> PrettyType
-argType p (Mandatory _ t)  = atype p t
+argTypeFFI : Prec -> CGArg -> Doc ()
+argTypeFFI p (Mandatory _ t)  = ffi p t
+argTypeFFI p (VarArg _ t)     = prettyCon p "VarArg" [ffi App t]
+argTypeFFI p (Optional _ t _) = prettyCon p "UndefOr" [ffi App t]
 
-argType p (VarArg _ t)     = sameFalse 
-                           $ prettyCon p "VarArg" [ffi $ atype App t]
-
-argType p (Optional _ t _) = 
-  let MkPrettyType ffi api ret _ b = atype App t
-   in if b
-         then diffTrue (prettyCon p "UndefOr" [ffi])
-                       (prettyCon p "Optional" [api])
-         else diffFalse (prettyCon p "UndefOr" [ffi])
-                        (prettyCon p "Optional" [api])
-                        (prettyCon p "Optional" [ret])
+argTypeAPI : Nat -> Prec -> CGArg -> Doc ()
+argTypeAPI k p (Mandatory _ t)  = api (Just k) p t
+argTypeAPI _ p (VarArg _ t)     = prettyCon p "VarArg" [ffi App t]
+argTypeAPI k p (Optional _ t _) = prettyCon p "Optional" [api (Just k) App t]
 
 arg : PrettyArg -> Doc ()
-arg a = parens $ hsep [pretty (argIdent a), ":", a.api]
+arg a = parens $ hsep [pretty (argIdent a), ":", a.doc]
 
-prettyArg : CGArg -> PrettyArg
-prettyArg a = let MkPrettyType ffi api ret same _ = argType Open a
-               in MkPrettyArg (argName a) ffi api ret same
+prettyArgFFI : CGArg -> PrettyArg
+prettyArgFFI a = let doc = argTypeFFI Open a
+                  in MkPrettyArg (argName a) doc
+
+prettyArgAPI : Nat -> CGArg -> PrettyArg
+prettyArgAPI k a = let doc = argTypeAPI k Open a
+                    in MkPrettyArg (argName a) doc
 
 --------------------------------------------------------------------------------
 --          Functions
 --------------------------------------------------------------------------------
 
 funTypeFFI : (name : IdrisIdent) -> ReturnType -> Args -> Doc ()
-funTypeFFI n t as = typeDecl n (ffi $ returnType t) (map (ffi . prettyArg) as)
+funTypeFFI n t as = typeDecl n (returnTypeFFI t) (map (doc . prettyArgFFI) as)
 
-funType : (name : IdrisIdent) -> PrettyType -> PrettyArgs -> Doc ()
-funType n t as = typeDecl n t.ret (map arg as)
+funType : (name : IdrisIdent) -> ReturnType -> Args -> Doc ()
+funType n t as = typeDecl n (returnTypeAPI t) $ run 0 as
+  where run : Nat -> Args -> List (Doc ())
+        run _ []        = []
+        run k (x :: xs) =
+          let k2 = if
 
-export
-callbackFFI :  (obj  : Identifier)
-            -> (name : IdrisIdent)
-            -> (impl : String)
-            -> (args : Args)
-            -> (tpe  : ReturnType)
-            -> String
-callbackFFI o n impl as t =
-  let cbTpe  = functionTypeOnly (ffi $ returnType' "IO" t)
-                                (map (ffi . prettyArg) as)
-
-      retTpe = "PrimIO" <++> pretty' (o.value)
-
-   in show . indent 2 $ vsep [ ""
-                             , "export"
-                             , pretty' impl
-                             , typeDecl n retTpe [cbTpe]
-                             ]
-
-export
-callbackAPI :  (obj  : Identifier)
-            -> (name : IdrisIdent)
-            -> (prim : IdrisIdent)
-            -> (args : Args)
-            -> (tpe  : ReturnType)
-            -> String
-callbackAPI o n prim as t =
-  let cbTpe  = functionTypeOnly (ffi $ returnType' "IO" t)
-                                (map (ffi . prettyArg) as)
-
-      retTpe = "JSIO" <++> pretty' (o.value)
-      impl   = pretty' n <++> "cb = primJS $" <++> pretty prim <++> "cb"
-
-   in show . indent 2 $ vsep [ ""
-                             , "export"
-                             , typeDecl n retTpe [cbTpe]
-                             , impl
-                             ]
-
-
-export
-funFFI :  (name : IdrisIdent)
-       -> (impl : String)
-       -> (args : Args)
-       -> (tpe  : ReturnType)
-       -> String
-funFFI n impl as t =
-   show . indent 2 $ vsep ["", "export", pretty impl, funTypeFFI n t as ]
-
-export
-namespacedIdent : (ns : Kind) -> (name : IdrisIdent) -> String
-namespacedIdent ns n = fastConcat ["\"",kindToString ns,".",show n,"\""]
-
-fun' :  (ns         : Kind)
-     -> (name       : IdrisIdent)
-     -> (prim       : IdrisIdent)
-     -> (args       : Args)
-     -> (undefs     : List String)
-     -> (returnType : PrettyType)
-     -> List (Doc ())
-fun' ns name prim as us rt =
-  let args    = map prettyArg as
-
-      vs      = take (length as) (unShadowingArgNames name)
-
-      appVs   = align . sep $  zipWith adjVal vs (map prettyArg as)
-                            ++ map pretty' us
-
-      primNS  = kindToString ns ++ "." ++ show prim
-
-      primCall = if rt.sameType
-                    then "primJS"
-                    else "tryJS " ++ namespacedIdent ns name
-
-      lhs     = pretty' . fastConcat . intersperse " " $ show name :: vs
-      
-      impl    = lhs <++> (align . sep) [ "=" <++> pretty primCall
-                                       , "$" <++> pretty primNS <++> appVs
-                                       ]
-   in ["", "export", funType name rt args, impl]
-
-  where adjVal : String -> PrettyArg -> Doc ()
-        adjVal v (MkPrettyArg _ _ _ _ True)  = pretty v
-        adjVal v (MkPrettyArg _ _ _ _ False) = parens ("toFFI" <++> pretty v)
-
-export
-fun :  (ns   : Kind)
-    -> (name : IdrisIdent)
-    -> (prim : IdrisIdent)
-    -> Args
-    -> ReturnType
-    -> String
-fun ns name prim as t =
-  let retType       = returnType t
-
-      funImpl       = fun' ns name prim as [] retType
-
-      -- function without optional args
-      as2      = filter (not . isOptional) as
-      undefs   = replicate (length as `minus` length as2) "undef"
-      funImpl2 = if null undefs then []
-                 else fun' ns name2 prim as2 undefs retType
-
-   in show . indent 2 $ vsep (funImpl ++ funImpl2)
-
-  where name2 : IdrisIdent
-        name2 = case name of
-                     II v prf     => fromString $ v ++ "'"
-                     Prim v       => Prim (v ++ "'")
-                     Underscore v => fromString $ v ++ "'"
-
---------------------------------------------------------------------------------
---          Attribute
---------------------------------------------------------------------------------
-
-export
-attrImpl:  (msg : Doc())
-        -> (set : Doc())
-        -> (get : Doc())
-        -> (arg : CGArg)
-        -> (Doc (), Doc())
-attrImpl msg s g (Mandatory _ (MkAType (D $ MaybeNull x) _)) =
-  ( "Attribute False Maybe" <++> ret (idl App $ D $ NotNull x)
-  , "fromNullablePrim" <++> align (sep [msg,s,g])
-  )
-
-attrImpl msg s g (Mandatory _ (MkAType (U $ MaybeNull x) _)) =
-  ( "Attribute False Maybe" <++> ret (idl App $ U $ NotNull x)
-  , "fromNullablePrim" <++> align (sep [msg,s,g])
-  )
-
-attrImpl msg s g (Mandatory _ t) =
-  ( "Attribute True I" <++> ret (atype App t)
-  , "fromPrim" <++> align (sep [msg,s,g])
-  )
-
-attrImpl msg s g (VarArg _ t) =
-  ( "Attribute True I" <++> prettyCon App "VarArg" [ffi $ atype App t]
-  , "fromPrim" <++> align (sep [msg,s,g])
-  )
-
-attrImpl msg s g (Optional _ t d) =
-  let MkPrettyType api ffi ret _ sc = atype App t
-   in case deflt sc App t.type d of
-        Nothing  =>
-          ( "Attribute False Optional" <++> ret
-          , "fromUndefOrPrimNoDefault" <++> align (sep [msg,s,g])
-          )
-        Just x =>
-          ( "Attribute True Optional" <++> ret
-          , "fromUndefOrPrim" <++> align (sep [msg,s,g,x])
-          )
+-- export
+-- callbackFFI :  (obj  : Identifier)
+--             -> (name : IdrisIdent)
+--             -> (impl : String)
+--             -> (args : Args)
+--             -> (tpe  : ReturnType)
+--             -> String
+-- callbackFFI o n impl as t =
+--   let cbTpe  = functionTypeOnly (ffi $ returnType' "IO" t)
+--                                 (map (ffi . prettyArg) as)
+-- 
+--       retTpe = "PrimIO" <++> pretty' (o.value)
+-- 
+--    in show . indent 2 $ vsep [ ""
+--                              , "export"
+--                              , pretty' impl
+--                              , typeDecl n retTpe [cbTpe]
+--                              ]
+-- 
+-- export
+-- callbackAPI :  (obj  : Identifier)
+--             -> (name : IdrisIdent)
+--             -> (prim : IdrisIdent)
+--             -> (args : Args)
+--             -> (tpe  : ReturnType)
+--             -> String
+-- callbackAPI o n prim as t =
+--   let cbTpe  = functionTypeOnly (ffi $ returnType' "IO" t)
+--                                 (map (ffi . prettyArg) as)
+-- 
+--       retTpe = "JSIO" <++> pretty' (o.value)
+--       impl   = pretty' n <++> "cb = primJS $" <++> pretty prim <++> "cb"
+-- 
+--    in show . indent 2 $ vsep [ ""
+--                              , "export"
+--                              , typeDecl n retTpe [cbTpe]
+--                              , impl
+--                              ]
+-- 
+-- 
+-- export
+-- funFFI :  (name : IdrisIdent)
+--        -> (impl : String)
+--        -> (args : Args)
+--        -> (tpe  : ReturnType)
+--        -> String
+-- funFFI n impl as t =
+--    show . indent 2 $ vsep ["", "export", pretty impl, funTypeFFI n t as ]
+-- 
+-- export
+-- namespacedIdent : (ns : Kind) -> (name : IdrisIdent) -> String
+-- namespacedIdent ns n = fastConcat ["\"",kindToString ns,".",show n,"\""]
+-- 
+-- fun' :  (ns         : Kind)
+--      -> (name       : IdrisIdent)
+--      -> (prim       : IdrisIdent)
+--      -> (args       : Args)
+--      -> (undefs     : List String)
+--      -> (returnType : PrettyType)
+--      -> List (Doc ())
+-- fun' ns name prim as us rt =
+--   let args    = map prettyArg as
+-- 
+--       vs      = take (length as) (unShadowingArgNames name)
+-- 
+--       appVs   = align . sep $  zipWith adjVal vs (map prettyArg as)
+--                             ++ map pretty' us
+-- 
+--       primNS  = kindToString ns ++ "." ++ show prim
+-- 
+--       primCall = if rt.sameType
+--                     then "primJS"
+--                     else "tryJS " ++ namespacedIdent ns name
+-- 
+--       lhs     = pretty' . fastConcat . intersperse " " $ show name :: vs
+--       
+--       impl    = lhs <++> (align . sep) [ "=" <++> pretty primCall
+--                                        , "$" <++> pretty primNS <++> appVs
+--                                        ]
+--    in ["", "export", funType name rt args, impl]
+-- 
+--   where adjVal : String -> PrettyArg -> Doc ()
+--         adjVal v (MkPrettyArg _ _ _ _ True)  = pretty v
+--         adjVal v (MkPrettyArg _ _ _ _ False) = parens ("toFFI" <++> pretty v)
+-- 
+-- export
+-- fun :  (ns   : Kind)
+--     -> (name : IdrisIdent)
+--     -> (prim : IdrisIdent)
+--     -> Args
+--     -> ReturnType
+--     -> String
+-- fun ns name prim as t =
+--   let retType       = returnType t
+-- 
+--       funImpl       = fun' ns name prim as [] retType
+-- 
+--       -- function without optional args
+--       as2      = filter (not . isOptional) as
+--       undefs   = replicate (length as `minus` length as2) "undef"
+--       funImpl2 = if null undefs then []
+--                  else fun' ns name2 prim as2 undefs retType
+-- 
+--    in show . indent 2 $ vsep (funImpl ++ funImpl2)
+-- 
+--   where name2 : IdrisIdent
+--         name2 = case name of
+--                      II v prf     => fromString $ v ++ "'"
+--                      Prim v       => Prim (v ++ "'")
+--                      Underscore v => fromString $ v ++ "'"
+-- 
+-- --------------------------------------------------------------------------------
+-- --          Attribute
+-- --------------------------------------------------------------------------------
+-- 
+-- export
+-- attrImpl:  (msg : Doc())
+--         -> (set : Doc())
+--         -> (get : Doc())
+--         -> (arg : CGArg)
+--         -> (Doc (), Doc())
+-- attrImpl msg s g (Mandatory _ (MkAType (D $ MaybeNull x) _)) =
+--   ( "Attribute False Maybe" <++> ret (idl App $ D $ NotNull x)
+--   , "fromNullablePrim" <++> align (sep [msg,s,g])
+--   )
+-- 
+-- attrImpl msg s g (Mandatory _ (MkAType (U $ MaybeNull x) _)) =
+--   ( "Attribute False Maybe" <++> ret (idl App $ U $ NotNull x)
+--   , "fromNullablePrim" <++> align (sep [msg,s,g])
+--   )
+-- 
+-- attrImpl msg s g (Mandatory _ t) =
+--   ( "Attribute True I" <++> ret (atype App t)
+--   , "fromPrim" <++> align (sep [msg,s,g])
+--   )
+-- 
+-- attrImpl msg s g (VarArg _ t) =
+--   ( "Attribute True I" <++> prettyCon App "VarArg" [ffi $ atype App t]
+--   , "fromPrim" <++> align (sep [msg,s,g])
+--   )
+-- 
+-- attrImpl msg s g (Optional _ t d) =
+--   let MkPrettyType api ffi ret _ sc = atype App t
+--    in case deflt sc App t.type d of
+--         Nothing  =>
+--           ( "Attribute False Optional" <++> ret
+--           , "fromUndefOrPrimNoDefault" <++> align (sep [msg,s,g])
+--           )
+--         Just x =>
+--           ( "Attribute True Optional" <++> ret
+--           , "fromUndefOrPrim" <++> align (sep [msg,s,g,x])
+--           )

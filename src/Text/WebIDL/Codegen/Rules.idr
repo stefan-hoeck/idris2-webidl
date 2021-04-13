@@ -1,6 +1,7 @@
 module Text.WebIDL.Codegen.Rules
 
 import Data.List
+import Data.List1
 import Data.List.Elem
 import Text.WebIDL.Codegen.Util
 
@@ -32,12 +33,12 @@ env k ds = let kinds = SortedMap.fromList
         -- types they represent
         aliases :  SortedMap Identifier Kind
                 -> List Typedef
-                -> SortedMap Identifier CGType
+                -> SortedMap Identifier (IdlTypeF ExtAttributeList Kind)
         aliases ks = SortedMap.fromList . map mkPair
           where kind : Identifier -> Kind
                 kind i = fromMaybe (KOther i) $ lookup i ks
 
-                mkPair : Typedef -> (Identifier,CGType)
+                mkPair : Typedef -> (Identifier,IdlTypeF ExtAttributeList Kind)
                 mkPair (MkTypedef _ _ t n) = (n, map kind t)
 
         dictToType : Dictionary -> (Identifier,JSType)
@@ -69,8 +70,37 @@ env k ds = let kinds = SortedMap.fromList
 --          Types
 --------------------------------------------------------------------------------
 
-member : Attributed (Nullable CGDist) -> CGMember
-member (a, n) = MkUnionMember a $ nullVal n
+buff : BufferRelatedType -> SimpleType
+buff Uint8Array        = Unchangeable "UInt8Array"
+buff Uint16Array       = Unchangeable "UInt8Array"
+buff Uint32Array       = Unchangeable "UInt8Array"
+buff Uint8ClampedArray = Unchangeable "UInt8ClampedArray"
+buff x                 = Unchangeable $ show x
+
+-- booleans are marshalled from Idris2 `Bool` to JS `Boolean`
+-- and back
+prim : PrimitiveType -> SimpleType
+prim Boolean             = Boolean
+prim (Unsigned Short)    = Primitive "UInt16"
+prim (Unsigned Long)     = Primitive "UInt32"
+prim (Unsigned LongLong) = Primitive "UInt64"
+prim (Signed Short)      = Primitive "Int16"
+prim (Signed Long)       = Primitive "Int32"
+prim (Signed LongLong)   = Primitive "Int64"
+prim (Unrestricted x)    = Primitive "Double"
+prim (Restricted x)      = Primitive "Double"
+prim Undefined           = Undef
+prim Byte                = Primitive "Int8"
+prim Octet               = Primitive "UInt8"
+prim BigInt              = Primitive "Integer"
+
+string : StringType -> SimpleType
+string ByteString = Unchangeable "ByteString"
+string DOMString  = Primitive "String"
+string USVString  = Primitive "String"
+
+-- member : Attributed (Nullable CGDist) -> CGMember
+-- member (a, n) = MkUnionMember a $ nullVal n
 
 parameters (e : Env, dom : Domain)
 
@@ -86,92 +116,92 @@ parameters (e : Env, dom : Domain)
     -- we return the corresponding type wrapped in a `Left`.
     -- Otherwise we keep the distinguishable type
     -- (but keep unaliasing inner types, if any)
-    uaD : CGDist -> Codegen CGType
+    uaD : DistinguishableF ExtAttributeList Kind -> Codegen CGType
     uaD i@(I $ KAlias x) =
       case lookup x e.aliases of
-           Nothing              => Right (D $ NotNull i)
-           Just x               => unalias x
-    uaD (Sequence x y)        = D . NotNull . Sequence x <$> unalias y
-    uaD (FrozenArray x y)     = D . NotNull . FrozenArray x <$> unalias y
-    uaD (ObservableArray x y) = D . NotNull . ObservableArray x <$> unalias y
-    uaD (Record x y z)        = D . NotNull . Record x y <$> unalias z
-    uaD d                     = Right (D $ NotNull d)
-  
-    uaU : CGUnion -> Codegen (Nullable CGUnion)
+           Nothing            => Left [UnresolvedAlias dom x]
+           Just x             => unalias x
+    uaD (I k)                 = Right $ fromKind k
+    uaD (Sequence x y)        = simple . Array <$> unalias y
+    uaD (FrozenArray x y)     = simple . Array <$> unalias y
+    uaD (ObservableArray x y) = simple . Array <$> unalias y
+    uaD (Record x y z)        = simple . Record (show y) <$> unalias z
+    uaD (P p)                 = Right . simple $ prim p
+    uaD (S s)                 = Right . simple $ string s
+    uaD (B b)                 = Right . simple $ buff b
+    uaD Object                = Right . simple . ParentType $ MkIdent "Object"
+    uaD Symbol                = Right $ unchangeable "Symbol"
+
+    uaU :  UnionTypeF ExtAttributeList Kind
+        -> Codegen (Nullable $ List1 SimpleType)
     uaU (UT f s r) =
       do (hf ::: tf) <- uaM f
          rest        <- map join (traverse uaM (s ::: r))
 
-         let (h ::: t) = case tf of
-                              []        => rest
-                              (x :: xs) => x  ::: (xs ++ forget rest)
+         let nullables = hf ::: (tf ++ forget rest)
+             simples   = map nullVal nullables
 
-             ut = UT (member hf) (member h) (member <$> t)
-
-         if any (isNullable . snd) (hf :: h :: t)
+         if any isNullable nullables
             -- the result is nullable
-            then pure $ MaybeNull ut
+            then pure $ MaybeNull simples
             -- the result is non-nullable
-            else pure $ NotNull ut
+            else pure $ NotNull simples
 
 
     -- in case of a wrapped distinguishable type,
     -- we unalias it using `uaD` but keep the unaliased
     -- version only, if it is again distinguishable.
-    uaM : CGMember -> Codegen $ List1 (Attributed $ Nullable CGDist)
+    uaM :  UnionMemberTypeF ExtAttributeList Kind
+        -> Codegen (List1 $ Nullable SimpleType)
     uaM (MkUnionMember a t) =
       do t2 <- uaD t
          case t2 of
               Any       => Left [AnyInUnion dom]
               Promise x => Left [PromiseInUnion dom]
-              D x       => Right (singleton (a,x))
-              U $ MaybeNull $ UT f s r =>
-                do h ::: t <- uaM f
-                   r2      <- traverse (map forget . uaM) (s :: r)
-                   pure . map (map nullable) $ h ::: (t ++ join r2)
-              U $ NotNull $ UT f s r =>
-                do h ::: t <- uaM f
-                   r2      <- traverse (map forget . uaM) (s :: r)
-                   pure $ h ::: (t ++ join r2)
+              Simple x  => Right $ singleton x
+              Union $ MaybeNull xs => Right $ map MaybeNull xs
+              Union $ NotNull xs   => Right $ map NotNull xs
   
-    unalias : CGType -> Codegen CGType
+    unalias : IdlTypeF ExtAttributeList Kind -> Codegen CGType
     unalias Any               = Right Any
     unalias (D $ NotNull d)   = uaD d
-    unalias (U $ NotNull d)   = U <$> uaU d
-    unalias (U $ MaybeNull d) = U . nullable <$> uaU d
+    unalias (U $ NotNull d)   = Union <$> uaU d
+    unalias (U $ MaybeNull d) = Union . nullable <$> uaU d
     unalias (Promise x)       = Promise <$> unalias x
     unalias t@(D $ MaybeNull d) =
       do res <- uaD d
          case res of
               Any         => Left [NullableAny dom]
-              (D x)       => pure . D $ nullable x
-              (U x)       => pure . U $ nullable x
+              (Simple x)  => pure . Simple $ nullable x
+              (Union x)   => pure . Union $ nullable x
               (Promise x) => Left [NullablePromise dom]
   
   -- calculate the aliased type from a type coming
   -- from the WebIDL parser
   -- the unaliased version of the type is only kept (in a `Just`)
   -- if it differs from the original type.
-  tpe : IdlType -> CodegenV AType
+  tpe : IdlType -> CodegenV CGType
   tpe t = let cgt = map kind t
-              al  = fromEither $ unalias cgt
-           in map (\t => MkAType t (if t == cgt then Nothing else Just cgt)) al
+           in fromEither $ unalias cgt
   
   -- convert an IDL type coming from the parser to
   -- a return type in the code generator
   rtpe : IdlType -> CodegenV ReturnType
   rtpe (D $ NotNull $ P Undefined)        = Valid Undefined
   rtpe (D $ NotNull $ I $ MkIdent "void") = Valid Undefined
-  rtpe t = FromIdl <$> tpe t
+  rtpe t = Def <$> tpe t
 
   constTpe : ConstType -> CodegenV CGConstType
-  constTpe (CI i) = case uaD (I $ kind i) of
-                         Left x                    => Invalid x
-                         Right (D $ NotNull $ P x) => Valid $ CP x
-                         Right (D $ NotNull $ I x) => Valid $ CI x
-                         Right _     => Invalid [InvalidConstType dom]
+  constTpe (CI i) =
+    case uaD (I $ kind i) of
+         Left x                                 => Invalid x
+         Right (Simple $ NotNull $ Primitive s) => Valid $ MkConstType s
+         Right _                                => Invalid [InvalidConstType dom]
 
-  constTpe (CP p) = Valid $ CP p
+  constTpe (CP p) =
+    case prim p of
+         Primitive s => Valid $ MkConstType s
+         _           => Invalid [InvalidConstType dom]
 
   const : Const -> CodegenV CGConst
   const (MkConst t n v) = map (\t2 => MkConst t2 n v) (constTpe t)
@@ -401,15 +431,11 @@ parameters (e : Env, dom : Domain)
                        (pure dom.enums)
                        (traverse iface dom.interfaces)
                        (traverse mixin dom.mixins)
-                       (traverse typedef dom.typedefs)
            |]
 
     where dict : Dictionary -> CodegenV CGDict
           dict v@(MkDictionary _ n i _) =
             MkDict n  (supertypes n) <$> dictFuns v
-
-          typedef : Typedef -> CodegenV CGTypedef
-          typedef (MkTypedef _ _ t n) = Valid $ MkTypedef n (map kind t)
 
           iface : Interface -> CodegenV CGIface
           iface v@(MkInterface _ n i _) =

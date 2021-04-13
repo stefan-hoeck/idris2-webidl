@@ -103,7 +103,7 @@ codegen : Config -> CGDomain -> Prog ()
 codegen c d =
   let typesFile = c.outDir ++ "/Web/Internal/" ++ d.name ++ "Types.idr"
       primFile  = c.outDir ++ "/Web/Internal/" ++ d.name ++ "Prim.idr"
-      apiFile   = c.outDir ++ "/Web/" ++ d.name ++ ".idr"
+      apiFile   = c.outDir ++ "/Web/Raw/" ++ d.name ++ ".idr"
 
    in do writeDoc typesFile (types d)
          writeDoc primFile (primitives d)

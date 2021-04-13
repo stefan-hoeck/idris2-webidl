@@ -190,7 +190,7 @@ export
 definitions : CGDomain -> String
 definitions d =
   #"""
-  module Web.\#{d.name}
+  module Web.Raw.\#{d.name}
    
   \#{defImports d}
   \#{ifaces d}

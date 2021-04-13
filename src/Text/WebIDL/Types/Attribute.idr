@@ -1,5 +1,6 @@
 module Text.WebIDL.Types.Attribute
 
+import Data.List1
 import Data.SOP
 import Text.WebIDL.Types.Numbers
 import Text.WebIDL.Types.StringLit
@@ -123,6 +124,100 @@ ExtAttributeList = List ExtAttribute
 public export
 Attributed : Type -> Type
 Attributed a = (ExtAttributeList, a)
+
+public export
+interface HasAttributes a where
+  attributes : a -> ExtAttributeList
+
+public export
+HasAttributes () where
+  attributes = const Nil
+
+public export
+HasAttributes String where
+  attributes = const Nil
+
+public export
+HasAttributes Identifier where
+  attributes = const Nil
+
+public export
+HasAttributes Bool where
+  attributes = const Nil
+
+public export
+HasAttributes FloatLit where
+  attributes = const Nil
+
+public export
+HasAttributes IntLit where
+  attributes = const Nil
+
+public export
+HasAttributes StringLit where
+  attributes = const Nil
+
+public export
+(HasAttributes a, HasAttributes b) => HasAttributes (a,b) where
+  attributes (x,y) = attributes x ++ attributes y
+
+public export
+HasAttributes ExtAttribute where
+  attributes = pure
+
+public export
+HasAttributes a => HasAttributes (Maybe a) where
+  attributes = maybe Nil attributes
+
+public export
+HasAttributes a => HasAttributes (List a) where
+  attributes = concatMap attributes
+
+public export
+HasAttributes a => HasAttributes (List1 a) where
+  attributes = attributes . forget
+
+--------------------------------------------------------------------------------
+--          Deriving HasAttributes
+--------------------------------------------------------------------------------
+
+public export
+(all : NP HasAttributes ts) => HasAttributes (NP I ts) where
+  attributes = hcconcatMap HasAttributes attributes
+
+public export
+(all : NP HasAttributes ts) => HasAttributes (NS I ts) where
+  attributes = hcconcatMap HasAttributes attributes
+
+public export
+(all : POP HasAttributes ts) => HasAttributes (SOP I ts) where
+  attributes = hcconcatMap HasAttributes attributes
+
+public export
+genAttributes :  Generic a code
+              => POP HasAttributes code
+              => a
+              -> ExtAttributeList
+genAttributes = attributes . from
+
+namespace Derive
+
+  public export %inline
+  mkHasAttributes : (attrs : a -> ExtAttributeList) -> HasAttributes a
+  mkHasAttributes = %runElab check (var $ singleCon "HasAttributes")
+
+  ||| Derives an `Eq` implementation for the given data type
+  ||| and visibility.
+  export
+  HasAttributesVis : Visibility -> DeriveUtil -> InterfaceImpl
+  HasAttributesVis vis g = MkInterfaceImpl "HasAttributes" vis []
+                             `(mkHasAttributes genAttributes)
+                             (implementationType `(HasAttributes) g)
+
+  ||| Alias for `EqVis Public`.
+  export
+  HasAttributes : DeriveUtil -> InterfaceImpl
+  HasAttributes = HasAttributesVis Public
 
 --------------------------------------------------------------------------------
 --          Tests and Proofs

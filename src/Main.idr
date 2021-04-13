@@ -9,6 +9,7 @@ import System
 import System.Console.GetOpt
 import System.File
 import Text.WebIDL.Codegen as Codegen
+import Text.WebIDL.Encoder
 import Text.WebIDL.Types
 import Text.WebIDL.Parser
 import Text.PrettyPrint.Prettyprinter
@@ -108,6 +109,9 @@ codegen c d =
          writeDoc primFile (primitives d)
          writeDoc apiFile  (definitions d)
 
+logAttributes : HasAttributes a => a -> Prog ()
+logAttributes = traverse_ (putStrLn . extAttribute) . attributes
+
 --------------------------------------------------------------------------------
 --          Main Function
 --------------------------------------------------------------------------------
@@ -120,6 +124,7 @@ run args = do config <- toProg (pure $ applyArgs args)
 
               doms   <- fromCodegen (traverse (domain e) ds)
 
+--              logAttributes ds
               traverse_ (codegen config) doms
               typesGen config
 

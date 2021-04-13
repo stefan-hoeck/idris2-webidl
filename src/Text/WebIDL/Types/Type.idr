@@ -1,6 +1,7 @@
 module Text.WebIDL.Types.Type
 
 import Data.Bitraversable
+import Data.Bifoldable
 import Data.Traversable
 import Text.WebIDL.Types.Attribute
 import Text.WebIDL.Types.Identifier
@@ -33,7 +34,7 @@ data BufferRelatedType = ArrayBuffer
                        | Float32Array
                        | Float64Array
 
-%runElab derive "BufferRelatedType" [Generic,Meta,Eq,Show]
+%runElab derive "BufferRelatedType" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| StringType ::
 |||     ByteString
@@ -44,17 +45,17 @@ data StringType = ByteString
                 | DOMString
                 | USVString
 
-%runElab derive "Type.StringType" [Generic,Meta,Eq,Show]
+%runElab derive "Type.StringType" [Generic,Meta,Eq,Show,HasAttributes]
 
 public export
 data IntType = Short | Long | LongLong
 
-%runElab derive "Type.IntType" [Generic,Meta,Eq,Show]
+%runElab derive "Type.IntType" [Generic,Meta,Eq,Show,HasAttributes]
 
 public export
 data FloatType = Float | Dbl
 
-%runElab derive "Type.FloatType" [Generic,Meta,Eq,Show]
+%runElab derive "Type.FloatType" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| PrimitiveType ::
 |||     UnsignedIntegerType
@@ -94,12 +95,12 @@ data PrimitiveType = Unsigned     IntType
                    | Octet
                    | BigInt
 
-%runElab derive "PrimitiveType" [Generic,Meta,Eq,Show]
+%runElab derive "PrimitiveType" [Generic,Meta,Eq,Show,HasAttributes]
 
 public export
 data ConstTypeF a = CP PrimitiveType | CI a
 
-%runElab derive "ConstTypeF" [Generic,Meta,Eq,Show]
+%runElab derive "ConstTypeF" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| Null ::
 |||     ?
@@ -107,7 +108,7 @@ data ConstTypeF a = CP PrimitiveType | CI a
 public export
 data Nullable a = MaybeNull a | NotNull a
 
-%runElab derive "Nullable" [Generic,Meta,Eq,Show]
+%runElab derive "Nullable" [Generic,Meta,Eq,Show,HasAttributes]
 
 export
 nullVal : Nullable a -> a
@@ -376,3 +377,7 @@ mutual
 
   export
   Traversable (IdlTypeF a) where traverse = bitraverse pure
+
+  export
+  HasAttributes a => HasAttributes (IdlTypeF a b) where
+    attributes = bifoldMap attributes (const Nil)

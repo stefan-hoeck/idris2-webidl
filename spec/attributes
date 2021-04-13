@@ -1,0 +1,62 @@
+AllowShared 
+CEReactions 
+Clamp 
+Constructor (DOMString type , optional AnimationPlaybackEventInit eventInitDict )
+Constructor (DOMString type , optional CompositionEventInit eventInitDict )
+Constructor (DOMString type , optional FocusEventInit eventInitDict )
+Constructor (DOMString type , optional InputEventInit eventInitDict )
+Constructor (DOMString type , optional KeyboardEventInit eventInitDict )
+Constructor (DOMString type , optional MouseEventInit eventInitDict )
+Constructor (DOMString type , optional UIEventInit eventInitDict )
+Constructor (DOMString type , optional WheelEventInit eventInitDict )
+Constructor ((Element or CSSPseudoElement ) ? target , object ? keyframes , optional (unrestricted double or KeyframeEffectOptions ) options )
+Constructor (KeyframeEffect source )
+Constructor (optional AnimationEffect ? effect = null , optional AnimationTimeline ? timeline )
+Constructor (optional DocumentTimelineOptions options )
+Constructor (optional DOMPointInit p1 , optional DOMPointInit p2 , optional DOMPointInit p3 , optional DOMPointInit p4 )
+Constructor (optional (DOMString or sequence < unrestricted double > ) init )
+Constructor (optional unrestricted double x = 00 , optional unrestricted double y = 00 , optional unrestricted double width = 00 , optional unrestricted double height = 00 )
+Constructor (optional unrestricted double x = 00 , optional unrestricted double y = 00 , optional unrestricted double z = 00 , optional unrestricted double w = 1 )
+Default 
+EnforceRange 
+Exposed = DedicatedWorker 
+Exposed = (DedicatedWorker , SharedWorker )
+Exposed = ServiceWorker 
+Exposed = SharedWorker 
+Exposed = Window 
+Exposed = (Window , DedicatedWorker , SharedWorker )
+Exposed = (Window , Worker )
+Exposed = (Window , Worker , AudioWorklet )
+Exposed = (Window , Worker , Worklet )
+Exposed = Worker 
+Exposed = Worklet 
+Global = Window 
+Global = (Worker , DedicatedWorker )
+Global = (Worker , ServiceWorker )
+Global = (Worker , SharedWorker )
+HTMLConstructor 
+LegacyFactoryFunction = Audio (optional DOMString src )
+LegacyFactoryFunction = Image (optional unsigned long width , optional unsigned long height )
+LegacyFactoryFunction = Option (optional DOMString text = "" , optional DOMString value , optional boolean defaultSelected = false , optional boolean selected = false )
+LegacyLenientThis 
+LegacyNullToEmptyString 
+LegacyOverrideBuiltIns 
+LegacyTreatNonObjectAsNull 
+LegacyUnenumerableNamedProperties 
+LegacyUnforgeable 
+LegacyWindowAlias = (SVGMatrix , WebKitCSSMatrix )
+LegacyWindowAlias = SVGPoint 
+LegacyWindowAlias = SVGRect 
+LegacyWindowAlias = webkitURL 
+NewObject 
+PutForwards = cssText 
+PutForwards = href 
+PutForwards = mediaText 
+PutForwards = value 
+Replaceable 
+SameObject 
+SecureContext 
+Serializable 
+Transferable 
+Unscopable 
+WebGLHandlesContextLoss 

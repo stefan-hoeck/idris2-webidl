@@ -21,7 +21,7 @@ record Callback where
   type       : IdlType
   args       : ArgumentList
 
-%runElab derive "Callback" [Generic,Meta,Eq,Show]
+%runElab derive "Callback" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| CallbackRestOrInterface ::
 |||     CallbackRest
@@ -33,7 +33,7 @@ record CallbackInterface where
   name       : Identifier
   members    : CallbackInterfaceMembers
 
-%runElab derive "CallbackInterface" [Generic,Meta,Eq,Show]
+%runElab derive "CallbackInterface" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| Dictionary ::
 |||     dictionary identifier Inheritance { DictionaryMembers } ;
@@ -45,7 +45,7 @@ record Dictionary where
   inherits   : Inheritance
   members    : DictionaryMembers
 
-%runElab derive "Dictionary" [Generic,Meta,Eq,Show]
+%runElab derive "Dictionary" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| Enum ::
 |||     enum identifier { EnumValueList } ;
@@ -67,7 +67,7 @@ record Enum where
   name       : Identifier
   values     : List1 StringLit
 
-%runElab derive "Enum" [Generic,Meta,Eq,Show]
+%runElab derive "Enum" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| IncludesStatement ::
 |||     identifier includes identifier ;
@@ -78,7 +78,7 @@ record Includes where
   name       : Identifier
   includes   : Identifier
 
-%runElab derive "Includes" [Generic,Meta,Eq,Show]
+%runElab derive "Includes" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| InterfaceRest ::
 |||     identifier Inheritance { InterfaceMembers } ;
@@ -90,7 +90,7 @@ record Interface where
   inherits   : Inheritance
   members    : InterfaceMembers
 
-%runElab derive "Interface" [Generic,Meta,Eq,Show]
+%runElab derive "Interface" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| MixinRest ::
 |||     mixin identifier { MixinMembers } ;
@@ -101,7 +101,7 @@ record Mixin where
   name       : Identifier
   members    : MixinMembers
 
-%runElab derive "Mixin" [Generic,Meta,Eq,Show]
+%runElab derive "Mixin" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| Namespace ::
 |||     namespace identifier { NamespaceMembers } ;
@@ -112,7 +112,7 @@ record Namespace where
   name       : Identifier
   members    : NamespaceMembers
 
-%runElab derive "Namespace" [Generic,Meta,Eq,Show]
+%runElab derive "Namespace" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| Typedef ::
 |||     typedef TypeWithExtendedAttributes identifier ;
@@ -124,7 +124,7 @@ record Typedef where
   type           : IdlType
   name           : Identifier
 
-%runElab derive "Typedef" [Generic,Meta,Eq,Show]
+%runElab derive "Typedef" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| PartialDictionary ::
 |||     dictionary identifier { DictionaryMembers } ;
@@ -135,7 +135,7 @@ record PDictionary where
   name       : Identifier
   members    : DictionaryMembers
 
-%runElab derive "PDictionary" [Generic,Meta,Eq,Show]
+%runElab derive "PDictionary" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| PartialInterfaceRest ::
 |||     identifier { PartialInterfaceMembers } ;
@@ -146,7 +146,7 @@ record PInterface where
   name       : Identifier
   members    : PartialInterfaceMembers
 
-%runElab derive "PInterface" [Generic,Meta,Eq,Show]
+%runElab derive "PInterface" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| MixinRest ::
 |||     mixin identifier { MixinMembers } ;
@@ -157,7 +157,7 @@ record PMixin where
   name       : Identifier
   members    : MixinMembers
 
-%runElab derive "PMixin" [Generic,Meta,Eq,Show]
+%runElab derive "PMixin" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| Namespace ::
 |||     namespace identifier { NamespaceMembers } ;
@@ -168,7 +168,7 @@ record PNamespace where
   name       : Identifier
   members    : NamespaceMembers
 
-%runElab derive "PNamespace" [Generic,Meta,Eq,Show]
+%runElab derive "PNamespace" [Generic,Meta,Eq,Show,HasAttributes]
 
 public export
 DefTypes : List Type
@@ -272,6 +272,8 @@ record Domain where
   mixins              : List Mixin
   namespaces          : List Namespace
   typedefs            : List Typedef
+
+%runElab derive "Domain" [Generic,Meta,Eq,Show,HasAttributes]
 
 applyPart : Domain -> Part -> Domain
 applyPart d (Z v) =

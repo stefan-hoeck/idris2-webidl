@@ -1,6 +1,7 @@
 module Text.WebIDL.Types.Argument
 
 import Data.Bitraversable
+import Data.Bifoldable
 import Data.Traversable
 import Text.WebIDL.Types.Attribute
 import Text.WebIDL.Types.Identifier
@@ -22,7 +23,7 @@ import Generics.Derive
 public export
 data ConstValue = B Bool | F FloatLit | I IntLit
 
-%runElab derive "ConstValue" [Generic,Meta,Eq,Show]
+%runElab derive "ConstValue" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| Default ::
 |||     = DefaultValue
@@ -42,7 +43,7 @@ data Default = None
              | S StringLit
              | C ConstValue
 
-%runElab derive "Default" [Generic,Meta,Eq,Show]
+%runElab derive "Default" [Generic,Meta,Eq,Show,HasAttributes]
 
 ||| ArgumentName ::
 |||     ArgumentNameKeyword
@@ -52,7 +53,7 @@ record ArgumentName where
   constructor MkArgName
   value : String
 
-%runElab derive "ArgumentName" [Generic,Meta,Eq,Show]
+%runElab derive "ArgumentName" [Generic,Meta,Eq,Show,HasAttributes]
 
 public export
 record ArgF (a : Type) (b : Type) where
@@ -183,3 +184,7 @@ mutual
 
   export
   Traversable (ArgumentListF a) where traverse = bitraverse pure
+
+  export
+  HasAttributes a => HasAttributes (ArgumentListF a b) where
+    attributes = bifoldMap attributes (const Nil)

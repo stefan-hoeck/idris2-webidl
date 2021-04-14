@@ -78,6 +78,18 @@ primCallbacks : CGDomain -> String
 primCallbacks = cbacks (pure . primCallback)
 
 --------------------------------------------------------------------------------
+--          JSType
+--------------------------------------------------------------------------------
+
+jsTypes : List CGDomain -> String
+jsTypes ds = 
+  let ifs  = sortBy (comparing name) (ds >>= ifaces)
+      dics = sortBy (comparing name) (ds >>= dicts)
+   in section "Inheritance" $
+        map (\i => jsType i.name i.super) ifs ++
+        map (\d => jsType d.name d.super) dics
+
+--------------------------------------------------------------------------------
 --          Interfaces
 --------------------------------------------------------------------------------
 
@@ -87,8 +99,7 @@ ifaces' f = section "Interfaces" . map ns . sortBy (comparing name) . ifaces
         ns i = namespaced i.name (f i)
 
 ifaces : CGDomain -> String
-ifaces = ifaces' \(MkIface n s cs fs) =>
-         jsType n s :: constants cs ++ functions fs
+ifaces = ifaces' \(MkIface n s cs fs) => constants cs ++ functions fs
 
 primIfaces : CGDomain -> String
 primIfaces = ifaces' (primFunctions . functions)
@@ -103,7 +114,7 @@ dicts' f = section "Dictionaries" . map ns . sortBy (comparing name) . dicts
         ns d = namespaced d.name (f d)
 
 dicts : CGDomain -> String
-dicts = dicts' \(MkDict n s fs) => jsType n s :: functions fs
+dicts = dicts' \(MkDict n s fs) => functions fs
 
 primDicts : CGDomain -> String
 primDicts = dicts' (primFunctions . functions)
@@ -128,8 +139,8 @@ primMixins = mixins' (primFunctions . functions)
 --------------------------------------------------------------------------------
 
 export
-typedefs : String
-typedefs =
+typedefs : List CGDomain -> String
+typedefs ds =
       #"""
       module Web.Internal.Types
       
@@ -154,7 +165,7 @@ typedefs =
       import public Web.Internal.WebglTypes as Types
       import public Web.Internal.WebidlTypes as Types
       import public Web.Internal.XhrTypes as Types
-      """#
+      """# ++ "\n\n" ++ jsTypes ds
 
 --------------------------------------------------------------------------------
 --          Codegen

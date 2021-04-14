@@ -73,6 +73,8 @@ fromCodegen = toProgWith (fastUnlines . map err) . pure . toEither
           #"Invalid getter in \#{x.domain}: \#{y.value}"#
         err (InvalidSetter x y) =
           #"Invalid setter in \#{x.domain}: \#{y.value}"#
+        err (UnresolvedAlias x y) =
+          #"Unresolved alias in \#{x.domain}: \#{y.value}"#
         err (AnyInUnion x) = #"\"Any\" type in a union type in \#{x.domain}"#
         err (PromiseInUnion x) = #"\"Promise\" type in a union type in \#{x.domain}"#
         err (NullableAny x) = #"Nullable \"Any\" type in \#{x.domain}"#
@@ -94,10 +96,10 @@ loadDef f = let mn = moduleName
                    d <- toProg (pure $ parseIdl partsAndDefs s)
                    pure (mn,d)
 
-typesGen : Config -> Prog ()
-typesGen c =
+typesGen : Config -> List CGDomain -> Prog ()
+typesGen c ds =
   let typesFile = c.outDir ++ "/Web/Internal/Types.idr"
-   in writeDoc typesFile typedefs
+   in writeDoc typesFile (typedefs ds)
 
 codegen : Config -> CGDomain -> Prog ()
 codegen c d =
@@ -126,7 +128,7 @@ run args = do config <- toProg (pure $ applyArgs args)
 
 --              logAttributes ds
               traverse_ (codegen config) doms
-              typesGen config
+              typesGen config doms
 
 main : IO ()
 main = do (pn :: args) <- getArgs

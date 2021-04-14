@@ -59,6 +59,43 @@ callback (MkCallback n _ t as) =
 --          Attribute
 --------------------------------------------------------------------------------
 
+attrImpl:  (msg : Doc())
+        -> (set : Doc())
+        -> (get : Doc())
+        -> (app : Doc())
+        -> (arg : CGArg)
+        -> (Doc (), Doc())
+attrImpl msg s g a (Mandatory _ (Simple $ MaybeNull x)) =
+  ( "Attribute False Maybe" <++> ret App (Simple $ NotNull x)
+  , "fromNullablePrim" <++> align (sep [msg,s,g,a])
+  )
+
+attrImpl msg s g a (Mandatory _ (Union $ MaybeNull x)) =
+  ( "Attribute False Maybe" <++> ret App (Union $ NotNull x)
+  , "fromNullablePrim" <++> align (sep [msg,s,g,a])
+  )
+
+attrImpl msg s g a (Mandatory _ t) =
+  ( "Attribute True I" <++> ret App t
+  , "fromPrim" <++> align (sep [msg,s,g,a])
+  )
+
+attrImpl msg s g a (VarArg _ t) =
+  ( "Attribute True I" <++> prettyCon App "VarArg" [ffi App t]
+  , "fromPrim" <++> align (sep [msg,s,g,a])
+  )
+
+attrImpl msg s g a (Optional _ t d) =
+   case deflt (safeCast t) App t d of
+      Nothing  =>
+        ( "Attribute False Optional" <++> ret App t
+        , "fromUndefOrPrimNoDefault" <++> align (sep [msg,s,g,a])
+        )
+      Just x =>
+        ( "Attribute True Optional" <++> ret App t
+        , "fromUndefOrPrim" <++> align (sep [msg,s,g,x,a])
+        )
+
 attrRW :  Nat
        -> AttributeName
        -> Kind
@@ -66,16 +103,23 @@ attrRW :  Nat
        -> ReturnType
        -> String
 attrRW k n o t rt =
-  let implName   = pretty' $ attrGetter k n
+  let implName   = attrGetter k n
       primGet    = pretty' $ primAttrGetter k n
       primSet    = pretty' $ primAttrSetter k n
       msg        = pretty' $ namespacedIdent o (fromString $ "get" ++ n.value)
       po         = pretty' $ kindToString o
-      (tpe,impl) = attrImpl msg primGet primSet t
+      up         = "(v :> " <+> po <+> ")"
+      (tpe,impl) = attrImpl msg primGet primSet up t
+      funTpe     = typeDeclWithImplicits
+                      implName
+                      tpe
+                      ["JSType t"]
+                      ["{auto 0 _ : Elem" <++> po <++> "(Types t)}","t"]
+
    in show . indent 2 $ vsep [ ""
                              , "export"
-                             , hsep [implName,":",po,"->",tpe]
-                             , hsep [implName,"=",impl]
+                             , funTpe
+                             , hsep [pretty' implName,"v =",impl]
                              ]
 
 --------------------------------------------------------------------------------

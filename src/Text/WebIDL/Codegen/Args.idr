@@ -50,7 +50,7 @@ mutual
   unionFFI : Prec -> List1 SimpleType -> Doc ()
   unionFFI p ts = prettyCon p ("Union" <+> pretty (length $ forget ts))
                               (map (simpleFFI App) $ forget ts)
-
+  export
   ffi : Prec -> CGType -> Doc ()
   ffi p Any         = "AnyPtr"
   ffi p (Promise x) = prettyCon p "Promise" [ffi App x]
@@ -95,7 +95,7 @@ mutual
 --          Return Types
 --------------------------------------------------------------------------------
 
-
+export
 ret : Prec -> CGType -> Doc ()
 ret p (Union $ MaybeNull xs) =
   let u = if all SimpleType.safeCast xs
@@ -357,44 +357,3 @@ fun ns name prim as t =
                      II v prf     => fromString $ v ++ "'"
                      Prim v       => Prim (v ++ "'")
                      Underscore v => fromString $ v ++ "'"
-
---------------------------------------------------------------------------------
---          Attribute
---------------------------------------------------------------------------------
-
-export
-attrImpl:  (msg : Doc())
-        -> (set : Doc())
-        -> (get : Doc())
-        -> (arg : CGArg)
-        -> (Doc (), Doc())
-attrImpl msg s g (Mandatory _ (Simple $ MaybeNull x)) =
-  ( "Attribute False Maybe" <++> ret App (Simple $ NotNull x)
-  , "fromNullablePrim" <++> align (sep [msg,s,g])
-  )
-
-attrImpl msg s g (Mandatory _ (Union $ MaybeNull x)) =
-  ( "Attribute False Maybe" <++> ret App (Union $ NotNull x)
-  , "fromNullablePrim" <++> align (sep [msg,s,g])
-  )
-
-attrImpl msg s g (Mandatory _ t) =
-  ( "Attribute True I" <++> ret App t
-  , "fromPrim" <++> align (sep [msg,s,g])
-  )
-
-attrImpl msg s g (VarArg _ t) =
-  ( "Attribute True I" <++> prettyCon App "VarArg" [ffi App t]
-  , "fromPrim" <++> align (sep [msg,s,g])
-  )
-
-attrImpl msg s g (Optional _ t d) =
-   case deflt (safeCast t) App t d of
-      Nothing  =>
-        ( "Attribute False Optional" <++> ret App t
-        , "fromUndefOrPrimNoDefault" <++> align (sep [msg,s,g])
-        )
-      Just x =>
-        ( "Attribute True Optional" <++> ret App t
-        , "fromUndefOrPrim" <++> align (sep [msg,s,g,x])
-        )

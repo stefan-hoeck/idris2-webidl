@@ -99,8 +99,10 @@ string ByteString = Unchangeable "ByteString"
 string DOMString  = Primitive "String"
 string USVString  = Primitive "String"
 
--- member : Attributed (Nullable CGDist) -> CGMember
--- member (a, n) = MkUnionMember a $ nullVal n
+strTpe : StringType -> String
+strTpe ByteString = "ByteString"
+strTpe DOMString = "String"
+strTpe USVString = "String"
 
 parameters (e : Env, dom : Domain)
 
@@ -125,7 +127,7 @@ parameters (e : Env, dom : Domain)
     uaD (Sequence x y)        = simple . Array <$> unalias y
     uaD (FrozenArray x y)     = simple . Array <$> unalias y
     uaD (ObservableArray x y) = simple . Array <$> unalias y
-    uaD (Record x y z)        = simple . Record (show y) <$> unalias z
+    uaD (Record x _ z)        = simple . Record (strTpe x) <$> unalias z
     uaD (P p)                 = Right . simple $ prim p
     uaD (S s)                 = Right . simple $ string s
     uaD (B b)                 = Right . simple $ buff b

@@ -9,6 +9,7 @@
 ||| in function implementations.
 module Text.WebIDL.Codegen.Args
 
+import Data.List
 import Data.List1
 import Text.WebIDL.Codegen.Util
 import Text.WebIDL.Encoder as E
@@ -46,15 +47,15 @@ mutual
   simpleFFI p (Array x)        = prettyCon p "Array" [ffi App x]
   simpleFFI p (Record x y)     = prettyCon p "Record" [pretty x, ffi App y]
 
-  unionFFI : Prec -> List SimpleType -> Doc ()
-  unionFFI p ts = prettyCon p ("Union" <+> pretty (length ts))
-                              (map (simpleFFI App) ts)
+  unionFFI : Prec -> List1 SimpleType -> Doc ()
+  unionFFI p ts = prettyCon p ("Union" <+> pretty (length $ forget ts))
+                              (map (simpleFFI App) $ forget ts)
 
   ffi : Prec -> CGType -> Doc ()
   ffi p Any         = "AnyPtr"
   ffi p (Promise x) = prettyCon p "Promise" [ffi App x]
   ffi p (Simple x)  = nullableFFI simpleFFI p x
-  ffi p (Union x)   = nullableFFI unionFFI p $ map forget x
+  ffi p (Union x)   = nullableFFI unionFFI p x
 
 --------------------------------------------------------------------------------
 --          API
@@ -85,7 +86,7 @@ mutual
      in prettyCon p "NS I" [brkt]
 
   api : Maybe Nat -> Prec -> CGType -> Doc ()
-  api _ p Any         = "AnyPtr"
+  api _ p Any         = "Any"
   api _ p (Promise x) = prettyCon p "Promise" [ffi App x]
   api k p (Simple x)  = nullableAPI (simpleAPI k) p x
   api _ p (Union x)   = nullableAPI unionAPI p x
@@ -96,16 +97,26 @@ mutual
 
 
 ret : Prec -> CGType -> Doc ()
-ret p t@(Union x)   = if all safeCast $ nullVal x
-                         then api Nothing p t
-                         else ffi p t
+ret p (Union $ MaybeNull xs) =
+  let u = if all SimpleType.safeCast xs
+             then unionAPI App xs
+             else unionFFI App xs
+
+   in prettyCon p "Maybe" [u]
+
+ret p t@(Union $ NotNull xs) =
+  if all SimpleType.safeCast xs then api Nothing p t else ffi p t
+
 ret p t             = api Nothing p t
 
+returnTypeFFI' : (io : Doc ()) -> ReturnType -> Doc ()
+returnTypeFFI' io Undefined     = io <++> "()"
+returnTypeFFI' io (Def t)       = prettyCon Open io [ffi App t]
+returnTypeFFI' io (UndefOr t _) =
+  prettyCon Open io [prettyCon App "UndefOr" [ffi App t]]
+
 returnTypeFFI : ReturnType -> Doc ()
-returnTypeFFI Undefined     = "PrimIO ()"
-returnTypeFFI (Def t)       = prettyCon Open "PrimIO" [ffi App t]
-returnTypeFFI (UndefOr t _) =
-  prettyCon Open "PrimIO" [prettyCon App "UndefOr" [ffi App t]]
+returnTypeFFI = returnTypeFFI' "PrimIO"
 
 returnTypeAPI : ReturnType -> Doc ()
 returnTypeAPI Undefined     = "JSIO ()"
@@ -190,9 +201,8 @@ argTypeAPI k p (Optional _ t _) = prettyCon p "Optional" [api (Just k) App t]
 arg : PrettyArg -> Doc ()
 arg a = parens $ hsep [pretty (argIdent a), ":", a.doc]
 
-prettyArgFFI : CGArg -> PrettyArg
-prettyArgFFI a = let doc = argTypeFFI Open a
-                  in MkPrettyArg (argName a) doc
+prettyArgFFI : CGArg -> Doc ()
+prettyArgFFI = argTypeFFI Open
 
 prettyArgAPI : Nat -> CGArg -> PrettyArg
 prettyArgAPI k a = let doc = argTypeAPI k Open a
@@ -203,164 +213,188 @@ prettyArgAPI k a = let doc = argTypeAPI k Open a
 --------------------------------------------------------------------------------
 
 funTypeFFI : (name : IdrisIdent) -> ReturnType -> Args -> Doc ()
-funTypeFFI n t as = typeDecl n (returnTypeFFI t) (map (doc . prettyArgFFI) as)
+funTypeFFI n t as = typeDecl n (returnTypeFFI t) (map prettyArgFFI as)
 
 funType : (name : IdrisIdent) -> ReturnType -> Args -> Doc ()
-funType n t as = typeDecl n (returnTypeAPI t) $ run 0 as
-  where run : Nat -> Args -> List (Doc ())
-        run _ []        = []
-        run k (x :: xs) =
-          let k2 = if
+funType n t as = 
+  let (implicits,autos,explicits) = run 0 as
+   in typeDeclWithImplicits n (returnTypeAPI t) implicits (autos ++ explicits)
+  where run : Nat -> Args -> (List $ Doc(), List $ Doc (), List $ Doc ())
+        run _ []        = ([],[],[])
+        run k (a :: as) =
+          case CGArg.inheritance a of
+               Just (n,_) =>
+                 let k2  = S k
+                     pk2 = "t" <+> pretty' k2
+                     (implicits,autos,explicits) = run k2 as
+                     impl = "JSType" <++> pk2
+                     aut = hsep ["{auto 0 _ : Elem"
+                                , pretty n.value
+                                ,"(Types" <++> pk2 <+> ")}"
+                                ]
+                     expl = arg (prettyArgAPI k2 a)
+                  in (impl :: implicits, aut :: autos, expl :: explicits)
+               Nothing =>
+                 let (implicits,autos,explicits) = run k as
+                     expl = arg (prettyArgAPI k a)
+                  in (implicits, autos, expl :: explicits)
 
--- export
--- callbackFFI :  (obj  : Identifier)
---             -> (name : IdrisIdent)
---             -> (impl : String)
---             -> (args : Args)
---             -> (tpe  : ReturnType)
---             -> String
--- callbackFFI o n impl as t =
---   let cbTpe  = functionTypeOnly (ffi $ returnType' "IO" t)
---                                 (map (ffi . prettyArg) as)
--- 
---       retTpe = "PrimIO" <++> pretty' (o.value)
--- 
---    in show . indent 2 $ vsep [ ""
---                              , "export"
---                              , pretty' impl
---                              , typeDecl n retTpe [cbTpe]
---                              ]
--- 
--- export
--- callbackAPI :  (obj  : Identifier)
---             -> (name : IdrisIdent)
---             -> (prim : IdrisIdent)
---             -> (args : Args)
---             -> (tpe  : ReturnType)
---             -> String
--- callbackAPI o n prim as t =
---   let cbTpe  = functionTypeOnly (ffi $ returnType' "IO" t)
---                                 (map (ffi . prettyArg) as)
--- 
---       retTpe = "JSIO" <++> pretty' (o.value)
---       impl   = pretty' n <++> "cb = primJS $" <++> pretty prim <++> "cb"
--- 
---    in show . indent 2 $ vsep [ ""
---                              , "export"
---                              , typeDecl n retTpe [cbTpe]
---                              , impl
---                              ]
--- 
--- 
--- export
--- funFFI :  (name : IdrisIdent)
---        -> (impl : String)
---        -> (args : Args)
---        -> (tpe  : ReturnType)
---        -> String
--- funFFI n impl as t =
---    show . indent 2 $ vsep ["", "export", pretty impl, funTypeFFI n t as ]
--- 
--- export
--- namespacedIdent : (ns : Kind) -> (name : IdrisIdent) -> String
--- namespacedIdent ns n = fastConcat ["\"",kindToString ns,".",show n,"\""]
--- 
--- fun' :  (ns         : Kind)
---      -> (name       : IdrisIdent)
---      -> (prim       : IdrisIdent)
---      -> (args       : Args)
---      -> (undefs     : List String)
---      -> (returnType : PrettyType)
---      -> List (Doc ())
--- fun' ns name prim as us rt =
---   let args    = map prettyArg as
--- 
---       vs      = take (length as) (unShadowingArgNames name)
--- 
---       appVs   = align . sep $  zipWith adjVal vs (map prettyArg as)
---                             ++ map pretty' us
--- 
---       primNS  = kindToString ns ++ "." ++ show prim
--- 
---       primCall = if rt.sameType
---                     then "primJS"
---                     else "tryJS " ++ namespacedIdent ns name
--- 
---       lhs     = pretty' . fastConcat . intersperse " " $ show name :: vs
---       
---       impl    = lhs <++> (align . sep) [ "=" <++> pretty primCall
---                                        , "$" <++> pretty primNS <++> appVs
---                                        ]
---    in ["", "export", funType name rt args, impl]
--- 
---   where adjVal : String -> PrettyArg -> Doc ()
---         adjVal v (MkPrettyArg _ _ _ _ True)  = pretty v
---         adjVal v (MkPrettyArg _ _ _ _ False) = parens ("toFFI" <++> pretty v)
--- 
--- export
--- fun :  (ns   : Kind)
---     -> (name : IdrisIdent)
---     -> (prim : IdrisIdent)
---     -> Args
---     -> ReturnType
---     -> String
--- fun ns name prim as t =
---   let retType       = returnType t
--- 
---       funImpl       = fun' ns name prim as [] retType
--- 
---       -- function without optional args
---       as2      = filter (not . isOptional) as
---       undefs   = replicate (length as `minus` length as2) "undef"
---       funImpl2 = if null undefs then []
---                  else fun' ns name2 prim as2 undefs retType
--- 
---    in show . indent 2 $ vsep (funImpl ++ funImpl2)
--- 
---   where name2 : IdrisIdent
---         name2 = case name of
---                      II v prf     => fromString $ v ++ "'"
---                      Prim v       => Prim (v ++ "'")
---                      Underscore v => fromString $ v ++ "'"
--- 
--- --------------------------------------------------------------------------------
--- --          Attribute
--- --------------------------------------------------------------------------------
--- 
--- export
--- attrImpl:  (msg : Doc())
---         -> (set : Doc())
---         -> (get : Doc())
---         -> (arg : CGArg)
---         -> (Doc (), Doc())
--- attrImpl msg s g (Mandatory _ (MkAType (D $ MaybeNull x) _)) =
---   ( "Attribute False Maybe" <++> ret (idl App $ D $ NotNull x)
---   , "fromNullablePrim" <++> align (sep [msg,s,g])
---   )
--- 
--- attrImpl msg s g (Mandatory _ (MkAType (U $ MaybeNull x) _)) =
---   ( "Attribute False Maybe" <++> ret (idl App $ U $ NotNull x)
---   , "fromNullablePrim" <++> align (sep [msg,s,g])
---   )
--- 
--- attrImpl msg s g (Mandatory _ t) =
---   ( "Attribute True I" <++> ret (atype App t)
---   , "fromPrim" <++> align (sep [msg,s,g])
---   )
--- 
--- attrImpl msg s g (VarArg _ t) =
---   ( "Attribute True I" <++> prettyCon App "VarArg" [ffi $ atype App t]
---   , "fromPrim" <++> align (sep [msg,s,g])
---   )
--- 
--- attrImpl msg s g (Optional _ t d) =
---   let MkPrettyType api ffi ret _ sc = atype App t
---    in case deflt sc App t.type d of
---         Nothing  =>
---           ( "Attribute False Optional" <++> ret
---           , "fromUndefOrPrimNoDefault" <++> align (sep [msg,s,g])
---           )
---         Just x =>
---           ( "Attribute True Optional" <++> ret
---           , "fromUndefOrPrim" <++> align (sep [msg,s,g,x])
---           )
+export
+callbackFFI :  (obj  : Identifier)
+            -> (name : IdrisIdent)
+            -> (impl : String)
+            -> (args : Args)
+            -> (tpe  : ReturnType)
+            -> String
+callbackFFI o n impl as t =
+  let cbTpe  = functionTypeOnly (returnTypeFFI' "IO" t)
+                                (map prettyArgFFI as)
+
+      retTpe = "PrimIO" <++> pretty' (o.value)
+
+   in show . indent 2 $ vsep [ ""
+                             , "export"
+                             , pretty' impl
+                             , typeDecl n retTpe [cbTpe]
+                             ]
+
+export
+callbackAPI :  (obj  : Identifier)
+            -> (name : IdrisIdent)
+            -> (prim : IdrisIdent)
+            -> (args : Args)
+            -> (tpe  : ReturnType)
+            -> String
+callbackAPI o n prim as t =
+  let cbTpe  = functionTypeOnly (returnTypeFFI' "IO" t)
+                                (map prettyArgFFI as)
+
+      retTpe = "JSIO" <++> pretty' (o.value)
+      impl   = pretty' n <++> "cb = primJS $" <++> pretty prim <++> "cb"
+
+   in show . indent 2 $ vsep [ ""
+                             , "export"
+                             , typeDecl n retTpe [cbTpe]
+                             , impl
+                             ]
+
+
+export
+funFFI :  (name : IdrisIdent)
+       -> (impl : String)
+       -> (args : Args)
+       -> (tpe  : ReturnType)
+       -> String
+funFFI n impl as t =
+   show . indent 2 $ vsep ["", "export", pretty impl, funTypeFFI n t as ]
+
+export
+namespacedIdent : (ns : Kind) -> (name : IdrisIdent) -> String
+namespacedIdent ns n = fastConcat ["\"",kindToString ns,".",show n,"\""]
+
+fun' :  (ns         : Kind)
+     -> (name       : IdrisIdent)
+     -> (prim       : IdrisIdent)
+     -> (args       : Args)
+     -> (undefs     : List String)
+     -> (returnType : ReturnType)
+     -> List (Doc ())
+fun' ns name prim as us rt =
+  let vs      = take (length as) (unShadowingArgNames name)
+
+      appVs   = align . sep $ zipWith adjVal vs as ++ map pretty' us
+
+      primNS  = kindToString ns ++ "." ++ show prim
+
+      primCall = if sameType rt
+                    then "primJS"
+                    else "tryJS " ++ namespacedIdent ns name
+
+      lhs     = pretty' . fastConcat . intersperse " " $ show name :: vs
+      
+      impl    = lhs <++> (align . sep) [ "=" <++> pretty primCall
+                                       , "$" <++> pretty primNS <++> appVs
+                                       ]
+   in ["", "export", funType name rt as, impl]
+
+  where adjVal : String -> CGArg -> Doc ()
+        adjVal v a =
+          -- If the same type is used at the FFI and the API,
+          -- there is no need to convert the value.
+          -- If the value should be upcast to a parent type (`inheritance` returns
+          -- a `Just`), we upcast the value using a number of nested `map`s,
+          -- corresponding to the number of functors around
+          -- the type (at most two layers: `Optional` and `Maybe`),
+          -- otherwise, we just use `toFFI` to convert it.
+          case (sameType a, snd <$> inheritance a) of
+            (True,_)            => pretty v
+            (False,Nothing)     => parens ("toFFI" <++> pretty v)
+            (False,Just Direct) => parens ("up" <++> pretty v)
+            (False,Just May)    => parens ("mayUp" <++> pretty v)
+            (False,Just Opt)    => parens ("optUp" <++> pretty v)
+            (False,Just OptMay) => parens ("omyUp" <++> pretty v)
+
+export
+fun :  (ns   : Kind)
+    -> (name : IdrisIdent)
+    -> (prim : IdrisIdent)
+    -> Args
+    -> ReturnType
+    -> String
+fun ns name prim as t =
+  let funImpl       = fun' ns name prim as [] t
+
+      -- function without optional args
+      as2      = filter (not . isOptional) as
+      undefs   = replicate (length as `minus` length as2) "undef"
+      funImpl2 = if null undefs then []
+                 else fun' ns name2 prim as2 undefs t
+
+   in show . indent 2 $ vsep (funImpl ++ funImpl2)
+
+  where name2 : IdrisIdent
+        name2 = case name of
+                     II v prf     => fromString $ v ++ "'"
+                     Prim v       => Prim (v ++ "'")
+                     Underscore v => fromString $ v ++ "'"
+
+--------------------------------------------------------------------------------
+--          Attribute
+--------------------------------------------------------------------------------
+
+export
+attrImpl:  (msg : Doc())
+        -> (set : Doc())
+        -> (get : Doc())
+        -> (arg : CGArg)
+        -> (Doc (), Doc())
+attrImpl msg s g (Mandatory _ (Simple $ MaybeNull x)) =
+  ( "Attribute False Maybe" <++> ret App (Simple $ NotNull x)
+  , "fromNullablePrim" <++> align (sep [msg,s,g])
+  )
+
+attrImpl msg s g (Mandatory _ (Union $ MaybeNull x)) =
+  ( "Attribute False Maybe" <++> ret App (Union $ NotNull x)
+  , "fromNullablePrim" <++> align (sep [msg,s,g])
+  )
+
+attrImpl msg s g (Mandatory _ t) =
+  ( "Attribute True I" <++> ret App t
+  , "fromPrim" <++> align (sep [msg,s,g])
+  )
+
+attrImpl msg s g (VarArg _ t) =
+  ( "Attribute True I" <++> prettyCon App "VarArg" [ffi App t]
+  , "fromPrim" <++> align (sep [msg,s,g])
+  )
+
+attrImpl msg s g (Optional _ t d) =
+   case deflt (safeCast t) App t d of
+      Nothing  =>
+        ( "Attribute False Optional" <++> ret App t
+        , "fromUndefOrPrimNoDefault" <++> align (sep [msg,s,g])
+        )
+      Just x =>
+        ( "Attribute True Optional" <++> ret App t
+        , "fromUndefOrPrim" <++> align (sep [msg,s,g,x])
+        )

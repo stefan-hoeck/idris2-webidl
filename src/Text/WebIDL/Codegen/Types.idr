@@ -45,6 +45,20 @@ public export
 kindToString : Kind -> String
 kindToString = value . ident
 
+public export
+data Wrapper = Direct | Opt | May | OptMay
+
+public export
+opt : Wrapper -> Wrapper
+opt Direct = Opt
+opt May    = OptMay
+opt i      = i
+
+public export
+may : Wrapper -> Wrapper
+may Direct = May
+may i      = i
+
 --------------------------------------------------------------------------------
 --          Types
 --------------------------------------------------------------------------------
@@ -92,8 +106,8 @@ mutual
 ||| to either an `unsigned long` or a `DOMString`.
 export
 isIndex : CGType -> Bool
-isIndex (Simple $ NotNull $ Unchangeable "String") = True
-isIndex (Simple $ NotNull $ Unchangeable "UInt32") = True
+isIndex (Simple $ NotNull $ Primitive "String") = True
+isIndex (Simple $ NotNull $ Primitive "UInt32") = True
 isIndex _                                          = False
 
 namespace SimpleType
@@ -137,9 +151,9 @@ namespace SimpleType
   sameRetType (Record x y)     = True
 
   export
-  isParent : SimpleType -> Bool
-  isParent (ParentType _) = True
-  isParent _              = False
+  inheritance : SimpleType -> Maybe (Identifier,Wrapper)
+  inheritance (ParentType x) = Just (x,Direct)
+  inheritance _              = Nothing
 
 namespace CGType
 
@@ -197,8 +211,10 @@ namespace CGType
   sameRetType (Union  $ NotNull xs)  = not $ all safeCast xs
 
   export
-  isParent : CGType -> Bool
-  isParent x = ?isParent_rhs
+  inheritance : CGType -> Maybe (Identifier,Wrapper)
+  inheritance (Simple $ MaybeNull x) = map may <$> inheritance x
+  inheritance (Simple $ NotNull x)   = inheritance x
+  inheritance _                      = Nothing
 
 --------------------------------------------------------------------------------
 --          ReturnType
@@ -324,6 +340,12 @@ namespace CGArg
   sameType (Mandatory _ t)  = sameArgType t
   sameType (Optional _ _ _) = False
   sameType (VarArg _ _)     = True
+
+  export
+  inheritance : CGArg -> Maybe (Identifier,Wrapper)
+  inheritance (Mandatory _ t)  = inheritance t
+  inheritance (Optional _ t _) = map opt <$> inheritance t
+  inheritance (VarArg _ _)     = Nothing
 
 public export
 Args : Type

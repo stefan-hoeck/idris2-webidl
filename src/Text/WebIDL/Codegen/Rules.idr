@@ -3,25 +3,28 @@ module Text.WebIDL.Codegen.Rules
 import Data.List
 import Data.List1
 import Data.List.Elem
+import Data.SortedSet
 import Text.WebIDL.Codegen.Util
 
 --------------------------------------------------------------------------------
 --          Environment
 --------------------------------------------------------------------------------
 
-||| Calculate the environment from a list of domains.
-export
-env : Nat -> List Domain -> Env
-env k ds = let kinds = SortedMap.fromList
-                     $  (ds >>= pairs name KEnum . enums)
-                     ++ (ds >>= pairs name KMixin . mixins)
-                     ++ (ds >>= pairs name KInterface . interfaces)
-                     ++ (ds >>= pairs name KDictionary . dictionaries)
-                     ++ (ds >>= pairs name KCallback . callbackInterfaces)
-                     ++ (ds >>= pairs name KCallback . callbacks)
-                     ++ (ds >>= pairs name KAlias . typedefs)
+parents : Domain -> List Identifier
+parents d =  mapMaybe inherits d.interfaces
+          ++ mapMaybe inherits d.dictionaries
 
-            in MkEnv k kinds jsTypes (aliases kinds $ ds >>= typedefs)
+kinds : List Domain -> SortedMap Identifier Kind
+kinds ds = 
+  let ps = SortedSet.fromList $ ds >>= parents
+   in SortedMap.fromList
+        $  (ds >>= pairs name KEnum . enums)
+        ++ (ds >>= pairs name KMixin . mixins)
+        ++ (ds >>= pairs name (iface ps) . interfaces)
+        ++ (ds >>= pairs name (dict ps) . dictionaries)
+        ++ (ds >>= pairs name KCallback . callbackInterfaces)
+        ++ (ds >>= pairs name KCallback . callbacks)
+        ++ (ds >>= pairs name KAlias . typedefs)
   where -- pairs list of identifiers with their kinds
         pairs :  (a -> Identifier)
               -> (Identifier -> Kind)
@@ -29,7 +32,18 @@ env k ds = let kinds = SortedMap.fromList
               -> List (Identifier,Kind)
         pairs name knd = map \v => (name v, knd $ name v)
 
-        -- calculates the mapping from type aliases to the
+        iface : SortedSet Identifier -> Identifier -> Kind
+        iface ps i = KInterface (contains i ps) i
+
+        dict : SortedSet Identifier -> Identifier -> Kind
+        dict ps i = KDictionary (contains i ps) i
+
+||| Calculate the environment from a list of domains.
+export
+env : Nat -> List Domain -> Env
+env k ds = let ks = kinds ds
+            in MkEnv k ks jsTypes (aliases ks $ ds >>= typedefs)
+  where -- calculates the mapping from type aliases to the
         -- types they represent
         aliases :  SortedMap Identifier Kind
                 -> List Typedef
@@ -131,7 +145,8 @@ parameters (e : Env, dom : Domain)
     uaD (P p)                 = Right . simple $ prim p
     uaD (S s)                 = Right . simple $ string s
     uaD (B b)                 = Right . simple $ buff b
-    uaD Object                = Right . simple . ParentType $ MkIdent "Object"
+    uaD Object                = Right . simple . ParentType True $
+                                MkIdent "Object"
     uaD Symbol                = Right $ unchangeable "Symbol"
 
     uaU :  UnionTypeF ExtAttributeList Kind

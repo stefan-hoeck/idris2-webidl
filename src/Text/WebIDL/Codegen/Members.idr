@@ -108,13 +108,18 @@ attrRW k n o t rt =
       primSet    = pretty' $ primAttrSetter k n
       msg        = pretty' $ namespacedIdent o (fromString $ "get" ++ n.value)
       po         = pretty' $ kindToString o
-      up         = "(v :> " <+> po <+> ")"
+      up         = if isParent o
+                      then "(v :> " <+> po <+> ")"
+                      else "v"
+
       (tpe,impl) = attrImpl msg primGet primSet up t
-      funTpe     = typeDeclWithImplicits
-                      implName
-                      tpe
-                      ["JSType t"]
-                      ["{auto 0 _ : Elem" <++> po <++> "(Types t)}","t"]
+      funTpe     = if isParent o
+                      then typeDeclWithImplicits
+                           implName
+                           tpe
+                           ["JSType t"]
+                           ["{auto 0 _ : Elem" <++> po <++> "(Types t)}","t"]
+                      else typeDecl implName tpe [po]
 
    in show . indent 2 $ vsep [ ""
                              , "export"

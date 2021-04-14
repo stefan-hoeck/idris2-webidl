@@ -23,23 +23,30 @@ public export
 data Kind : Type where
   KAlias      : Identifier -> Kind
   KCallback   : Identifier -> Kind
-  KDictionary : Identifier -> Kind
+  KDictionary : (isParent : Bool) -> Identifier -> Kind
   KEnum       : Identifier -> Kind
-  KInterface  : Identifier -> Kind
+  KInterface  : (isParent : Bool) -> Identifier -> Kind
   KMixin      : Identifier -> Kind
   KOther      : Identifier -> Kind
 
 %runElab derive "Kind" [Generic,Meta,Eq,Show]
 
 public export
+isParent : Kind -> Bool
+isParent (KDictionary b _) = b
+isParent (KInterface b _)  = b
+isParent (KMixin _)        = True
+isParent _                 = False
+
+public export
 ident : Kind -> Identifier
-ident (KAlias x)      = x
-ident (KCallback x)   = x
-ident (KDictionary x) = x
-ident (KEnum x)       = x
-ident (KInterface x)  = x
-ident (KMixin x)      = x
-ident (KOther x)      = x
+ident (KAlias x)        = x
+ident (KCallback x)     = x
+ident (KDictionary _ x) = x
+ident (KEnum x)         = x
+ident (KInterface _ x)  = x
+ident (KMixin x)        = x
+ident (KOther x)        = x
 
 public export
 kindToString : Kind -> String
@@ -72,10 +79,13 @@ mutual
     ||| `Boolean` at the FFI, `Bool` in the API.
     Boolean      : SimpleType
 
-    ||| A dictionary or interface. This has an instance of `SafeCast`,
+    ||| A dictionary, interface or mixin. This has an instance of `SafeCast`,
     ||| and is being abstracted over when used in an argument
-    ||| list in the API.
-    ParentType   : Identifier  -> SimpleType
+    ||| list in the API, but only, when the `isParent` flag is set to true.
+    ||| If this flag is `False`, meaning that there are no subtypes of
+    ||| this type, we do not abstract over the type to improve
+    ||| type inference.
+    ParentType   : (isParent : Bool) -> Identifier  -> SimpleType
 
     ||| Primitive type or a wrapper of a primitive.
     ||| This is the same at the FFI and API and
@@ -117,7 +127,7 @@ namespace SimpleType
   safeCast : SimpleType -> Bool
   safeCast Undef            = True
   safeCast Boolean          = True
-  safeCast (ParentType x)   = True
+  safeCast (ParentType _ x) = True
   safeCast (Primitive x)    = True
   safeCast (Unchangeable x) = False
   safeCast (Enum x)         = True
@@ -130,12 +140,12 @@ namespace SimpleType
   sameArgType : SimpleType -> Bool
   sameArgType Undef            = True
   sameArgType Boolean          = False
-  sameArgType (ParentType x)   = False
-  sameArgType (Primitive x)    = True
-  sameArgType (Unchangeable x) = True
-  sameArgType (Enum x)         = False
-  sameArgType (Array x)        = True
-  sameArgType (Record x y)     = True
+  sameArgType (ParentType b _) = not b
+  sameArgType (Primitive _)    = True
+  sameArgType (Unchangeable _) = True
+  sameArgType (Enum _)         = False
+  sameArgType (Array _)        = True
+  sameArgType (Record _ _)     = True
 
   ||| True, if the type uses the same representation in
   ||| the FFI and the API as a return value.
@@ -143,17 +153,17 @@ namespace SimpleType
   sameRetType : SimpleType -> Bool
   sameRetType Undef            = True
   sameRetType Boolean          = False
-  sameRetType (ParentType x)   = True
-  sameRetType (Primitive x)    = True
-  sameRetType (Unchangeable x) = True
-  sameRetType (Enum x)         = False
-  sameRetType (Array x)        = True
-  sameRetType (Record x y)     = True
+  sameRetType (ParentType _ _) = True
+  sameRetType (Primitive _)    = True
+  sameRetType (Unchangeable _) = True
+  sameRetType (Enum _)         = False
+  sameRetType (Array _)        = True
+  sameRetType (Record _ _)     = True
 
   export
   inheritance : SimpleType -> Maybe (Identifier,Wrapper)
-  inheritance (ParentType x) = Just (x,Direct)
-  inheritance _              = Nothing
+  inheritance (ParentType True x) = Just (x,Direct)
+  inheritance _                   = Nothing
 
 namespace CGType
 
@@ -166,19 +176,19 @@ namespace CGType
   unchangeable = simple . Unchangeable
 
   public export
-  parentType : Identifier -> CGType
-  parentType = simple . ParentType
+  parentType : Bool -> Identifier -> CGType
+  parentType b = simple . ParentType b
 
   ||| Wrapps the given kind in return type.
   export
   fromKind : Kind -> CGType
-  fromKind (KAlias x)      = unchangeable x.value
-  fromKind (KCallback x)   = unchangeable x.value
-  fromKind (KDictionary x) = parentType x
-  fromKind (KEnum x)       = Simple . NotNull $ Enum x
-  fromKind (KInterface x)  = parentType x
-  fromKind (KMixin x)      = unchangeable x.value
-  fromKind (KOther x)      = unchangeable x.value
+  fromKind (KAlias x)        = unchangeable x.value
+  fromKind (KCallback x)     = unchangeable x.value
+  fromKind (KDictionary b x) = parentType b x
+  fromKind (KEnum x)         = Simple . NotNull $ Enum x
+  fromKind (KInterface b x)  = parentType b x
+  fromKind (KMixin x)        = parentType True x
+  fromKind (KOther x)        = unchangeable x.value
 
   ||| True, if the FFI representation of the given type
   ||| has a `SafeCast` implementation
@@ -251,8 +261,8 @@ namespace ReturnType
   unchangeable = Def . unchangeable
 
   public export
-  parentType : Identifier -> ReturnType
-  parentType = Def . parentType
+  parentType : Bool -> Identifier -> ReturnType
+  parentType b = Def . parentType b
 
   ||| Wrapps the given kind in return type.
   export

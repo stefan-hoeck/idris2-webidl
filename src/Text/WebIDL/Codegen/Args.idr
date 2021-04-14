@@ -40,7 +40,7 @@ mutual
   simpleFFI : Prec -> SimpleType -> Doc ()
   simpleFFI p Undef            = "Undefined"
   simpleFFI p Boolean          = "Boolean"
-  simpleFFI p (ParentType x)   = pretty x.value
+  simpleFFI p (ParentType _ x) = pretty x.value
   simpleFFI p (Primitive x)    = pretty x
   simpleFFI p (Unchangeable x) = pretty x
   simpleFFI p (Enum x)         = "String"
@@ -67,8 +67,8 @@ nullableAPI f p (NotNull x)   = f p x
 
 mutual
   simpleAPI : Maybe Nat -> Prec -> SimpleType -> Doc ()
-  simpleAPI Nothing  _ (ParentType x) = pretty x.value
-  simpleAPI (Just k) _ (ParentType x) = pretty "t" <+> pretty k
+  simpleAPI (Just k) _ (ParentType True x) = pretty "t" <+> pretty k
+  simpleAPI _ _        (ParentType _ x) = pretty x.value
   simpleAPI _ _ Undef            = "Undefined"
   simpleAPI _ _ Boolean          = "Bool"
   simpleAPI _ _ (Primitive x)    = pretty x

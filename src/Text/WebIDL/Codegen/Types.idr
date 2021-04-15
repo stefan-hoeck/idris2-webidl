@@ -381,7 +381,7 @@ namespace CGArg
   sameType : CGArg -> Bool
   sameType (Mandatory _ t)  = sameArgType t
   sameType (Optional _ _ _) = False
-  sameType (VarArg _ _)     = True
+  sameType (VarArg _ _)     = False
 
   export
   inheritance : CGArg -> Maybe (Identifier,Wrapper)

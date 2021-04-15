@@ -33,8 +33,7 @@ Parsers and (eventually) Idris code generator for WebIDL documents
     - [x] Functions with optional arguments
           (including a second version with the optional arguments
           missing)
-    - [ ] Functions with a variadic argument (not sure yet how
-          to handle these).
+    - [x] Functions with a variadic argument
     - [x] Function to callback converters
     - [x] Static functions
     - [ ] Iterables

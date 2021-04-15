@@ -196,12 +196,13 @@ deflt _ _ _ _ = Nothing
 
 argTypeFFI : Prec -> CGArg -> Doc ()
 argTypeFFI p (Mandatory _ t)  = ffi p t
-argTypeFFI p (VarArg _ t)     = prettyCon p "VarArg" [ffi App t]
+argTypeFFI p (VarArg _ t)     =
+  prettyCon p "IO" [prettyCon App "Array" [ffi App t]]
 argTypeFFI p (Optional _ t _) = prettyCon p "UndefOr" [ffi App t]
 
 argTypeAPI : Nat -> Prec -> CGArg -> Doc ()
 argTypeAPI k p (Mandatory _ t)  = api (Just k) p t
-argTypeAPI _ p (VarArg _ t)     = prettyCon p "VarArg" [ffi App t]
+argTypeAPI _ p (VarArg _ t)     = prettyCon p "List" [api Nothing App t]
 argTypeAPI k p (Optional _ t _) = prettyCon p "Optional" [api (Just k) App t]
 
 arg : PrettyArg -> Doc ()

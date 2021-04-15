@@ -1,6 +1,7 @@
 module Text.WebIDL.Codegen.Util
 
 import Data.List
+import Data.Nat
 import Data.Stream
 import public Data.String
 import public Data.Vect
@@ -295,6 +296,14 @@ funFFI n k =
    in foreignBrowser #"(x,\#{vals})=>x.\#{n.value}(\#{vals})"#
 
 export
+funFFIVarArg : OperationName -> Nat -> String
+funFFIVarArg n k =
+  let vs = take (pred k) argNames
+      vals = fastConcat $ intersperse "," (vs ++ ["va"])
+      args = fastConcat $ intersperse "," (vs ++ ["...va()"])
+   in foreignBrowser #"(x,\#{vals})=>x.\#{n.value}(\#{args})"#
+
+export
 staticFunFFI : Kind -> OperationName -> Nat -> String
 staticFunFFI o n Z = foreignBrowser #"x=>x.\#{n.value}()"#
 staticFunFFI o n k =
@@ -303,11 +312,27 @@ staticFunFFI o n k =
    in foreignBrowser #"(\#{vals})=>\#{kindToString o}.\#{n.value}(\#{vals})"#
 
 export
+staticFunFFIVarArg : Kind -> OperationName -> Nat -> String
+staticFunFFIVarArg o n k =
+  let vs = take (pred k) argNames
+      vals = fastConcat $ intersperse "," (vs ++ ["va"])
+      args = fastConcat $ intersperse "," (vs ++ ["...va()"])
+   in foreignBrowser #"(\#{vals})=>\#{kindToString o}.\#{n.value}(\#{args})"#
+
+export
 conFFI : Kind -> Nat -> String
 conFFI n k =
   let vs = take k argNames
       vals = fastConcat $ intersperse "," vs
    in foreignBrowser #"(\#{vals})=> new \#{kindToString n}(\#{vals})"#
+
+export
+conFFIVarArg : Kind -> Nat -> String
+conFFIVarArg n k =
+  let vs = take (pred k) argNames
+      vals = fastConcat $ intersperse "," (vs ++ ["va"])
+      args = fastConcat $ intersperse "," (vs ++ ["...va()"])
+   in foreignBrowser #"(\#{vals})=> new \#{kindToString n}(\#{args})"#
 
 export
 dictConFFI : List ArgumentName -> String

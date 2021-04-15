@@ -161,15 +161,24 @@ function (k,DictConstructor o as) =
 function (k,Constructor o as) =
   fun o (constr k) (primConstr k) as (fromKind o)
 
+hasVarArg : Args -> Bool
+hasVarArg (VarArg _ _ :: []) = True
+hasVarArg []                 = False
+hasVarArg (_ :: xs)          = hasVarArg xs
+
 prim : (Nat,CGFunction) -> String
 prim (k,Getter o i t) = funFFI (primGetter k) getterFFI [obj o, i] t
 prim (k,Setter o i v) = funFFI (primSetter k) setterFFI [obj o, i, v] Undefined
 prim (k,Regular n o args t) =
   let as = obj o :: args
-   in funFFI (primOp k n) (funFFI n $ length args) as t
+   in if hasVarArg args
+         then funFFI (primOp k n) (funFFIVarArg n $ length args) as t
+         else funFFI (primOp k n) (funFFI n $ length args) as t
 
 prim (k,Static n o as t) =
-  funFFI (primOp k n) (staticFunFFI o n $ length as) as t
+  if hasVarArg as
+     then funFFI (primOp k n) (staticFunFFIVarArg o n $ length as) as t
+     else funFFI (primOp k n) (staticFunFFI o n $ length as) as t
 
 prim (k,Attribute n o t rt) =
   fastUnlines
@@ -191,7 +200,9 @@ prim (k,DictConstructor o as) =
   funFFI (primConstr k) (dictConFFI $ map argName as) as (fromKind o)
 
 prim (k,Constructor o as)  =
-  funFFI (primConstr k) (conFFI o $ length as) as (fromKind o)
+  if hasVarArg as
+     then funFFI (primConstr k) (conFFIVarArg o $ length as) as (fromKind o)
+     else funFFI (primConstr k) (conFFI o $ length as) as (fromKind o)
 
 -- Tags functions with an index if several function of the
 -- same priority (same kind of function and same name) exist,

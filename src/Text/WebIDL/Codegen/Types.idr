@@ -23,7 +23,7 @@ public export
 data Kind : Type where
   KAlias      : Identifier -> Kind
   KCallback   : Identifier -> Kind
-  KDictionary : (isParent : Bool) -> Identifier -> Kind
+  KDictionary : Identifier -> Kind
   KEnum       : Identifier -> Kind
   KInterface  : (isParent : Bool) -> Identifier -> Kind
   KMixin      : Identifier -> Kind
@@ -33,16 +33,16 @@ data Kind : Type where
 
 public export
 isParent : Kind -> Bool
-isParent (KDictionary b _) = b
-isParent (KInterface b _)  = b
-isParent (KMixin _)        = True
-isParent _                 = False
+isParent (KDictionary _)  = True
+isParent (KInterface b _) = b
+isParent (KMixin _)       = True
+isParent _                = False
 
 public export
 ident : Kind -> Identifier
 ident (KAlias x)        = x
 ident (KCallback x)     = x
-ident (KDictionary _ x) = x
+ident (KDictionary x)   = x
 ident (KEnum x)         = x
 ident (KInterface _ x)  = x
 ident (KMixin x)        = x
@@ -79,13 +79,33 @@ mutual
     ||| `Boolean` at the FFI, `Bool` in the API.
     Boolean      : SimpleType
 
-    ||| A dictionary, interface or mixin. This has an instance of `SafeCast`,
+    ||| A Web IDL interface. This has an instance of `SafeCast`,
     ||| and is being abstracted over when used in an argument
     ||| list in the API, but only, when the `isParent` flag is set to true.
     ||| If this flag is `False`, meaning that there are no subtypes of
     ||| this type, we do not abstract over the type to improve
     ||| type inference.
-    ParentType   : (isParent : Bool) -> Identifier  -> SimpleType
+    Interface   : (isParent : Bool) -> Identifier  -> SimpleType
+
+    ||| A dictionary, specifying a Javascript object with a
+    ||| set of mandatory and optional attributes.
+    ||| This is always abstracted over, since theoretically
+    ||| every value with the same set of attributes is
+    ||| a dictionary of the given type.
+    |||
+    ||| The type of a dictionary cannot be verified at
+    ||| runtime, therefore they have no instance of `SafeCast`.
+    Dictionary  : Identifier  -> SimpleType
+
+    ||| A Web IDL `Mixin` is a set of attributes and operations (functions)
+    ||| shared by several types. A type includes a given mixin, if
+    ||| a corresponding `includes` statement is provided in the spec.
+    |||
+    ||| Mixins do not define new types, and whether a value implements
+    ||| a given mixin can typcally not be verified at runtime, therefore
+    ||| mixins come without an instance of `SafeCast`.
+    ||| runtime, therefore they have no instance of `SafeCast`.
+    Mixin  : Identifier  -> SimpleType
 
     ||| Primitive type or a wrapper of a primitive.
     ||| This is the same at the FFI and API and
@@ -127,7 +147,9 @@ namespace SimpleType
   safeCast : SimpleType -> Bool
   safeCast Undef            = True
   safeCast Boolean          = True
-  safeCast (ParentType _ x) = True
+  safeCast (Interface _ x)  = True
+  safeCast (Dictionary _)   = False
+  safeCast (Mixin _)        = False
   safeCast (Primitive x)    = True
   safeCast (Unchangeable x) = False
   safeCast (Enum x)         = True
@@ -140,7 +162,9 @@ namespace SimpleType
   sameArgType : SimpleType -> Bool
   sameArgType Undef            = True
   sameArgType Boolean          = False
-  sameArgType (ParentType b _) = not b
+  sameArgType (Interface b _)  = not b
+  sameArgType (Dictionary _)   = False
+  sameArgType (Mixin _)        = False
   sameArgType (Primitive _)    = True
   sameArgType (Unchangeable _) = True
   sameArgType (Enum _)         = False
@@ -153,7 +177,9 @@ namespace SimpleType
   sameRetType : SimpleType -> Bool
   sameRetType Undef            = True
   sameRetType Boolean          = False
-  sameRetType (ParentType _ _) = True
+  sameRetType (Interface _ _)  = True
+  sameRetType (Dictionary _)   = True
+  sameRetType (Mixin _)        = True
   sameRetType (Primitive _)    = True
   sameRetType (Unchangeable _) = True
   sameRetType (Enum _)         = False
@@ -162,7 +188,9 @@ namespace SimpleType
 
   export
   inheritance : SimpleType -> Maybe (Identifier,Wrapper)
-  inheritance (ParentType True x) = Just (x,Direct)
+  inheritance (Interface True x)  = Just (x,Direct)
+  inheritance (Dictionary x)      = Just (x,Direct)
+  inheritance (Mixin x)           = Just (x,Direct)
   inheritance _                   = Nothing
 
 namespace CGType
@@ -176,18 +204,26 @@ namespace CGType
   unchangeable = simple . Unchangeable
 
   public export
-  parentType : Bool -> Identifier -> CGType
-  parentType b = simple . ParentType b
+  iface : Bool -> Identifier -> CGType
+  iface b = simple . Interface b
+
+  public export
+  mixin : Identifier -> CGType
+  mixin = simple . Mixin
+
+  public export
+  dict : Identifier -> CGType
+  dict = simple . Dictionary
 
   ||| Wrapps the given kind in return type.
   export
   fromKind : Kind -> CGType
   fromKind (KAlias x)        = unchangeable x.value
   fromKind (KCallback x)     = unchangeable x.value
-  fromKind (KDictionary b x) = parentType b x
+  fromKind (KDictionary x)   = dict x
   fromKind (KEnum x)         = Simple . NotNull $ Enum x
-  fromKind (KInterface b x)  = parentType b x
-  fromKind (KMixin x)        = parentType True x
+  fromKind (KInterface b x)  = iface b x
+  fromKind (KMixin x)        = mixin x
   fromKind (KOther x)        = unchangeable x.value
 
   ||| True, if the FFI representation of the given type
@@ -260,14 +296,10 @@ namespace ReturnType
   unchangeable : String -> ReturnType
   unchangeable = Def . unchangeable
 
-  public export
-  parentType : Bool -> Identifier -> ReturnType
-  parentType b = Def . parentType b
-
   ||| Wrapps the given kind in return type.
   export
   fromKind : Kind -> ReturnType
-  fromKind = Def . fromKind
+  fromKind = Def . CGType.fromKind
 
   ||| True, if the given FFI type has a `SafeCast` instance
   export

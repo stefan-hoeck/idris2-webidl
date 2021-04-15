@@ -40,7 +40,9 @@ mutual
   simpleFFI : Prec -> SimpleType -> Doc ()
   simpleFFI p Undef            = "Undefined"
   simpleFFI p Boolean          = "Boolean"
-  simpleFFI p (ParentType _ x) = pretty x.value
+  simpleFFI p (Interface _ x)  = pretty x.value
+  simpleFFI p (Dictionary x)   = pretty x.value
+  simpleFFI p (Mixin x)        = pretty x.value
   simpleFFI p (Primitive x)    = pretty x
   simpleFFI p (Unchangeable x) = pretty x
   simpleFFI p (Enum x)         = "String"
@@ -67,15 +69,19 @@ nullableAPI f p (NotNull x)   = f p x
 
 mutual
   simpleAPI : Maybe Nat -> Prec -> SimpleType -> Doc ()
-  simpleAPI (Just k) _ (ParentType True x) = pretty "t" <+> pretty k
-  simpleAPI _ _        (ParentType _ x) = pretty x.value
-  simpleAPI _ _ Undef            = "Undefined"
-  simpleAPI _ _ Boolean          = "Bool"
-  simpleAPI _ _ (Primitive x)    = pretty x
-  simpleAPI _ _ (Unchangeable x) = pretty x
-  simpleAPI _ _ (Enum x)         = pretty x.value
-  simpleAPI _ p (Array x)        = prettyCon p "Array" [ffi App x]
-  simpleAPI _ p (Record x y)     = prettyCon p "Record" [pretty x, ffi App y]
+  simpleAPI (Just k) _ (Dictionary _)     = pretty "t" <+> pretty k
+  simpleAPI (Just k) _ (Mixin _)          = pretty "t" <+> pretty k
+  simpleAPI (Just k) _ (Interface True _) = pretty "t" <+> pretty k
+  simpleAPI Nothing _ (Dictionary x)      = pretty x.value
+  simpleAPI Nothing _ (Mixin x)           = pretty x.value
+  simpleAPI _ _        (Interface _ x)    = pretty x.value
+  simpleAPI _ _ Undef                     = "Undefined"
+  simpleAPI _ _ Boolean                   = "Bool"
+  simpleAPI _ _ (Primitive x)             = pretty x
+  simpleAPI _ _ (Unchangeable x)          = pretty x
+  simpleAPI _ _ (Enum x)                  = pretty x.value
+  simpleAPI _ p (Array x)                 = prettyCon p "Array" [ffi App x]
+  simpleAPI _ p (Record x y)              = prettyCon p "Record" [pretty x, ffi App y]
 
   unionAPI : Prec -> List1 SimpleType -> Doc ()
   unionAPI p (h ::: t) =

@@ -31,7 +31,7 @@ typeImports = "import JS"
 
 extern : CGDomain -> String
 extern d = fastUnlines [ section "Interfaces" $ exts ext name d.ifaces
-                       , section "Dictionaries" $ exts ext name d.dicts
+                       , section "Dictionaries" $ exts extNoCast name d.dicts
                        , section "Mixins" $ exts extNoCast name d.mixins
                        , section "Callbacks" $ exts extNoCast name d.callbacks
                        ]

@@ -21,7 +21,7 @@ kinds ds =
         $  (ds >>= pairs name KEnum . enums)
         ++ (ds >>= pairs name KMixin . mixins)
         ++ (ds >>= pairs name (iface ps) . interfaces)
-        ++ (ds >>= pairs name (dict ps) . dictionaries)
+        ++ (ds >>= pairs name KDictionary . dictionaries)
         ++ (ds >>= pairs name KCallback . callbackInterfaces)
         ++ (ds >>= pairs name KCallback . callbacks)
         ++ (ds >>= pairs name KAlias . typedefs)
@@ -34,9 +34,6 @@ kinds ds =
 
         iface : SortedSet Identifier -> Identifier -> Kind
         iface ps i = KInterface (contains i ps) i
-
-        dict : SortedSet Identifier -> Identifier -> Kind
-        dict ps i = KDictionary (contains i ps) i
 
 ||| Calculate the environment from a list of domains.
 export
@@ -145,7 +142,7 @@ parameters (e : Env, dom : Domain)
     uaD (P p)                 = Right . simple $ prim p
     uaD (S s)                 = Right . simple $ string s
     uaD (B b)                 = Right . simple $ buff b
-    uaD Object                = Right . simple . ParentType True $
+    uaD Object                = Right . simple . Interface True $
                                 MkIdent "Object"
     uaD Symbol                = Right $ unchangeable "Symbol"
 

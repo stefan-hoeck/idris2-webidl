@@ -1,5 +1,6 @@
 // Extracted from https://drafts.csswg.org/cssom/
 //            and https://www.w3.org/TR/css-pseudo-4/
+// plus added a typedef for CSSOMString at the bottom
 
 [Exposed=Window]
 interface MediaList {
@@ -153,3 +154,6 @@ interface CSSPseudoElement : EventTarget {
 partial interface Element {
   CSSPseudoElement? pseudo(CSSOMString type);
 };
+
+// Added to get rid of CSSOMString
+typedef DOMString CSSOMString;

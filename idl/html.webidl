@@ -1,5 +1,6 @@
 // Extracted from https://html.spec.whatwg.org/multipage/indices.html
 //           and  https://w3c.github.io/aria/
+// Plus manually written (the last part about event handlers
 
 [Exposed=Window]
 interface AudioTrackList : EventTarget {
@@ -207,75 +208,6 @@ partial interface Document {
 Document includes GlobalEventHandlers;
 Document includes DocumentAndElementEventHandlers;
 
-interface mixin GlobalEventHandlers {
-  attribute EventHandler onabort;
-  attribute EventHandler onauxclick;
-  attribute EventHandler onblur;
-  attribute EventHandler oncancel;
-  attribute EventHandler oncanplay;
-  attribute EventHandler oncanplaythrough;
-  attribute EventHandler onchange;
-  attribute EventHandler onclick;
-  attribute EventHandler onclose;
-  attribute EventHandler oncontextmenu;
-  attribute EventHandler oncuechange;
-  attribute EventHandler ondblclick;
-  attribute EventHandler ondrag;
-  attribute EventHandler ondragend;
-  attribute EventHandler ondragenter;
-  attribute EventHandler ondragleave;
-  attribute EventHandler ondragover;
-  attribute EventHandler ondragstart;
-  attribute EventHandler ondrop;
-  attribute EventHandler ondurationchange;
-  attribute EventHandler onemptied;
-  attribute EventHandler onended;
-  attribute OnErrorEventHandler onerror;
-  attribute EventHandler onfocus;
-  attribute EventHandler onformdata;
-  attribute EventHandler oninput;
-  attribute EventHandler oninvalid;
-  attribute EventHandler onkeydown;
-  attribute EventHandler onkeypress;
-  attribute EventHandler onkeyup;
-  attribute EventHandler onload;
-  attribute EventHandler onloadeddata;
-  attribute EventHandler onloadedmetadata;
-  attribute EventHandler onloadstart;
-  attribute EventHandler onmousedown;
-  [LegacyLenientThis] attribute EventHandler onmouseenter;
-  [LegacyLenientThis] attribute EventHandler onmouseleave;
-  attribute EventHandler onmousemove;
-  attribute EventHandler onmouseout;
-  attribute EventHandler onmouseover;
-  attribute EventHandler onmouseup;
-  attribute EventHandler onpause;
-  attribute EventHandler onplay;
-  attribute EventHandler onplaying;
-  attribute EventHandler onprogress;
-  attribute EventHandler onratechange;
-  attribute EventHandler onreset;
-  attribute EventHandler onresize;
-  attribute EventHandler onscroll;
-  attribute EventHandler onsecuritypolicyviolation;
-  attribute EventHandler onseeked;
-  attribute EventHandler onseeking;
-  attribute EventHandler onselect;
-  attribute EventHandler onslotchange;
-  attribute EventHandler onstalled;
-  attribute EventHandler onsubmit;
-  attribute EventHandler onsuspend;
-  attribute EventHandler ontimeupdate;
-  attribute EventHandler ontoggle;
-  attribute EventHandler onvolumechange;
-  attribute EventHandler onwaiting;
-  attribute EventHandler onwebkitanimationend;
-  attribute EventHandler onwebkitanimationiteration;
-  attribute EventHandler onwebkitanimationstart;
-  attribute EventHandler onwebkittransitionend;
-  attribute EventHandler onwheel;
-};
-
 interface mixin WindowEventHandlers {
   attribute EventHandler onafterprint;
   attribute EventHandler onbeforeprint;
@@ -292,7 +224,7 @@ interface mixin WindowEventHandlers {
   attribute EventHandler onrejectionhandled;
   attribute EventHandler onstorage;
   attribute EventHandler onunhandledrejection;
-  attribute EventHandler onunload;
+  attribute UIEventHandler? onunload;
 };
 
 interface mixin DocumentAndElementEventHandlers {
@@ -2671,3 +2603,83 @@ enum SelectionMode {
 [LegacyTreatNonObjectAsNull]
 callback EventHandlerNonNull = any (Event event);
 typedef EventHandlerNonNull? EventHandler;
+
+// The part below was added manually
+// inspired by https://w3c.github.io/uievents/#event-types-list
+
+callback InputEventHandler = undefined (InputEvent event);
+callback FocusEventHandler = undefined (FocusEvent event);
+callback MouseEventHandler = undefined (MouseEvent event);
+callback CompositionEventHandler = undefined (CompositionEvent event);
+callback KeyboardEventHandler = undefined (KeyboardEvent event);
+callback UIEventHandler = undefined (UIEvent event);
+callback WheelEventHandler = undefined (WheelEvent event);
+
+interface mixin GlobalEventHandlers {
+  attribute UIEventHandler? onabort;
+  attribute MouseEventHandler? onauxclick;
+  attribute FocusEventHandler? onblur;
+  attribute EventHandler oncancel;
+  attribute EventHandler oncanplay;
+  attribute EventHandler oncanplaythrough;
+  attribute EventHandler onchange;
+  attribute MouseEventHandler? onclick;
+  attribute EventHandler onclose;
+  attribute EventHandler oncontextmenu;
+  attribute EventHandler oncuechange;
+  attribute MouseEventHandler? ondblclick;
+  attribute EventHandler ondrag;
+  attribute EventHandler ondragend;
+  attribute EventHandler ondragenter;
+  attribute EventHandler ondragleave;
+  attribute EventHandler ondragover;
+  attribute EventHandler ondragstart;
+  attribute EventHandler ondrop;
+  attribute EventHandler ondurationchange;
+  attribute EventHandler onemptied;
+  attribute EventHandler onended;
+  attribute OnErrorEventHandler onerror;
+  attribute FocusEventHandler? onfocus;
+  attribute EventHandler onformdata;
+  attribute InputEventHandler? oninput;
+  attribute EventHandler oninvalid;
+  attribute KeyboardEventHandler? onkeydown;
+  attribute EventHandler onkeypress;
+  attribute KeyboardEventHandler? onkeyup;
+  attribute UIEventHandler? onload;
+  attribute EventHandler onloadeddata;
+  attribute EventHandler onloadedmetadata;
+  attribute EventHandler onloadstart;
+  attribute MouseEventHandler? onmousedown;
+  [LegacyLenientThis] attribute MouseEventHandler? onmouseenter;
+  [LegacyLenientThis] attribute MouseEventHandler? onmouseleave;
+  attribute MouseEventHandler? onmousemove;
+  attribute MouseEventHandler? onmouseout;
+  attribute MouseEventHandler? onmouseover;
+  attribute MouseEventHandler? onmouseup;
+  attribute EventHandler onpause;
+  attribute EventHandler onplay;
+  attribute EventHandler onplaying;
+  attribute EventHandler onprogress;
+  attribute EventHandler onratechange;
+  attribute EventHandler onreset;
+  attribute EventHandler onresize;
+  attribute EventHandler onscroll;
+  attribute EventHandler onsecuritypolicyviolation;
+  attribute EventHandler onseeked;
+  attribute EventHandler onseeking;
+  attribute UIEventHandler? onselect;
+  attribute EventHandler onslotchange;
+  attribute EventHandler onstalled;
+  attribute EventHandler onsubmit;
+  attribute EventHandler onsuspend;
+  attribute EventHandler ontimeupdate;
+  attribute EventHandler ontoggle;
+  attribute EventHandler onvolumechange;
+  attribute EventHandler onwaiting;
+  attribute EventHandler onwebkitanimationend;
+  attribute EventHandler onwebkitanimationiteration;
+  attribute EventHandler onwebkitanimationstart;
+  attribute EventHandler onwebkittransitionend;
+  attribute WheelEventHandler? onwheel;
+};

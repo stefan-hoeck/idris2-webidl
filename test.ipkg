@@ -11,7 +11,6 @@ executable = runTest
 sourcedir  = "src"
 
 depends    = base        >= 0.3.0
-           , comonad     >= 0.1.0
            , contrib     >= 0.3.0
            , elab-util   >= 0.1.1
            , hedgehog    >= 0.0.3

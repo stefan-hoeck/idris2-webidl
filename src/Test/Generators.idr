@@ -5,6 +5,7 @@ import Data.List
 import Data.List.Elem
 import Data.String
 import Data.Vect
+import Experimental.Prelude
 import public Hedgehog
 import public Text.WebIDL.Types
 

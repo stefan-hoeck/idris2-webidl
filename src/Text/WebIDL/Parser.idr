@@ -5,6 +5,7 @@ import Data.SOP
 import Data.List
 import Data.List.Elem
 import Data.List1
+import Experimental.Prelude
 import Text.Lexer
 import Text.Parser
 import Text.WebIDL.Types

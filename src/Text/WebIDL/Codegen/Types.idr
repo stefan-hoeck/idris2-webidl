@@ -137,7 +137,7 @@ mutual
 export
 isIndex : CGType -> Bool
 isIndex (Simple $ NotNull $ Primitive "String") = True
-isIndex (Simple $ NotNull $ Primitive "UInt32") = True
+isIndex (Simple $ NotNull $ Primitive "Bits32") = True
 isIndex _                                          = False
 
 namespace SimpleType
@@ -165,7 +165,7 @@ namespace SimpleType
   sameArgType (Interface b _)  = not b
   sameArgType (Dictionary _)   = False
   sameArgType (Mixin _)        = False
-  sameArgType (Primitive _)    = True
+  sameArgType (Primitive t)    = True
   sameArgType (Unchangeable _) = True
   sameArgType (Enum _)         = False
   sameArgType (Array _)        = True

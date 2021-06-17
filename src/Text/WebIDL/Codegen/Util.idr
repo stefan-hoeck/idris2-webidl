@@ -1,5 +1,6 @@
 module Text.WebIDL.Codegen.Util
 
+import Experimental.Prelude
 import Data.List
 import Data.Nat
 import Data.Stream

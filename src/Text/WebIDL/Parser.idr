@@ -1,5 +1,6 @@
 module Text.WebIDL.Parser
 
+import Experimental.Prelude
 import Data.SOP
 import Data.List
 import Data.List.Elem

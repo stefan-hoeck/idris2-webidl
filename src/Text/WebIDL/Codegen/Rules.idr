@@ -92,17 +92,17 @@ buff x                 = Unchangeable $ show x
 -- and back
 prim : PrimitiveType -> SimpleType
 prim Boolean             = Boolean
-prim (Unsigned Short)    = Primitive "UInt16"
-prim (Unsigned Long)     = Primitive "UInt32"
-prim (Unsigned LongLong) = Primitive "UInt64"
+prim (Unsigned Short)    = Primitive "Bits16"
+prim (Unsigned Long)     = Primitive "Bits32"
+prim (Unsigned LongLong) = Primitive "JSBits64"
 prim (Signed Short)      = Primitive "Int16"
 prim (Signed Long)       = Primitive "Int32"
-prim (Signed LongLong)   = Primitive "Int64"
+prim (Signed LongLong)   = Primitive "JSInt64"
 prim (Unrestricted x)    = Primitive "Double"
 prim (Restricted x)      = Primitive "Double"
 prim Undefined           = Undef
 prim Byte                = Primitive "Int8"
-prim Octet               = Primitive "UInt8"
+prim Octet               = Primitive "Bits8"
 prim BigInt              = Primitive "Integer"
 
 string : StringType -> SimpleType

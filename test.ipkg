@@ -1,7 +1,7 @@
 package webidl-test
 
 authors    = "stefan-hoeck"
-version    = 0.0.1
+version    = 0.1.0
 readme     = "README.md"
 license    = "BSD-2 Clause"
 
@@ -10,13 +10,13 @@ executable = runTest
 
 sourcedir  = "src"
 
-depends    = base         >= 0.3.0
-           , contrib      >= 0.3.0
-           , elab-util    >= 0.1.1
-           , experimental >= 0.1.0
-           , hedgehog     >= 0.0.3
-           , pretty-show  >= 0.1.2
-           , sop          >= 0.2.0
+depends    = base         >= 0.4.0
+           , contrib      >= 0.4.0
+           , elab-util    >= 0.3.1
+           , experimental >= 0.2.0
+           , hedgehog     >= 0.1.0
+           , pretty-show  >= 0.3.0
+           , sop          >= 0.4.0
 
 modules    = Test.Generators
            , Test.Lexer

@@ -5,6 +5,7 @@ import Data.List.Elem
 import Data.SOP
 import Data.String
 import Data.Validated
+import Experimental.Prelude
 import System
 import System.Console.GetOpt
 import System.File

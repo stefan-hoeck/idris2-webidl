@@ -1,6 +1,5 @@
 module Text.WebIDL.Encoder
 
-import Experimental.Prelude
 import Data.SOP
 import Data.List
 import Data.String

@@ -1,9 +1,7 @@
 module Text.WebIDL.Lexer
 
-import Experimental.Prelude
 import Data.List
 import Data.String
-import Experimental.Prelude
 import Text.Lexer
 import Text.WebIDL.Types
 

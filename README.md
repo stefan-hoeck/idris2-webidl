@@ -64,12 +64,12 @@ required from these bindings, but in a first step
     `Undefined` Idris2 type. As an unwrapped return value, it
     is mapped to `()`.
 
- * Integral types: These are mapped to the following external types
-   * `octet` : `UInt8`
+ * Integral types: These are mapped to the following types
+   * `octet` : `Bits8`
    * `byte` : `Int8`
-   * `unsigned short` : `UInt16`
+   * `unsigned short` : `Bits16`
    * `short` : `Int16`
-   * `unsigned long` : `UInt32`
+   * `unsigned long` : `Bits32`
    * `long` : `Int32`
    * `unsigned long long` : `UInt64`
    * `long long` : `UInt64`

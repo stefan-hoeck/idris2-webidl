@@ -3,7 +3,6 @@ module Test.Main
 
 import Data.List
 import Data.String
-import Experimental.Prelude
 import Hedgehog
 import System
 import System.Console.GetOpt

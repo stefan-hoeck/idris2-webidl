@@ -1,12 +1,10 @@
 module Text.WebIDL.Codegen.Util
 
-import Experimental.Prelude
 import Data.List
 import Data.Nat
 import Data.Stream
 import public Data.String
 import public Data.Vect
-import Experimental.Prelude
 import public Text.PrettyPrint.Prettyprinter
 import public Text.WebIDL.Codegen.Types
 import public Text.WebIDL.Types

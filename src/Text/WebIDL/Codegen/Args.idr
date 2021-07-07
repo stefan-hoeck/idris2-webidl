@@ -353,7 +353,7 @@ fun ns name prim as t =
 
       -- function without optional args
       as2      = filter (not . isOptional) as
-      undefs   = replicate (length as `minus` length as2) "undef"
+      undefs   = List.replicate (length as `minus` length as2) "undef"
       funImpl2 = if null undefs then []
                  else fun' ns name2 prim as2 undefs t
 

@@ -81,10 +81,6 @@ required from these bindings, but in a first step
    at this precision. Will have to do some reading on how these
    are handled elsewhere (for instance in PureScript).
 
-   Note that some of these bindings might change if Idris2 gets primitives
-   like `Int32` and some of its `BitsXY` types are mapped to `Number`
-   (right now, all integral primitives in Idris2 are mapped to `BigInt`).
-
  * Floating point types: These are mapped to `Double` for
    simplicity. Not yet sure whether it is worth to treat `float`
    and `unrestricted float` differently.

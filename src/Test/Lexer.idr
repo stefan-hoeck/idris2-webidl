@@ -6,7 +6,7 @@ import Text.WebIDL.Lexer
 import Text.WebIDL.Encoder
 
 lex : String -> Either String (List IdlToken)
-lex s = map (map tok) $ lexIdl s
+lex s = map (map val) $ lexIdl s
 
 prop_identifier : Property
 prop_identifier = property $ do

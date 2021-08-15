@@ -30,7 +30,7 @@ kinds ds =
               -> (Identifier -> Kind)
               -> List a
               -> List (Identifier,Kind)
-        pairs name knd = map \v => (name v, knd $ name v)
+        pairs name knd = map $ \v => (name v, knd $ name v)
 
         iface : SortedSet Identifier -> Identifier -> Kind
         iface ps i = KInterface (contains i ps) i
@@ -173,8 +173,8 @@ parameters (e : Env, dom : Domain)
               Any       => Left [AnyInUnion dom]
               Promise x => Left [PromiseInUnion dom]
               Simple x  => Right $ singleton x
-              Union $ MaybeNull xs => Right $ map MaybeNull xs
-              Union $ NotNull xs   => Right $ map NotNull xs
+              (Union $ MaybeNull xs) => Right $ map MaybeNull xs
+              (Union $ NotNull xs)   => Right $ map NotNull xs
   
     unalias : IdlTypeF ExtAttributeList Kind -> Codegen CGType
     unalias Any               = Right Any
@@ -277,10 +277,10 @@ parameters (e : Env, dom : Domain)
             case lookup i e.jsTypes of
                  Nothing                              => objectOnly
 
-                 Just $ MkJSType Nothing mixins       =>
+                 (Just $ MkJSType Nothing mixins)       =>
                    record { mixins = mixins } objectOnly
 
-                 Just $ MkJSType (Just parent) mixins =>
+                 (Just $ MkJSType (Just parent) mixins) =>
                    let MkSupertypes parents mixins2 = run k parent
                     in MkSupertypes (parent :: parents) (mixins ++ mixins2)
 

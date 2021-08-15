@@ -17,7 +17,7 @@ star = many
 
 -- /[1-9]/
 nonZeroDigit : Lexer
-nonZeroDigit = pred \c => '1' <= c && c <= '9'
+nonZeroDigit = pred $ \c => '1' <= c && c <= '9'
 
 --------------------------------------------------------------------------------
 --          Numbers
@@ -66,7 +66,7 @@ float = (opt (is '-') <+> (expOpt <|> expNonOpt))
 identifier : Lexer
 identifier =   opt (oneOf "_-")
            <+> alpha
-           <+> star (pred \c => isAlphaNum c || c == '_' || c == '-')
+           <+> star (pred $ \c => isAlphaNum c || c == '_' || c == '-')
 
 -- Takes a valid identifier and converts it either
 -- to a FloatLit, a Keyword, or an Identifier
@@ -83,8 +83,8 @@ comment =   lineComment (exact "//" )
 
 -- /[^\t\n\r 0-9A-Za-z]/
 other : Lexer
-other = pred \c => not $
-        isAlpha c || isDigit c || isSpace c || isControl c
+other = pred $
+        \c => not (isAlpha c || isDigit c || isSpace c || isControl c)
 
 symbol : String -> IdlToken
 symbol "..." = Other Ellipsis
@@ -115,7 +115,7 @@ isNoise _           = False
 ||| they come with line and position numbers) from an input
 ||| string.
 export
-lexIdl : String -> Either String $ List (TokenData IdlToken)
+lexIdl : String -> Either String $ List (WithBounds IdlToken)
 lexIdl s = case lex tokenMap s of
                 (ts, (_,_,"")) => Right ts
                 (_,  t)        => Left $ "Lexer aborted at " ++ show t
@@ -124,5 +124,5 @@ lexIdl s = case lex tokenMap s of
 ||| from an input string, removing unnecessary tokens by
 ||| means of `isNoise`.
 export
-lexIdlNoNoise : String -> Either String $ List (TokenData IdlToken)
-lexIdlNoNoise = map (filter (not . isNoise . tok)) . lexIdl
+lexIdlNoNoise : String -> Either String $ List (WithBounds IdlToken)
+lexIdlNoNoise = map (filter (not . isNoise . val)) . lexIdl

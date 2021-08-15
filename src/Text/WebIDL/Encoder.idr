@@ -308,7 +308,7 @@ callbackInterfaceMembers : Encoder CallbackInterfaceMembers
 callbackInterfaceMembers = sepList " " $ attributed callbackInterfaceMember
 
 inheritance : Encoder Inheritance
-inheritance = maybe "" \i => " : " ++ i.value
+inheritance = maybe "" $ \i => " : " ++ i.value
 
 dictMemberRest : Encoder DictionaryMemberRest
 dictMemberRest (Required as t n) =

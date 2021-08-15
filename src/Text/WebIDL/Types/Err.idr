@@ -1,6 +1,7 @@
 module Text.WebIDL.Types.Err
 
 import Text.WebIDL.Types.Token
+import Text.Lexer
 import Generics.Derive
 
 %default total
@@ -16,18 +17,17 @@ data Err : Type where
   ||| The parser will fail with this error, if not all tokens
   ||| have been consumed at the end of parsing.
   ||| The error constains position and content of the next token.
-  NoEOI      : (line : Int) -> (col : Int) -> (tok : IdlToken) -> Err
+  NoEOI      : (tok : WithBounds IdlToken) -> Err
 
   ||| There was an error in the parser but all tokens were already
   ||| consumed.
   ParseErr   :  (msg : String) -> Err
 
-  ||| There was an error in the parser and the next token
+  ||| There was an error in the parser and the position
   ||| is given.
   ParseErrAt :  (msg : String)
              -> (line : Int)
              -> (col : Int)
-             -> (tok : IdlToken)
              -> Err
 
 %runElab derive "Err" [Generic,Meta,Eq,Show]

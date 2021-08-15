@@ -15,7 +15,7 @@ import Text.WebIDL.Lexer
 
 public export
 IdlGrammarAny : (b : Bool) -> Type -> Type
-IdlGrammarAny b t = Grammar (TokenData IdlToken) b t
+IdlGrammarAny b t = Grammar () IdlToken b t
 
 public export
 IdlGrammar : Type -> Type
@@ -26,38 +26,38 @@ IdlGrammar' : Type -> Type
 IdlGrammar' = IdlGrammarAny False
 
 tok : String -> (IdlToken -> Maybe a) -> IdlGrammar a
-tok s f = terminal s (f . tok)
+tok s f = terminal s f
 
 withKey : String -> (String -> Maybe a) -> IdlGrammar a
-withKey s f = tok s \case (Key $ MkKeyword s _) => f s
-                          _                     => Nothing
+withKey s f = tok s $ \case (Key $ MkKeyword s _) => f s
+                            _                     => Nothing
 
 intLit : IdlGrammar IntLit
-intLit = tok "Int Lit" \case ILit n => Just n
-                             _      => Nothing
+intLit = tok "Int Lit" $ \case ILit n => Just n
+                               _      => Nothing
 
 stringLit : IdlGrammar StringLit
-stringLit = tok "String Lit" \case SLit s => Just s
-                                   _      => Nothing
+stringLit = tok "String Lit" $ \case SLit s => Just s
+                                     _      => Nothing
 
 floatLit : IdlGrammar FloatLit
-floatLit = tok "Float Lit" \case FLit v => Just v
-                                 _      => Nothing
+floatLit = tok "Float Lit" $ \case FLit v => Just v
+                                   _      => Nothing
 
 --------------------------------------------------------------------------------
 --          Symbols
 --------------------------------------------------------------------------------
 
 symbol : Char -> IdlGrammar ()
-symbol c = tok ("Symbol " ++ show c) \case Other (Symb v) => guard (c == v)
-                                           _              => Nothing
+symbol c = tok ("Symbol " ++ show c) $ \case Other (Symb v) => guard (c == v)
+                                             _              => Nothing
 
 comma : IdlGrammar ()
 comma = symbol ','
 
 ellipsis : IdlGrammar ()
-ellipsis = tok "Ellipsis" \case Other Ellipsis => Just ()
-                                _              => Nothing
+ellipsis = tok "Ellipsis" $ \case Other Ellipsis => Just ()
+                                  _              => Nothing
 
 inParens : {b : _} -> Inf (IdlGrammarAny b a) -> IdlGrammar a
 inParens g = symbol '(' *> g <* symbol ')'
@@ -84,18 +84,18 @@ sepList1 c g =   [| (g <* symbol c) ::: sepBy (symbol c) g |]
 
 export
 key : String -> IdlGrammar ()
-key s = tok s \case Key (MkKeyword i _) => guard (i == s)
-                    _                   => Nothing
+key s = tok s $ \case Key (MkKeyword i _) => guard (i == s)
+                      _                   => Nothing
 
 export
 ident : IdlGrammar Identifier
-ident = tok "identifier" \case Ident i => Just i
-                               _       => Nothing
+ident = tok "identifier" $ \case Ident i => Just i
+                                 _       => Nothing
 
 export
 keyword : IdlGrammar Keyword
-keyword = tok "keyword" \case Key i => Just i
-                              _     => Nothing
+keyword = tok "keyword" $ \case Key i => Just i
+                                _     => Nothing
 
 ||| IdentifierList :: identifier Identifiers
 ||| Identifiers :: , identifier Identifiers ε
@@ -108,8 +108,8 @@ identifierList = [| ident ::: many (comma *> ident) |]
 --------------------------------------------------------------------------------
 
 symbolUnless : String -> (Char -> Bool) -> IdlGrammar Symbol
-symbolUnless s f = tok s \case Other s => fromSym s
-                               _       => Nothing
+symbolUnless s f = tok s $ \case Other s => fromSym s
+                                 _       => Nothing
   where fromSym : Symbol -> Maybe Symbol
         fromSym Ellipsis = Just Ellipsis
         fromSym (Symb c) = if f c then Nothing else Just (Symb c)
@@ -160,7 +160,7 @@ attributed g = [| (,) extAttrs1 g |] <|> map (Nil,) g
 --------------------------------------------------------------------------------
 
 bufferRelated : IdlGrammar BufferRelatedType
-bufferRelated = withKey "BufferRelated"
+bufferRelated = withKey "BufferRelated" $
                   \case "ArrayBuffer"       => Just ArrayBuffer
                         "DataView"          => Just DataView
                         "Int8Array"         => Just Int8Array
@@ -175,7 +175,7 @@ bufferRelated = withKey "BufferRelated"
                         _                   => Nothing
 
 stringType : IdlGrammar StringType
-stringType = withKey "stringType"
+stringType = withKey "stringType" $
                \case "ByteString" => Just ByteString
                      "DOMString"  => Just DOMString
                      "USVString"  => Just USVString
@@ -187,12 +187,12 @@ primitive =   key "unsigned"     *> map Unsigned int
           <|> key "unrestricted" *> map Unrestricted float
           <|> map Signed int
           <|> map Restricted float
-          <|> withKey "Primitive" \case "boolean"   => Just Boolean 
-                                        "byte"      => Just Byte
-                                        "octet"     => Just Octet
-                                        "bigint"    => Just BigInt
-                                        "undefined" => Just Undefined
-                                        _           => Nothing
+          <|> withKey "Primitive" (\case "boolean"   => Just Boolean 
+                                         "byte"      => Just Byte
+                                         "octet"     => Just Octet
+                                         "bigint"    => Just BigInt
+                                         "undefined" => Just Undefined
+                                         _           => Nothing)
 
   where int : IdlGrammar IntType
         int =   (key "long"  *> key "long" $> LongLong)
@@ -200,9 +200,9 @@ primitive =   key "unsigned"     *> map Unsigned int
             <|> (key "short" $> Short)
 
         float : IdlGrammar FloatType
-        float = withKey "FloatType" \case "double" => Just Dbl
-                                          "float"  => Just Float
-                                          _        => Nothing
+        float = withKey "FloatType" $ \case "double" => Just Dbl
+                                            "float"  => Just Float
+                                            _        => Nothing
 
 constType : IdlGrammar ConstType
 constType = map CP primitive <|> map CI ident
@@ -229,7 +229,7 @@ mutual
           <|> map D distinguishableType
           <|> (nullable flatUnion >>= map U . fromFlatUnion)
 
-    where um : Attributed $ Nullable Distinguishable -> UnionMemberType
+    where um : Attributed (Nullable Distinguishable) -> UnionMemberType
           um (a, MaybeNull x) = MkUnionMember a x
           um (a, NotNull x)   = MkUnionMember a x
 
@@ -505,58 +505,58 @@ enumLits = sepList1 ',' stringLit <* (symbol ',' <|> pure ())
 
 callback : IdlGrammar Callback
 callback =
-  def ["callback"] \as =>
+  def ["callback"] $ \as =>
   [| MkCallback as ident (symbol '=' *> idlType) (inParens argumentList) |]
 
 callbackInterface : IdlGrammar CallbackInterface
 callbackInterface =
-  def ["callback","interface"] \as =>
+  def ["callback","interface"] $ \as =>
   [| MkCallbackInterface as ident (members callbackInterfaceMember) |]
 
 dictionary : IdlGrammar Dictionary
 dictionary =
-  def ["dictionary"] \as =>
+  def ["dictionary"] $ \as =>
   [| MkDictionary as ident inheritance (members dictMember) |]
 
 enum : IdlGrammar Enum
-enum = def ["enum"] \as => [| MkEnum as ident (inBraces enumLits) |]
+enum = def ["enum"] $ \as => [| MkEnum as ident (inBraces enumLits) |]
 
 iface : IdlGrammar Interface
 iface =
-  def ["interface"] \as =>
+  def ["interface"] $ \as =>
   [| MkInterface as ident inheritance (members interfaceMember) |]
 
 includes : IdlGrammar Includes
 includes =
-  def0 \as => [| MkIncludes as ident (key "includes" *> ident) |]
+  def0 $ \as => [| MkIncludes as ident (key "includes" *> ident) |]
 
 mixin : IdlGrammar Mixin
-mixin = def ["interface","mixin"] \as =>
+mixin = def ["interface","mixin"] $ \as =>
         [| MkMixin as ident (members mixinMember) |]
 
 nspace : IdlGrammar Namespace
-nspace = def ["namespace"] \as =>
+nspace = def ["namespace"] $ \as =>
          [| MkNamespace as ident (members namespaceMember) |]
 
 pdictionary : IdlGrammar PDictionary
-pdictionary = def ["partial","dictionary"] \as =>
+pdictionary = def ["partial","dictionary"] $ \as =>
               [| MkPDictionary as ident (members dictMember) |]
 
 pnamespace : IdlGrammar PNamespace
-pnamespace = def ["partial","namespace"] \as =>
+pnamespace = def ["partial","namespace"] $ \as =>
              [| MkPNamespace as ident (members namespaceMember) |]
 
 pmixin : IdlGrammar PMixin
-pmixin = def ["partial","interface","mixin"] \as =>
+pmixin = def ["partial","interface","mixin"] $ \as =>
          [| MkPMixin as ident (members mixinMember) |]
 
 pinterface : IdlGrammar PInterface
 pinterface =
-  def ["partial","interface"] \as =>
+  def ["partial","interface"] $ \as =>
   [| MkPInterface as ident (members partialInterfaceMember) |]
 
 typedef : IdlGrammar Typedef
-typedef = def ["typedef"] \as =>
+typedef = def ["typedef"] $ \as =>
           [| MkTypedef as attributes idlType ident |]
 
 export
@@ -591,13 +591,14 @@ partsAndDefs = accumNs . forget <$> some partOrDef
 --          Parsing WebIDL
 --------------------------------------------------------------------------------
 
-toParseErr : ParseError (TokenData IdlToken) -> Err
-toParseErr (Error x []) = ParseErr x
-toParseErr (Error x (MkToken l c t :: _)) = ParseErrAt x l c t
+toParseErr : ParsingError IdlToken -> Err
+toParseErr (Error x Nothing)  = ParseErr x
+toParseErr (Error x $ Just $ MkBounds startLine startCol _ _) =
+  ParseErrAt x startLine startCol
 
 export
 parseIdl : IdlGrammar a -> String -> Either Err a
 parseIdl g s = do ts <- mapFst LexErr (lexIdlNoNoise s)
-                  (res,Nil) <- mapFst toParseErr (parse g ts)
-                    | (_,MkToken l c t :: _) => Left (NoEOI l c t)
+                  (res,Nil) <- mapFst (toParseErr . head) (parse g ts)
+                    | (_,b :: _) => Left (NoEOI b)
                   pure res

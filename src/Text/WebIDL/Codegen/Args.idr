@@ -234,7 +234,7 @@ funType n t as =
                  let k2  = S k
                      pk2 = "t" <+> pretty' k2
                      (implicits,autos,explicits) = run k2 as
-                     impl = "JSType" <++> pk2
+                     impl = "(0 _ : JSType" <++> pk2 <+> ")"
                      aut = hsep ["{auto 0 _ : Elem"
                                 , pretty n.value
                                 ,"(Types" <++> pk2 <+> ")}"

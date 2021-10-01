@@ -117,7 +117,7 @@ attrRW k n o t rt =
                       then typeDeclWithImplicits
                            implName
                            tpe
-                           ["JSType t"]
+                           ["(0 _ : JSType t)"]
                            ["{auto 0 _ : Elem" <++> po <++> "(Types t)}","t"]
                       else typeDecl implName tpe [po]
 

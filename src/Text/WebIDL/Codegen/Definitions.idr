@@ -99,7 +99,7 @@ ifaces' f = section "Interfaces" . map ns . sortBy (comparing name) . ifaces
         ns i = namespaced i.name (f i)
 
 ifaces : CGDomain -> String
-ifaces = ifaces' \(MkIface n s cs fs) => constants cs ++ functions fs
+ifaces = ifaces' $ \(MkIface n s cs fs) => constants cs ++ functions fs
 
 primIfaces : CGDomain -> String
 primIfaces = ifaces' (primFunctions . functions)
@@ -114,7 +114,7 @@ dicts' f = section "Dictionaries" . map ns . sortBy (comparing name) . dicts
         ns d = namespaced d.name (f d)
 
 dicts : CGDomain -> String
-dicts = dicts' \(MkDict n s fs) => functions fs
+dicts = dicts' $ \(MkDict n s fs) => functions fs
 
 primDicts : CGDomain -> String
 primDicts = dicts' (primFunctions . functions)
@@ -129,7 +129,7 @@ mixins' f = section "Mixins" . map ns . sortBy (comparing name) . mixins
         ns m = namespaced m.name (f m)
 
 mixins : CGDomain -> String
-mixins = mixins' \(MkMixin n cs fs) => constants cs ++ functions fs
+mixins = mixins' $ \(MkMixin n cs fs) => constants cs ++ functions fs
 
 primMixins : CGDomain -> String
 primMixins = mixins' (primFunctions . functions)

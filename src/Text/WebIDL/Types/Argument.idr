@@ -122,7 +122,7 @@ ArgumentList = ArgumentListF ExtAttributeList Identifier
 
 mutual
   export
-  Bifunctor ArgF where bimap = bimapDefault
+  Bifunctor ArgF where bimap = assert_total bimapDefault
 
   export
   Bifoldable ArgF where bifoldr = bifoldrDefault
@@ -143,7 +143,7 @@ mutual
 
 mutual
   export
-  Bifunctor OptArgF where bimap = bimapDefault
+  Bifunctor OptArgF where bimap = assert_total bimapDefault
 
   export
   Bifoldable OptArgF where bifoldr = bifoldrDefault
@@ -164,7 +164,7 @@ mutual
 
 mutual
   export
-  Bifunctor ArgumentListF where bimap = bimapDefault
+  Bifunctor ArgumentListF where bimap = assert_total bimapDefault
 
   export
   Bifoldable ArgumentListF where bifoldr = bifoldrDefault

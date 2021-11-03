@@ -288,7 +288,7 @@ mutual
 
 mutual
   export
-  Bifunctor DistinguishableF where bimap = bimapDefault
+  Bifunctor DistinguishableF where bimap = assert_total bimapDefault
 
   export
   Bifoldable DistinguishableF where bifoldr = bifoldrDefault
@@ -316,7 +316,7 @@ mutual
   Traversable (DistinguishableF a) where traverse = bitraverse pure
 
   export
-  Bifunctor UnionMemberTypeF where bimap = bimapDefault
+  Bifunctor UnionMemberTypeF where bimap = assert_total bimapDefault
 
   export
   Bifoldable UnionMemberTypeF where bifoldr = bifoldrDefault
@@ -336,7 +336,7 @@ mutual
   Traversable (UnionMemberTypeF a) where traverse = bitraverse pure
 
   export
-  Bifunctor UnionTypeF where bimap = bimapDefault
+  Bifunctor UnionTypeF where bimap = assert_total bimapDefault
 
   export
   Bifoldable UnionTypeF where bifoldr = bifoldrDefault
@@ -357,7 +357,7 @@ mutual
   Traversable (UnionTypeF a) where traverse = bitraverse pure
 
   export
-  Bifunctor IdlTypeF where bimap = bimapDefault
+  Bifunctor IdlTypeF where bimap = assert_total bimapDefault
 
   export
   Bifoldable IdlTypeF where bifoldr = bifoldrDefault

@@ -204,8 +204,8 @@ definitions d =
   module Web.Raw.\#{d.name}
    
   \#{defImports d}
-  \#{ifaces d}
-  \#{mixins d}
-  \#{dicts d}
-  \#{callbacks d}
+  \#{Definitions.ifaces d}
+  \#{Definitions.mixins d}
+  \#{Definitions.dicts d}
+  \#{Definitions.callbacks d}
   """#

@@ -15,7 +15,7 @@ parents d =  mapMaybe inherits d.interfaces
           ++ mapMaybe inherits d.dictionaries
 
 kinds : List Domain -> SortedMap Identifier Kind
-kinds ds = 
+kinds ds =
   let ps = SortedSet.fromList $ ds >>= parents
    in SortedMap.fromList
         $  (ds >>= pairs name KEnum . enums)
@@ -175,7 +175,7 @@ parameters (e : Env, dom : Domain)
               Simple x  => Right $ singleton x
               (Union $ MaybeNull xs) => Right $ map MaybeNull xs
               (Union $ NotNull xs)   => Right $ map NotNull xs
-  
+
     unalias : IdlTypeF ExtAttributeList Kind -> Codegen CGType
     unalias Any               = Right Any
     unalias (D $ NotNull d)   = uaD d
@@ -189,7 +189,7 @@ parameters (e : Env, dom : Domain)
               (Simple x)  => pure . Simple $ nullable x
               (Union x)   => pure . Union $ nullable x
               (Promise x) => Left [NullablePromise dom]
-  
+
   -- calculate the aliased type from a type coming
   -- from the WebIDL parser
   -- the unaliased version of the type is only kept (in a `Just`)
@@ -197,7 +197,7 @@ parameters (e : Env, dom : Domain)
   tpe : IdlType -> CodegenV CGType
   tpe t = let cgt = map kind t
            in fromEither $ unalias cgt
-  
+
   -- convert an IDL type coming from the parser to
   -- a return type in the code generator
   rtpe : IdlType -> CodegenV ReturnType
@@ -228,27 +228,27 @@ parameters (e : Env, dom : Domain)
   -- a type coming from the parser
   optArg : IdlType -> Default -> CodegenV CGArg
   optArg t d = [| Optional (pure $ MkArgName "value") (tpe t) (pure d) |]
-  
+
   -- create an argument named "value" from
   -- a type coming from the parser
   valArg : IdlType -> CodegenV CGArg
   valArg t = Mandatory (MkArgName "value") <$> tpe t
-  
+
   -- convert an argument coming from the parser
   -- to one to be used in the code generator
   arg : Arg -> CodegenV CGArg
   arg (MkArg _ t n) = Mandatory n <$> tpe t
-  
+
   -- convert an argument coming from the parser
   -- to a vararg to be used in the code generator
   vararg : Arg -> CodegenV CGArg
   vararg (MkArg _ t n) = VarArg n <$> tpe t
-  
+
   -- convert an argument coming from the parser
   -- to an optional arg to be used in the code generator
   opt : OptArg -> CodegenV CGArg
   opt (MkOptArg _ _ t n d) = [| Optional (pure n) (tpe t) (pure d) |]
-  
+
   -- convert an argument list coming from the parser
   -- to a list of codegen args
   toArgs : ArgumentList -> CodegenV Args
@@ -466,7 +466,7 @@ parameters (e : Env, dom : Domain)
           callbackIface : CallbackInterface -> CodegenV CGCallback
           callbackIface v@(MkCallbackInterface _ n ms) =
             case mapMaybe (\(_,m)   => extract RegularOperation m) ms of
-                 [MkOp () t _ a] => 
+                 [MkOp () t _ a] =>
                    [| MkCallback (pure n) (callbackConsts v) (rtpe t) (toArgs a) |]
                  xs => Invalid [CBInterfaceInvalidOps dom n (length xs)]
 

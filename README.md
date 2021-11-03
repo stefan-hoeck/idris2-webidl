@@ -105,7 +105,7 @@ required from these bindings, but in a first step
 
  * `Promise`: This is mapped to an external type of the same name.
    API yet to be defined (have a look at PureScript again).
-   
+
  * `Object`: This is mapped to an external type of the same name.
    The API should at least provide an `IO` function for returning an
    empty object.

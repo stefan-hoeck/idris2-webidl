@@ -113,7 +113,7 @@ symbolUnless s f = tok s $ \case Other s => fromSym s
   where fromSym : Symbol -> Maybe Symbol
         fromSym Ellipsis = Just Ellipsis
         fromSym (Symb c) = if f c then Nothing else Just (Symb c)
-        
+
 
 otherSym : IdlGrammar Symbol -> IdlGrammar Other
 otherSym sym = choice {t = List} [ map (\v => inject v) intLit
@@ -187,7 +187,7 @@ primitive =   key "unsigned"     *> map Unsigned int
           <|> key "unrestricted" *> map Unrestricted float
           <|> map Signed int
           <|> map Restricted float
-          <|> withKey "Primitive" (\case "boolean"   => Just Boolean 
+          <|> withKey "Primitive" (\case "boolean"   => Just Boolean
                                          "byte"      => Just Byte
                                          "octet"     => Just Octet
                                          "bigint"    => Just BigInt
@@ -215,7 +215,7 @@ mutual
   -- Type ::
   --     SingleType
   --     UnionType Null
-  -- 
+  --
   -- SingleType ::
   --     DistinguishableType
   --     any

@@ -70,7 +70,7 @@ data Signum = Plus | Minus
 ||| A floating point literal is either one of three
 ||| special values (`NaN`, `Infinity`, or `-Infinity`)
 ||| or a decimal floating point number (`NoExp`: dot is
-||| mandatory), or a float in scientific notation (`Exp`: 
+||| mandatory), or a float in scientific notation (`Exp`:
 ||| dot is optional).
 |||
 ||| The main focus of this data type is one of
@@ -132,7 +132,7 @@ exp bds ads es =
          ad <- maybe (Just Nothing) (map Just . charsToNat . fastUnpack) ads
          e  <- afterExp (fastUnpack es)
          pure $ Exp s bd ad e
-        
+
   where afterExp : List Char -> Maybe Integer
         afterExp ('-'::cs) = negate <$> charsToPosInt 10 cs
         afterExp ('+'::cs) = charsToPosInt 10 cs

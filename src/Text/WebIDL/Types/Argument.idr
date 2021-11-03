@@ -16,7 +16,7 @@ import Generics.Derive
 |||     BooleanLiteral
 |||     FloatLiteral
 |||     integer
-||| 
+|||
 ||| BooleanLiteral ::
 |||     true
 |||     false
@@ -28,7 +28,7 @@ data ConstValue = B Bool | F FloatLit | I IntLit
 ||| Default ::
 |||     = DefaultValue
 |||     ε
-||| 
+|||
 ||| (part of Default)] DefaultValue ::
 |||     ConstValue
 |||     string
@@ -86,11 +86,11 @@ OptArg = OptArgF ExtAttributeList Identifier
 ||| ArgumentList ::
 |||     Argument Arguments
 |||     ε
-||| 
+|||
 ||| Arguments ::
 |||     , Argument Arguments
 |||     ε
-||| 
+|||
 ||| Argument ::
 |||     ExtendedAttributeList ArgumentRest
 |||

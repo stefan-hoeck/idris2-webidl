@@ -116,7 +116,7 @@ symbol (Symb c) = singleton c
 
 export
 other : Encoder Other
-other = collapseNS 
+other = collapseNS
       . hliftA2 runEnc [intLit,floatLit,stringLit,ident,keyword,symbol]
 
 export
@@ -347,7 +347,7 @@ setlike : Encoder Setlike
 setlike (MkSetlike p) = member "setlike" ["<",attributed idlType p,">"]
 
 namespaceMember : Encoder NamespaceMember
-namespaceMember = collapseNS 
+namespaceMember = collapseNS
                 . hliftA2 runEnc [regularOperation,readonly attribute]
 
 namespaceMembers : Encoder NamespaceMembers
@@ -355,7 +355,7 @@ namespaceMembers = sepList " " $ attributed namespaceMember
 
 constructor_ : Encoder Constructor
 constructor_ (MkConstructor args) =
-  member "constructor" [inParens argumentList args] 
+  member "constructor" [inParens argumentList args]
 
 partialInterfaceMember : Encoder PartialInterfaceMember
 partialInterfaceMember (IConst x)       = const x
@@ -390,7 +390,7 @@ mixinMembers = sepList " " $ attributed mixinMember
 
 export
 interfaceMember : Encoder InterfaceMember
-interfaceMember = collapseNS 
+interfaceMember = collapseNS
                 . hliftA2 runEnc [constructor_,partialInterfaceMember]
 
 interfaceMembers : Encoder InterfaceMembers
@@ -459,7 +459,7 @@ typedef (MkTypedef as tas t n) =
 
 export
 definition : Encoder Definition
-definition = collapseNS 
+definition = collapseNS
            . hliftA2 runEnc [ callback
                             , callbackInterface
                             , dictionary

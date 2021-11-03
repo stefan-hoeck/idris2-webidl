@@ -11,7 +11,7 @@ import Text.WebIDL.Types.Type
 
 ||| Const ::
 |||     const ConstType identifier = ConstValue ;
-||| 
+|||
 ||| ConstValue ::
 |||     BooleanLiteral
 |||     FloatLiteral
@@ -32,7 +32,7 @@ record Const where
 ||| OperationName ::
 |||     OperationNameKeyword
 |||     identifier
-||| 
+|||
 ||| OperationNameKeyword ::
 |||     includes
 public export
@@ -53,10 +53,10 @@ data Special = Getter | Setter | Deleter
 
 ||| RegularOperation ::
 |||     Type OperationRest
-||| 
+|||
 ||| OperationRest ::
 |||     OptionalOperationName ( ArgumentList ) ;
-||| 
+|||
 ||| OptionalOperationName ::
 |||     OperationName
 |||     ε
@@ -178,7 +178,7 @@ record Inherit a where
 ||| AttributeName ::
 |||     AttributeNameKeyword
 |||     identifier
-||| 
+|||
 ||| AttributeNameKeyword ::
 |||     async
 |||     required
@@ -202,7 +202,7 @@ record Attribute where
 
 ||| ReadWriteMaplike ::
 |||     MaplikeRest
-||| 
+|||
 ||| MaplikeRest ::
 |||     maplike < TypeWithExtendedAttributes , TypeWithExtendedAttributes > ;
 public export
@@ -219,7 +219,7 @@ HasAttributes Maplike where
 
 ||| ReadWriteSetlike ::
 |||     SetlikeRest
-||| 
+|||
 ||| SetlikeRest ::
 |||     setlike < TypeWithExtendedAttributes > ;
 public export
@@ -233,7 +233,7 @@ record Setlike where
 |||     OptionalReadOnly AttributeRest
 |||     RegularOperation
 |||     ;
-||| 
+|||
 ||| Stringifier ::
 |||     stringifier StringifierRest
 public export
@@ -242,7 +242,7 @@ Stringifier = NS I [Attribute, Readonly Attribute, RegularOperation,()]
 
 ||| StaticMember ::
 |||     static StaticMemberRest
-||| 
+|||
 ||| StaticMemberRest ::
 |||     OptionalReadOnly AttributeRest
 |||     RegularOperation
@@ -293,7 +293,7 @@ record Constructor where
 |||     ReadWriteMaplike
 |||     ReadWriteSetlike
 |||     InheritAttribute
-||| 
+|||
 ||| Iterable ::
 |||     iterable < TypeWithExtendedAttributes OptionalType > ;
 public export

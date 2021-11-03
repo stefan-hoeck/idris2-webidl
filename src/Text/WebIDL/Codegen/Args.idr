@@ -33,7 +33,7 @@ PrettyArgs = List PrettyArg
 --------------------------------------------------------------------------------
 
 nullableFFI :  (Prec -> a -> Doc ()) -> Prec -> Nullable a -> Doc ()
-nullableFFI f p (MaybeNull x) = prettyCon p "Nullable" [f App x] 
+nullableFFI f p (MaybeNull x) = prettyCon p "Nullable" [f App x]
 nullableFFI f p (NotNull x)   = f p x
 
 mutual
@@ -64,7 +64,7 @@ mutual
 --------------------------------------------------------------------------------
 
 nullableAPI :  (Prec -> a -> Doc ()) -> Prec -> Nullable a -> Doc ()
-nullableAPI f p (MaybeNull x) = prettyCon p "Maybe" [f App x] 
+nullableAPI f p (MaybeNull x) = prettyCon p "Maybe" [f App x]
 nullableAPI f p (NotNull x)   = f p x
 
 mutual
@@ -223,7 +223,7 @@ funTypeFFI : (name : IdrisIdent) -> ReturnType -> Args -> Doc ()
 funTypeFFI n t as = typeDecl n (returnTypeFFI t) (map prettyArgFFI as)
 
 funType : (name : IdrisIdent) -> ReturnType -> Args -> Doc ()
-funType n t as = 
+funType n t as =
   let (implicits,autos,explicits) = run 0 as
    in typeDeclWithImplicits n (returnTypeAPI t) implicits (autos ++ explicits)
   where run : Nat -> Args -> (List $ Doc(), List $ Doc (), List $ Doc ())
@@ -318,7 +318,7 @@ fun' ns name prim as us rt =
                     else "tryJS " ++ namespacedIdent ns name
 
       lhs     = pretty' . fastConcat . intersperse " " $ show name :: vs
-      
+
       impl    = lhs <++> (align . sep) [ "=" <++> pretty primCall
                                        , "$" <++> pretty primNS <++> appVs
                                        ]

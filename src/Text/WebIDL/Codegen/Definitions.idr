@@ -38,10 +38,10 @@ extern d = fastUnlines [ section "Interfaces" $ exts ext name d.ifaces
   where extNoCast : String -> String
         extNoCast s = #"""
                       export data \#{s} : Type where [external]
-                        
+
                       export
                       ToFFI \#{s} \#{s} where toFFI = id
-                        
+
                       export
                       FromFFI \#{s} \#{s} where fromFFI = Just
                       """#
@@ -82,7 +82,7 @@ primCallbacks = cbacks (pure . primCallback)
 --------------------------------------------------------------------------------
 
 jsTypes : List CGDomain -> String
-jsTypes ds = 
+jsTypes ds =
   let ifs  = sortBy (comparing name) (ds >>= ifaces)
       dics = sortBy (comparing name) (ds >>= dicts)
    in section "Inheritance" $
@@ -143,7 +143,7 @@ typedefs : List CGDomain -> String
 typedefs ds =
       #"""
       module Web.Internal.Types
-      
+
       import JS
       import public Web.Internal.AnimationTypes as Types
       import public Web.Internal.ClipboardTypes as Types
@@ -170,13 +170,13 @@ typedefs ds =
 --------------------------------------------------------------------------------
 --          Codegen
 --------------------------------------------------------------------------------
--- 
+--
 export
 types : CGDomain -> String
 types d =
   #"""
   module Web.Internal.\#{d.name}Types
-   
+
   \#{typeImports}
   \#{enums d.enums}
   \#{extern d}
@@ -187,10 +187,10 @@ primitives : CGDomain -> String
 primitives d =
   #"""
   module Web.Internal.\#{d.name}Prim
-   
+
   import JS
   import Web.Internal.Types
-   
+
   \#{primIfaces d}
   \#{primMixins d}
   \#{primDicts d}
@@ -202,7 +202,7 @@ definitions : CGDomain -> String
 definitions d =
   #"""
   module Web.Raw.\#{d.name}
-   
+
   \#{defImports d}
   \#{Definitions.ifaces d}
   \#{Definitions.mixins d}

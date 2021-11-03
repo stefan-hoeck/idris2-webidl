@@ -68,19 +68,19 @@ data FloatType = Float | Dbl
 ||| UnrestrictedFloatType ::
 |||     unrestricted FloatType
 |||     FloatType
-||| 
+|||
 ||| FloatType ::
 |||     float
 |||     double
-||| 
+|||
 ||| UnsignedIntegerType ::
 |||     unsigned IntegerType
 |||     IntegerType
-||| 
+|||
 ||| IntegerType ::
 |||     short
 |||     long OptionalLong
-||| 
+|||
 ||| OptionalLong ::
 |||     long
 |||     ε
@@ -149,7 +149,7 @@ mutual
 
   ||| UnionType ::
   |||     ( UnionMemberType or UnionMemberType UnionMemberTypes )
-  ||| 
+  |||
   ||| UnionMemberTypes ::
   |||     or UnionMemberType UnionMemberTypes
   |||     ε

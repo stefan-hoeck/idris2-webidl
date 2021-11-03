@@ -10,7 +10,7 @@ import Generics.Derive
 
 ||| Errors that can happen during lexing and parsing.
 public export
-data Err : Type where 
+data Err : Type where
   ||| An error that happened during lexing
   LexErr     : (msg : String) -> Err
 

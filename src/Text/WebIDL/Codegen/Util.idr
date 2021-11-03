@@ -41,7 +41,7 @@ sortedNubOn f = nub . sortBy (comparing f)
 export
 prettyList : List (Doc ann) -> Doc ann
 prettyList []        = "[]"
-prettyList (x :: xs) = align $ sep $  ("[" <++> x) 
+prettyList (x :: xs) = align $ sep $  ("[" <++> x)
                                    :: map ("," <++>) xs
                                    ++ ["]"]
 
@@ -81,7 +81,7 @@ toDataConstructor s =
 
   where run : List Char -> List Char
         run []             = []
-        run (x :: c :: cs) = 
+        run (x :: c :: cs) =
           if isAlphaNum x then x :: run (c :: cs) else toUpper c :: run cs
         run (c :: cs)      = c :: run cs
 
@@ -255,9 +255,9 @@ primMarshallCallback i = Prim . fromString $ "to" ++ i.value
 export
 argNames : Stream String
 argNames = "a" :: "b" :: "c" :: "d" :: "e" :: "f" :: "g" ::
-           "h" :: "i" :: "j" :: "k" :: "l" :: "m" :: "n" :: 
-           "o" :: "p" :: "q" :: "r" :: "s" :: "t" :: "u" :: 
-           "v" :: "w" :: "y" :: "z" :: 
+           "h" :: "i" :: "j" :: "k" :: "l" :: "m" :: "n" ::
+           "o" :: "p" :: "q" :: "r" :: "s" :: "t" :: "u" ::
+           "v" :: "w" :: "y" :: "z" ::
            map (\v => "x" ++ show v) [the Integer 1 ..]
 
 export

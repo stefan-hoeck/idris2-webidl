@@ -111,7 +111,7 @@ namespace ExtAttribute
 ||| ExtendedAttributeList ::
 |||   [ ExtendedAttribute ExtendedAttributes ]
 |||   ε
-||| 
+|||
 ||| ExtendedAttributes ::
 |||   , ExtendedAttribute ExtendedAttributes
 |||   ε

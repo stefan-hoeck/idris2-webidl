@@ -148,7 +148,7 @@ record AttributeNameKeyword where
 
 ||| Identifier
 public export
-record Identifier where 
+record Identifier where
   constructor MkIdent
   value : String
 

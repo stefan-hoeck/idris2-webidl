@@ -287,7 +287,7 @@ isUndefined Undefined = True
 isUndefined _         = False
 
 namespace ReturnType
-  
+
   public export
   simple : SimpleType -> ReturnType
   simple = Def . simple

@@ -52,11 +52,11 @@ record Dictionary where
 |||
 ||| EnumValueList ::
 |||     string EnumValueListComma
-||| 
+|||
 ||| EnumValueListComma ::
 |||     , EnumValueListString
 |||     ε
-||| 
+|||
 ||| EnumValueListString ::
 |||     string EnumValueListComma
 |||     ε
@@ -198,7 +198,7 @@ PartTypes = [PDictionary, PInterface, PMixin, PNamespace]
 ||| CallbackOrInterfaceOrMixin ::
 |||     callback CallbackRestOrInterface
 |||     interface InterfaceOrMixin
-||| 
+|||
 ||| InterfaceOrMixin ::
 |||     InterfaceRest
 |||     MixinRest
@@ -214,7 +214,7 @@ Definitions = NP List DefTypes
 |||     interface PartialInterfaceOrPartialMixin
 |||     PartialDictionary
 |||     Namespace
-||| 
+|||
 ||| PartialInterfaceOrPartialMixin ::
 |||     PartialInterfaceRest
 |||     MixinRest
@@ -287,7 +287,7 @@ applyPart d (S $ S $ S $ Z v) =
 
 export
 toDomains : List (String,PartsAndDefs) -> List Domain
-toDomains ps = 
+toDomains ps =
   let defs = map (\(s,pad) => fromNP s (defs pad)) ps
       prts = concatMap (\(_,pad) => get Part pad) ps
    in map (\d => foldl applyPart d prts) defs

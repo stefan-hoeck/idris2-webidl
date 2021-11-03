@@ -165,6 +165,8 @@ typedefs ds =
       import public Web.Internal.WebglTypes as Types
       import public Web.Internal.WebidlTypes as Types
       import public Web.Internal.XhrTypes as Types
+
+      %default total
       """# ++ "\n\n" ++ jsTypes ds
 
 --------------------------------------------------------------------------------
@@ -178,6 +180,9 @@ types d =
   module Web.Internal.\#{d.name}Types
 
   \#{typeImports}
+
+  %default total
+
   \#{enums d.enums}
   \#{extern d}
   """#
@@ -190,6 +195,8 @@ primitives d =
 
   import JS
   import Web.Internal.Types
+
+  %default total
 
   \#{primIfaces d}
   \#{primMixins d}
@@ -204,6 +211,9 @@ definitions d =
   module Web.Raw.\#{d.name}
 
   \#{defImports d}
+
+  %default total
+
   \#{Definitions.ifaces d}
   \#{Definitions.mixins d}
   \#{Definitions.dicts d}

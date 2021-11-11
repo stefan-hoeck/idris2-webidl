@@ -153,6 +153,7 @@ typedefs ds =
       import public Web.Internal.FileTypes as Types
       import public Web.Internal.GeometryTypes as Types
       import public Web.Internal.HtmlTypes as Types
+      import public Web.Internal.IndexedDBTypes as Types
       import public Web.Internal.MediasourceTypes as Types
       import public Web.Internal.MediastreamTypes as Types
       import public Web.Internal.PermissionsTypes as Types

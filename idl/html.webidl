@@ -651,7 +651,7 @@ interface HTMLFontElement : HTMLElement {
 
   [CEReactions] attribute [LegacyNullToEmptyString] DOMString color;
   [CEReactions] attribute DOMString face;
-  [CEReactions] attribute DOMString size; 
+  [CEReactions] attribute DOMString size;
 };
 
 [Exposed=Window]
@@ -1870,10 +1870,10 @@ interface mixin CanvasPath {
   undefined lineTo(unrestricted double x, unrestricted double y);
   undefined quadraticCurveTo(unrestricted double cpx, unrestricted double cpy, unrestricted double x, unrestricted double y);
   undefined bezierCurveTo(unrestricted double cp1x, unrestricted double cp1y, unrestricted double cp2x, unrestricted double cp2y, unrestricted double x, unrestricted double y);
-  undefined arcTo(unrestricted double x1, unrestricted double y1, unrestricted double x2, unrestricted double y2, unrestricted double radius); 
+  undefined arcTo(unrestricted double x1, unrestricted double y1, unrestricted double x2, unrestricted double y2, unrestricted double radius);
   undefined rect(unrestricted double x, unrestricted double y, unrestricted double w, unrestricted double h);
-  undefined arc(unrestricted double x, unrestricted double y, unrestricted double radius, unrestricted double startAngle, unrestricted double endAngle, optional boolean counterclockwise = false); 
-  undefined ellipse(unrestricted double x, unrestricted double y, unrestricted double radiusX, unrestricted double radiusY, unrestricted double rotation, unrestricted double startAngle, unrestricted double endAngle, optional boolean counterclockwise = false); 
+  undefined arc(unrestricted double x, unrestricted double y, unrestricted double radius, unrestricted double startAngle, unrestricted double endAngle, optional boolean counterclockwise = false);
+  undefined ellipse(unrestricted double x, unrestricted double y, unrestricted double radiusX, unrestricted double radiusY, unrestricted double rotation, unrestricted double startAngle, unrestricted double endAngle, optional boolean counterclockwise = false);
 };
 
 [Exposed=(Window,Worker)]
@@ -2367,7 +2367,7 @@ interface Window : EventTarget {
   [LegacyUnforgeable] readonly attribute WindowProxy window;
   [Replaceable] readonly attribute WindowProxy self;
   [LegacyUnforgeable] readonly attribute Document document;
-  attribute DOMString name; 
+  attribute DOMString name;
   [PutForwards=href, LegacyUnforgeable] readonly attribute Location location;
   readonly attribute History history;
   readonly attribute CustomElementRegistry customElements;
@@ -2398,7 +2398,7 @@ interface Window : EventTarget {
   // Indexed access is taken care of by the WindowProxy exotic object.
 
   // the user agent
-  readonly attribute Navigator navigator; 
+  readonly attribute Navigator navigator;
   readonly attribute boolean originAgentCluster;
 
   // user prompts
@@ -2415,6 +2415,11 @@ interface Window : EventTarget {
 };
 Window includes GlobalEventHandlers;
 Window includes WindowEventHandlers;
+
+interface mixin WindowLocalStorage {
+  readonly attribute Storage localStorage;
+};
+Window includes WindowLocalStorage;
 
 dictionary WindowPostMessageOptions : PostMessageOptions {
   USVString targetOrigin = "/";
@@ -2523,7 +2528,7 @@ interface mixin ElementContentEditable {
 interface mixin ARIAMixin {
 	attribute DOMString? role;
 
-	
+
 	attribute DOMString ariaAtomic;
 	attribute DOMString ariaAutoComplete;
 	attribute DOMString ariaBusy;
@@ -2532,33 +2537,33 @@ interface mixin ARIAMixin {
 	attribute DOMString ariaColIndex;
 	attribute DOMString ariaColIndexText;
 	attribute DOMString ariaColSpan;
-	
+
 	attribute DOMString ariaCurrent;
-	
+
 	attribute DOMString ariaDescription;
-	
+
 	attribute DOMString ariaDisabled;
-	
+
 	attribute DOMString ariaExpanded;
-	
+
 	attribute DOMString ariaHasPopup;
 	attribute DOMString ariaHidden;
 	attribute DOMString ariaInvalid;
 	attribute DOMString ariaKeyShortcuts;
 	attribute DOMString ariaLabel;
-	
+
 	attribute DOMString ariaLevel;
 	attribute DOMString ariaLive;
 	attribute DOMString ariaModal;
 	attribute DOMString ariaMultiLine;
 	attribute DOMString ariaMultiSelectable;
 	attribute DOMString ariaOrientation;
-	
+
 	attribute DOMString ariaPlaceholder;
 	attribute DOMString ariaPosInSet;
 	attribute DOMString ariaPressed;
 	attribute DOMString ariaReadOnly;
-	
+
 	attribute DOMString ariaRequired;
 	attribute DOMString ariaRoleDescription;
 	attribute DOMString ariaRowCount;

@@ -340,7 +340,7 @@ dictConFFI ns =
   let vs     = take (length ns) argNames
       vals   = fastConcat $ intersperse "," vs
       fields = fastConcat $ intersperse "," (zipWith app vs ns)
-   in foreignBrowser #"(\#{vals})=> {\#{fields}}"#
+   in foreignBrowser #"(\#{vals})=> ({\#{fields}})"#
 
   where app : String -> ArgumentName -> String
         app v a = a.value ++ ": " ++ v

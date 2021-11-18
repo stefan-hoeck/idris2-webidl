@@ -59,99 +59,99 @@ Idris2 types by the code generator. Eventually, the list below
 will also give additional information about functionality
 required from these bindings, but in a first step
 
- * `Undefined`: This type actually has two Idris2 representations.
-    As a function argument, it is mapped to an external
-    `Undefined` Idris2 type. As an unwrapped return value, it
-    is mapped to `()`.
+* `Undefined`: This type actually has two Idris2 representations.
+   As a function argument, it is mapped to an external
+   `Undefined` Idris2 type. As an unwrapped return value, it
+   is mapped to `()`.
 
- * Integral types: These are mapped to the following types
-   * `octet` : `Bits8`
-   * `byte` : `Int8`
-   * `unsigned short` : `Bits16`
-   * `short` : `Int16`
-   * `unsigned long` : `Bits32`
-   * `long` : `Int32`
-   * `unsigned long long` : `UInt64`
-   * `long long` : `UInt64`
+* Integral types: These are mapped to the following types
+  * `octet` : `Bits8`
+  * `byte` : `Int8`
+  * `unsigned short` : `Bits16`
+  * `short` : `Int16`
+  * `unsigned long` : `Bits32`
+  * `long` : `Int32`
+  * `unsigned long long` : `UInt64`
+  * `long long` : `UInt64`
 
-   Up to 32-bit integers, these all implement the usual numeric
-   interfaces (including `Data.Bits`). The 64-bit types are
-   still lacking an API, as they are represented by `Number`
-   in the backend and this doesn't support integer operations
-   at this precision. Will have to do some reading on how these
-   are handled elsewhere (for instance in PureScript).
+  Up to 32-bit integers, these all implement the usual numeric
+  interfaces (including `Data.Bits`). The 64-bit types are
+  still lacking an API, as they are represented by `Number`
+  in the backend and this doesn't support integer operations
+  at this precision. Will have to do some reading on how these
+  are handled elsewhere (for instance in PureScript).
 
- * Floating point types: These are mapped to `Double` for
-   simplicity. Not yet sure whether it is worth to treat `float`
-   and `unrestricted float` differently.
+* Floating point types: These are mapped to `Double` for
+  simplicity. Not yet sure whether it is worth to treat `float`
+  and `unrestricted float` differently.
 
- * `bigint` : This is obviously mapped to `Integer`.
+* `bigint` : This is obviously mapped to `Integer`.
 
- * `boolean` : This gets its own external `Boolean` type with
-    marshalling functions from and to Idris2 `Bool`.
+* `boolean` : This gets its own external `Boolean` type with
+   marshalling functions from and to Idris2 `Bool`.
 
- * String types: `DOMString` and `USVString` are ordinary Idris2
-   strings, `ByteString` gets its own external type (API yet to be
-   defined).
+* String types: `DOMString` and `USVString` are ordinary Idris2
+  strings, `ByteString` gets its own external type (API yet to be
+  defined).
 
- * Buffer related types: These are mapped to external types
-   of the same name. APIs are yet to be defined.
+* Buffer related types: These are mapped to external types
+  of the same name. APIs are yet to be defined.
 
- * Nullable types: These get their own external type `Nullable`
-   like in PureScript, with functionality to convert from
-   and to `Maybe`.
+* Nullable types: These get their own external type `Nullable`
+  like in PureScript, with functionality to convert from
+  and to `Maybe`.
 
- * `Any`: This is mapped to `AnyPtr`.
+* `Any`: This is mapped to `AnyPtr`.
 
- * `Promise`: This is mapped to an external type of the same name.
-   API yet to be defined (have a look at PureScript again).
+* `Promise`: This is mapped to an external type of the same name.
+  API yet to be defined (have a look at PureScript again).
 
- * `Object`: This is mapped to an external type of the same name.
-   The API should at least provide an `IO` function for returning an
-   empty object.
+* `Object`: This is mapped to an external type of the same name.
+  The API should at least provide an `IO` function for returning an
+  empty object.
 
- * `Symbol`: This is mapped to an external type of the same name.
-   API yet to be defined.
+* `Symbol`: This is mapped to an external type of the same name.
+  API yet to be defined.
 
- * `Record`: Again, this gets its own parameterized external type.
-    API yet to be defined. In Idris2, it should be possible to
-    make sure that the key parameter can only be `String`
-    or `ByteString`.
+* `Record`: Again, this gets its own parameterized external type.
+   API yet to be defined. In Idris2, it should be possible to
+   make sure that the key parameter can only be `String`
+   or `ByteString`.
 
- * Union types : These are mapped to an external `Union` type
-   parameterized by a list of types listing the choices.
-   It should be straight forward to marshall from an n-ary sum
-   (`Data.SOP.NS`) to a union type. Marshalling back requires some
-   thinking, however.
+* Union types : These are mapped to an external `Union` type
+  parameterized by a list of types listing the choices.
+  It should be straight forward to marshall from an n-ary sum
+  (`Data.SOP.NS`) to a union type. Marshalling back requires some
+  thinking, however.
 
- * Callbacks : These get their own external types. We should, however,
-   provide a way to for each callback type marshall from a corresponding
-   Idris2 function to the callback (as in PureScript, these should be
-   `IO` actions, as they create new objects in the backend). I'm not
-   sure whether it will be necessary to marshall from a callback
-   back to an Idris2 function.
+* Callbacks : These get their own external types. We should, however,
+  provide a way to for each callback type marshall from a corresponding
+  Idris2 function to the callback (as in PureScript, these should be
+  `IO` actions, as they create new objects in the backend). I'm not
+  sure whether it will be necessary to marshall from a callback
+  back to an Idris2 function.
 
- * Enums: These are treated as `String` in FFI calls, but
-   get their own Idris2 enum type with proper conversions
-   from and to their `String` representation.
+* Enums: These are treated as `String` in FFI calls, but
+  get their own Idris2 enum type with proper conversions
+  from and to their `String` representation.
 
- * Interfaces : These git their own external types. Their API is generated
-   by this code generator from the idl specs.
-   API yet to be defined.
+* Interfaces : These git their own external types. Their API is generated
+  by this code generator from the idl specs.
+  API yet to be defined.
 
- * Dictionaries : These get their own external types. Their API is generated
-   by this code generator from the idl specs. In addition, each dictionary
-   should get one or two (if the dictionary has optional attributes)
-   constructor.
+* Dictionaries : These get their own external types. Their API is generated
+  by this code generator from the idl specs. In addition, each dictionary
+  should get one or two (if the dictionary has optional attributes)
+  constructor.
 
- * Mixins : These just get their own external types without any
-   constructor.
+* Mixins : These just get their own external types without any
+  constructor.
 
- * Constants : Right now, these are implemented as plain Idris2
-   nullary functions. Eventually, I'd like define proper Idris2 types
-   for these and define rules for the code generator, where to
-   replace the primitive types by these Idris2 types. This is future work,
-   however.
+* Constants : Right now, these are implemented as plain Idris2
+  nullary functions. Eventually, I'd like define proper Idris2 types
+  for these and define rules for the code generator, where to
+  replace the primitive types by these Idris2 types. This is future work,
+  however.
 
 ### Inheritance and Mixins
 

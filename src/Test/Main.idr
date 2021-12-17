@@ -28,7 +28,7 @@ init = MkConfig 100
 
 setTests : String -> Config -> Either (List String) Config
 setTests s c = maybe (Left ["Not a natural number: " ++ s])
-                     (\n => Right $ record { numTests = MkTagged n} c)
+                     (\n => Right $ { numTests := MkTagged n} c)
                      (parsePositive {a = Nat} s)
 
 descs : List $ OptDescr (Config -> Either (List String) Config)

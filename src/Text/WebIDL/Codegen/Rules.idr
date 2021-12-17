@@ -64,7 +64,7 @@ env k ds = let ks = kinds ds
         mixin ts (MkIncludes _ n incl) =
           case lookup n ts of
                Nothing => ts
-               Just js => let js2 = record {mixins $= (incl ::)} js
+               Just js => let js2 = {mixins $= (incl ::)} js
                            in insert n js2 ts
 
         jsTypes : SortedMap Identifier JSType
@@ -278,7 +278,7 @@ parameters (e : Env, dom : Domain)
                  Nothing                              => objectOnly
 
                  (Just $ MkJSType Nothing mixins)       =>
-                   record { mixins = mixins } objectOnly
+                   { mixins := mixins } objectOnly
 
                  (Just $ MkJSType (Just parent) mixins) =>
                    let MkSupertypes parents mixins2 = run k parent

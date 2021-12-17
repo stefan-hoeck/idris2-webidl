@@ -91,11 +91,11 @@ Operation = Op (Maybe Special)
 
 public export
 regToOp : RegularOperation -> Operation
-regToOp = record { special = Nothing }
+regToOp = { special := Nothing }
 
 public export
 specToOp : SpecialOperation -> Operation
-specToOp = record { special $= Just }
+specToOp = { special $= Just }
 
 --------------------------------------------------------------------------------
 --          Callbacks

@@ -28,7 +28,7 @@ init : List String -> Config
 init = MkConfig "../dom/src" 100
 
 setOutDir : String -> Config -> Either (List String) Config
-setOutDir s = Right . record { outDir = s }
+setOutDir s = Right . { outDir := s }
 
 descs : List $ OptDescr (Config -> Either (List String) Config)
 descs = [ MkOpt ['o'] ["outDir"] (ReqArg setOutDir "<dir>")

@@ -246,18 +246,18 @@ update : Eq k => (b -> b) -> k -> (b -> k) -> List b -> List b
 update f k bk = map (\b => if bk b == k then f b else b)
 
 mergeDict : PDictionary -> Dictionary -> Dictionary
-mergeDict d = record { members $= (++ d.members) }
+mergeDict d = { members $= (++ d.members) }
 
 mergeIface : PInterface -> Interface -> Interface
-mergeIface i = record { members $= (++ map to i.members) }
+mergeIface i = { members $= (++ map to i.members) }
   where to : (a,b) -> (a, NS I [c,b])
         to (x, y) = (x, inject y)
 
 mergeMixin : PMixin -> Mixin -> Mixin
-mergeMixin m = record { members $= (++ m.members) }
+mergeMixin m = { members $= (++ m.members) }
 
 mergeNamespace : PNamespace -> Namespace -> Namespace
-mergeNamespace n = record { members $= (++ n.members) }
+mergeNamespace n = { members $= (++ n.members) }
 
 public export
 record Domain where
@@ -277,13 +277,13 @@ record Domain where
 
 applyPart : Domain -> Part -> Domain
 applyPart d (Z v) =
-  record { dictionaries $= update (mergeDict v) v.name name } d
+  { dictionaries $= update (mergeDict v) v.name name } d
 applyPart d (S $ Z v) =
-  record { interfaces $= update (mergeIface v) v.name name } d
+  { interfaces $= update (mergeIface v) v.name name } d
 applyPart d (S $ S $ Z v) =
-  record { mixins $= update (mergeMixin v) v.name name } d
+  { mixins $= update (mergeMixin v) v.name name } d
 applyPart d (S $ S $ S $ Z v) =
-  record { namespaces $= update (mergeNamespace v) v.name name } d
+  { namespaces $= update (mergeNamespace v) v.name name } d
 
 export
 toDomains : List (String,PartsAndDefs) -> List Domain

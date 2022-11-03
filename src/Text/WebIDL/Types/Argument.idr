@@ -1,7 +1,6 @@
 module Text.WebIDL.Types.Argument
 
 import Data.Bitraversable
-import Data.Bifoldable
 import Data.Traversable
 import Text.WebIDL.Types.Attribute
 import Text.WebIDL.Types.Identifier

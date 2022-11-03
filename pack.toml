@@ -1,0 +1,10 @@
+[custom.all.webidl]
+type = "local"
+path = "."
+ipkg = "webidl.ipkg"
+test = "test/test.ipkg"
+
+[custom.all.webidl-test]
+type = "local"
+path = "test"
+ipkg = "test.ipkg"

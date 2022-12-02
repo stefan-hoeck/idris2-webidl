@@ -2,12 +2,12 @@ module Text.WebIDL.Types.Argument
 
 import Data.Bitraversable
 import Data.Traversable
+import Derive.Prelude
 import Text.WebIDL.Types.Attribute
 import Text.WebIDL.Types.Identifier
 import Text.WebIDL.Types.Numbers
 import Text.WebIDL.Types.StringLit
 import Text.WebIDL.Types.Type
-import Generics.Derive
 
 %language ElabReflection
 
@@ -22,7 +22,7 @@ import Generics.Derive
 public export
 data ConstValue = B Bool | F FloatLit | I IntLit
 
-%runElab derive "ConstValue" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "ConstValue" [Eq,Show,HasAttributes]
 
 ||| Default ::
 |||     = DefaultValue
@@ -42,7 +42,7 @@ data Default = None
              | S StringLit
              | C ConstValue
 
-%runElab derive "Default" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Default" [Eq,Show,HasAttributes]
 
 ||| ArgumentName ::
 |||     ArgumentNameKeyword
@@ -52,7 +52,7 @@ record ArgumentName where
   constructor MkArgName
   value : String
 
-%runElab derive "ArgumentName" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "ArgumentName" [Eq,Show,HasAttributes]
 
 public export
 record ArgF (a : Type) (b : Type) where
@@ -61,7 +61,7 @@ record ArgF (a : Type) (b : Type) where
   type     : IdlTypeF a b
   name     : ArgumentName
 
-%runElab derive "ArgF" [Generic,Meta,Eq,Show]
+%runElab derive "ArgF" [Eq,Show]
 
 public export
 Arg : Type
@@ -76,7 +76,7 @@ record OptArgF (a : Type) (b : Type) where
   name      : ArgumentName
   def       : Default
 
-%runElab derive "OptArgF" [Generic,Meta,Eq,Show]
+%runElab derive "OptArgF" [Eq,Show]
 
 public export
 OptArg : Type
@@ -109,7 +109,7 @@ data ArgumentListF : (a : Type) -> (b : Type) -> Type where
            -> (optArgs : List $ OptArgF a b)
            -> ArgumentListF a b
 
-%runElab derive "ArgumentListF" [Generic,Meta,Eq,Show]
+%runElab derive "ArgumentListF" [Eq,Show]
 
 public export
 ArgumentList : Type

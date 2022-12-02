@@ -1,6 +1,6 @@
 module Text.WebIDL.Types.StringLit
 
-import Generics.Derive
+import Derive.Prelude
 
 %default total
 
@@ -12,4 +12,4 @@ record StringLit where
   constructor MkStrLit
   value : String
 
-%runElab derive "StringLit" [Generic,Meta,Eq,Ord,Show]
+%runElab derive "StringLit" [Eq,Ord,Show]

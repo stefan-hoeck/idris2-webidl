@@ -1,6 +1,8 @@
 module Text.WebIDL.Types.Definition
 
-import Generics.Derive
+import Data.List.Elem
+import Data.SOP
+import Derive.Prelude
 import Text.WebIDL.Types.Attribute
 import Text.WebIDL.Types.Argument
 import Text.WebIDL.Types.Identifier
@@ -9,6 +11,8 @@ import Text.WebIDL.Types.StringLit
 import Text.WebIDL.Types.Type
 
 %hide Language.Reflection.TT.Namespace
+%hide Derive.Enum.Enum
+
 %language ElabReflection
 
 ||| CallbackRest ::
@@ -21,7 +25,7 @@ record Callback where
   type       : IdlType
   args       : ArgumentList
 
-%runElab derive "Callback" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Callback" [Eq,Show,HasAttributes]
 
 ||| CallbackRestOrInterface ::
 |||     CallbackRest
@@ -33,7 +37,7 @@ record CallbackInterface where
   name       : Identifier
   members    : CallbackInterfaceMembers
 
-%runElab derive "CallbackInterface" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "CallbackInterface" [Eq,Show,HasAttributes]
 
 ||| Dictionary ::
 |||     dictionary identifier Inheritance { DictionaryMembers } ;
@@ -45,7 +49,7 @@ record Dictionary where
   inherits   : Inheritance
   members    : DictionaryMembers
 
-%runElab derive "Dictionary" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Dictionary" [Eq,Show,HasAttributes]
 
 ||| Enum ::
 |||     enum identifier { EnumValueList } ;
@@ -67,7 +71,7 @@ record Enum where
   name       : Identifier
   values     : List1 StringLit
 
-%runElab derive "Enum" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Enum" [Eq,Show,HasAttributes]
 
 ||| IncludesStatement ::
 |||     identifier includes identifier ;
@@ -78,7 +82,7 @@ record Includes where
   name       : Identifier
   includes   : Identifier
 
-%runElab derive "Includes" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Includes" [Eq,Show,HasAttributes]
 
 ||| InterfaceRest ::
 |||     identifier Inheritance { InterfaceMembers } ;
@@ -90,7 +94,7 @@ record Interface where
   inherits   : Inheritance
   members    : InterfaceMembers
 
-%runElab derive "Interface" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Interface" [Eq,Show,HasAttributes]
 
 ||| MixinRest ::
 |||     mixin identifier { MixinMembers } ;
@@ -101,7 +105,7 @@ record Mixin where
   name       : Identifier
   members    : MixinMembers
 
-%runElab derive "Mixin" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Mixin" [Eq,Show,HasAttributes]
 
 ||| Namespace ::
 |||     namespace identifier { NamespaceMembers } ;
@@ -112,7 +116,7 @@ record Namespace where
   name       : Identifier
   members    : NamespaceMembers
 
-%runElab derive "Namespace" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Namespace" [Eq,Show,HasAttributes]
 
 ||| Typedef ::
 |||     typedef TypeWithExtendedAttributes identifier ;
@@ -124,7 +128,7 @@ record Typedef where
   type           : IdlType
   name           : Identifier
 
-%runElab derive "Typedef" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Typedef" [Eq,Show,HasAttributes]
 
 ||| PartialDictionary ::
 |||     dictionary identifier { DictionaryMembers } ;
@@ -135,7 +139,7 @@ record PDictionary where
   name       : Identifier
   members    : DictionaryMembers
 
-%runElab derive "PDictionary" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "PDictionary" [Eq,Show,HasAttributes]
 
 ||| PartialInterfaceRest ::
 |||     identifier { PartialInterfaceMembers } ;
@@ -146,7 +150,7 @@ record PInterface where
   name       : Identifier
   members    : PartialInterfaceMembers
 
-%runElab derive "PInterface" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "PInterface" [Eq,Show,HasAttributes]
 
 ||| MixinRest ::
 |||     mixin identifier { MixinMembers } ;
@@ -157,7 +161,7 @@ record PMixin where
   name       : Identifier
   members    : MixinMembers
 
-%runElab derive "PMixin" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "PMixin" [Eq,Show,HasAttributes]
 
 ||| Namespace ::
 |||     namespace identifier { NamespaceMembers } ;
@@ -168,7 +172,7 @@ record PNamespace where
   name       : Identifier
   members    : NamespaceMembers
 
-%runElab derive "PNamespace" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "PNamespace" [Eq,Show,HasAttributes]
 
 public export
 DefTypes : List Type
@@ -236,7 +240,7 @@ PartsAndDefs = NP List [Part,Definition]
 
 public export
 defs : PartsAndDefs -> Definitions
-defs = accumNs . get Definition
+defs [_,d] = accumNs d
 
 --------------------------------------------------------------------------------
 --          Domain
@@ -273,7 +277,7 @@ record Domain where
   namespaces          : List Namespace
   typedefs            : List Typedef
 
-%runElab derive "Domain" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Domain" [Eq,Show,HasAttributes]
 
 applyPart : Domain -> Part -> Domain
 applyPart d (Z v) =

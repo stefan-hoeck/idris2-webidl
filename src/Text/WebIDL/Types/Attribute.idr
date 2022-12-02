@@ -1,13 +1,13 @@
 module Text.WebIDL.Types.Attribute
 
 import Data.List1
+import Derive.Enum
+import Derive.Prelude
 import Data.SOP
 import Text.WebIDL.Types.Numbers
 import Text.WebIDL.Types.StringLit
 import Text.WebIDL.Types.Identifier
 import Text.WebIDL.Types.Symbol
-
-import Generics.Derive
 
 %language ElabReflection
 
@@ -45,7 +45,7 @@ data EAInner : Type where
   |||   ε
   EAIEmpty  : EAInner
 
-%runElab derive "EAInner" [Generic,Meta,Eq,Show]
+%runElab derive "EAInner" [Eq,Show]
 
 namespace EAInner
 
@@ -85,7 +85,7 @@ data ExtAttribute : Type where
   ||| Other ExtendedAttributeRest
   EAOther : (other : Other) -> (rest : Maybe ExtAttribute) -> ExtAttribute
 
-%runElab derive "ExtAttribute" [Generic,Meta,Eq,Show]
+%runElab derive "ExtAttribute" [Eq,Show]
 
 namespace ExtAttribute
 
@@ -127,6 +127,7 @@ Attributed a = (ExtAttributeList, a)
 
 public export
 interface HasAttributes a where
+  constructor MkHasAttributes
   attributes : a -> ExtAttributeList
 
 public export
@@ -171,7 +172,7 @@ HasAttributes a => HasAttributes (Maybe a) where
 
 public export
 HasAttributes a => HasAttributes (List a) where
-  attributes = concatMap attributes
+  attributes x = x >>= attributes
 
 public export
 HasAttributes a => HasAttributes (List1 a) where
@@ -193,35 +194,96 @@ public export
 (all : POP HasAttributes ts) => HasAttributes (SOP I ts) where
   attributes = hcconcatMap HasAttributes attributes
 
-public export
-genAttributes :  Generic a code
-              => POP HasAttributes code
-              => a
-              -> ExtAttributeList
-genAttributes = attributes . from
+--------------------------------------------------------------------------------
+--          Claims
+--------------------------------------------------------------------------------
+
+||| General type of a `attributes` function with the given list
+||| of implicit and auto-implicit arguments, plus the given argument type
+||| to be displayed.
+export
+generalAttrType : (implicits : List Arg) -> (arg : TTImp) -> TTImp
+generalAttrType is arg = piAll `(~(arg) -> ExtAttributeList) is
+
+||| Top-level function declaration implementing the `attrbutes` function for
+||| the given data type.
+export
+attrClaim : (fun : Name) -> (p : ParamTypeInfo) -> Decl
+attrClaim fun p =
+  let arg := p.applied
+      tpe := generalAttrType (allImplicits p "HasAttributes") arg
+   in public' fun tpe
+
+||| Top-level declaration of the `HasAttributes`
+||| implementation for the given data type.
+export
+attrImplClaim : (impl : Name) -> (p : ParamTypeInfo) -> Decl
+attrImplClaim impl p = implClaim impl (implType "HasAttributes" p)
+
+--------------------------------------------------------------------------------
+--          Definitions
+--------------------------------------------------------------------------------
+
+||| Top-level definition of the `Show` implementation for the given data type.
+export
+attrImplDef : (fun, impl : Name) -> Decl
+attrImplDef f i = def i [var i .= var "MkHasAttributes" .$ var f]
+
+parameters (nms : List Name)
+  ttimp : BoundArg 1 Regular -> TTImp
+  ttimp (BA (MkArg _  _ _ t) [x] _) = assertIfRec nms t `(attributes ~(var x))
+
+  rsh : SnocList TTImp -> TTImp
+  rsh [<] = `(Nil)
+  rsh st  = `(listBind ~(listOf st) id)
+
+  export
+  attrClauses : (fun : Name) -> TypeInfo -> List Clause
+  attrClauses fun ti = map clause ti.cons
+    where clause : Con ti.arty ti.args -> Clause
+          clause c =
+            let ns  := freshNames "x" c.arty
+                bc  := bindCon c ns
+                lhs := var fun .$ bc
+                st  := ttimp <$> boundArgs regular c.args [ns]
+             in lhs .= rsh st
+
+  export
+  attrDef : Name -> TypeInfo -> Decl
+  attrDef fun ti = def fun (attrClauses fun ti)
+
+--------------------------------------------------------------------------------
+--          Deriving
+--------------------------------------------------------------------------------
 
 namespace Derive
 
-  public export %inline
-  mkHasAttributes : (attrs : a -> ExtAttributeList) -> HasAttributes a
-  mkHasAttributes = %runElab check (var $ singleCon "HasAttributes")
-
-  ||| Derives an `Eq` implementation for the given data type
-  ||| and visibility.
+  ||| Generate declarations and implementations for `HasAttributes`
+  ||| for a given data type.
   export
-  HasAttributesVis : Visibility -> DeriveUtil -> InterfaceImpl
-  HasAttributesVis vis g = MkInterfaceImpl "HasAttributes" vis []
-                             `(mkHasAttributes genAttributes)
-                             (implementationType `(HasAttributes) g)
+  HasAttributes : List Name -> ParamTypeInfo -> List TopLevel
+  HasAttributes nms p =
+    let fun  := funName p "attributes"
+        impl := implName p "HasAttributes"
+     in [ TL (attrClaim fun p) (attrDef nms fun p.info)
+        , TL (attrImplClaim impl p) (attrImplDef fun impl)
+        ]
 
-  ||| Alias for `EqVis Public`.
+namespace Enum
+
+  ||| Generate declarations and implementations for `Show` for
+  ||| an enum type.
   export
-  HasAttributes : DeriveUtil -> InterfaceImpl
-  HasAttributes = HasAttributesVis Public
+  HasAttributes : List Name -> Enum -> List TopLevel
+  HasAttributes nms (Element t _) =
+    let ns := freshNames "par" t.arty
+        nm := implName t "HasAttributes"
+        cl := var nm .= `(MkHasAttributes $ const [])
+     in [ TL (implClaim nm (ifaceClaimType "HasAttributes" t ns)) (def nm [cl]) ]
 
 --------------------------------------------------------------------------------
 --          Tests and Proofs
---------------------------------------------------------------------------------
+-----------------------------------------------------------------------------
 
 isParenTrue : all Attribute.isParenOrQuote (unpack "(){}[]\"") = True
 isParenTrue = Refl

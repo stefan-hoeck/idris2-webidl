@@ -1,11 +1,10 @@
 module Text.WebIDL.Types.Token
 
+import Derive.Prelude
 import Text.WebIDL.Types.Identifier
 import Text.WebIDL.Types.Numbers
 import Text.WebIDL.Types.StringLit
 import Text.WebIDL.Types.Symbol
-
-import Generics.Derive
 
 %default total
 
@@ -46,4 +45,4 @@ data IdlToken : Type where
   ||| token.
   Invalid   : String     -> IdlToken
 
-%runElab derive "IdlToken" [Generic,Meta,Eq,Show]
+%runElab derive "IdlToken" [Eq,Show]

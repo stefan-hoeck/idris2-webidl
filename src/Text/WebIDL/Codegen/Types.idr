@@ -1,11 +1,11 @@
 module Text.WebIDL.Codegen.Types
 
+import Derive.Prelude
 import public Data.SortedMap
 import public Data.Validated
 import Text.WebIDL.Types
 
-import Generics.Derive
-
+%hide Derive.Enum.Enum
 %language ElabReflection
 
 --------------------------------------------------------------------------------
@@ -29,7 +29,7 @@ data Kind : Type where
   KMixin      : Identifier -> Kind
   KOther      : Identifier -> Kind
 
-%runElab derive "Kind" [Generic,Meta,Eq,Show]
+%runElab derive "Kind" [Eq,Show]
 
 public export
 isParent : Kind -> Bool

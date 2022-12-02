@@ -138,43 +138,43 @@ public export
 HasAttributes String where
   attributes = const Nil
 
-public export
+public export %inline
 HasAttributes Identifier where
   attributes = const Nil
 
-public export
+public export %inline
 HasAttributes Bool where
   attributes = const Nil
 
-public export
+public export %inline
 HasAttributes FloatLit where
   attributes = const Nil
 
-public export
+public export %inline
 HasAttributes IntLit where
   attributes = const Nil
 
-public export
+public export %inline
 HasAttributes StringLit where
   attributes = const Nil
 
-public export
+public export %inline
 (HasAttributes a, HasAttributes b) => HasAttributes (a,b) where
   attributes (x,y) = attributes x ++ attributes y
 
-public export
+public export %inline
 HasAttributes ExtAttribute where
   attributes = pure
 
-public export
+public export %inline
 HasAttributes a => HasAttributes (Maybe a) where
   attributes = maybe Nil attributes
 
-public export
+public export %inline
 HasAttributes a => HasAttributes (List a) where
   attributes x = x >>= attributes
 
-public export
+public export %inline
 HasAttributes a => HasAttributes (List1 a) where
   attributes = attributes . forget
 

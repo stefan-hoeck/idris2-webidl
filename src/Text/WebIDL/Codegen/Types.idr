@@ -5,7 +5,6 @@ import public Data.SortedMap
 import public Data.Validated
 import Text.WebIDL.Types
 
-%hide Derive.Enum.Enum
 %language ElabReflection
 
 --------------------------------------------------------------------------------

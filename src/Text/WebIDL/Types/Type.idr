@@ -2,7 +2,6 @@ module Text.WebIDL.Types.Type
 
 import Data.Bitraversable
 import Data.Traversable
-import Derive.Enum
 import Derive.Prelude
 import Text.WebIDL.Types.Attribute
 import Text.WebIDL.Types.Identifier
@@ -34,7 +33,7 @@ data BufferRelatedType = ArrayBuffer
                        | Float32Array
                        | Float64Array
 
-%runElab deriveEnum "BufferRelatedType" [Eq,Show,HasAttributes]
+%runElab derive "BufferRelatedType" [Eq,Show,HasAttributes]
 
 ||| StringType ::
 |||     ByteString
@@ -45,17 +44,17 @@ data StringType = ByteString
                 | DOMString
                 | USVString
 
-%runElab deriveEnum "Type.StringType" [Eq,Show,HasAttributes]
+%runElab derive "Type.StringType" [Eq,Show,HasAttributes]
 
 public export
 data IntType = Short | Long | LongLong
 
-%runElab deriveEnum "Type.IntType" [Eq,Show,HasAttributes]
+%runElab derive "Type.IntType" [Eq,Show,HasAttributes]
 
 public export
 data FloatType = Float | Dbl
 
-%runElab deriveEnum "Type.FloatType" [Eq,Show,HasAttributes]
+%runElab derive "Type.FloatType" [Eq,Show,HasAttributes]
 
 ||| PrimitiveType ::
 |||     UnsignedIntegerType

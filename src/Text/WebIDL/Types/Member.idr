@@ -50,7 +50,7 @@ record OperationName where
 public export
 data Special = Getter | Setter | Deleter
 
-%runElab deriveEnum "Special" [Eq,Show,HasAttributes]
+%runElab derive "Special" [Eq,Show,HasAttributes]
 
 ||| RegularOperation ::
 |||     Type OperationRest

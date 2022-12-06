@@ -11,7 +11,6 @@ import Text.WebIDL.Types.StringLit
 import Text.WebIDL.Types.Type
 
 %hide Language.Reflection.TT.Namespace
-%hide Derive.Enum.Enum
 
 %language ElabReflection
 

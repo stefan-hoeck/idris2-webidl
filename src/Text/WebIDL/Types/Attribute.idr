@@ -1,7 +1,6 @@
 module Text.WebIDL.Types.Attribute
 
 import Data.List1
-import Derive.Enum
 import Derive.Prelude
 import Data.SOP
 import Text.WebIDL.Types.Numbers
@@ -231,7 +230,7 @@ attrImplDef f i = def i [var i .= var "MkHasAttributes" .$ var f]
 
 parameters (nms : List Name)
   ttimp : BoundArg 1 Regular -> TTImp
-  ttimp (BA (MkArg _  _ _ t) [x] _) = assertIfRec nms t `(attributes ~(var x))
+  ttimp (BA (MkArg _  _ _ t) [x] _) = assertIfRec nms t `(attributes ~(varStr x))
 
   rsh : SnocList TTImp -> TTImp
   rsh [<] = `(Nil)
@@ -261,25 +260,13 @@ namespace Derive
   ||| Generate declarations and implementations for `HasAttributes`
   ||| for a given data type.
   export
-  HasAttributes : List Name -> ParamTypeInfo -> List TopLevel
+  HasAttributes : List Name -> ParamTypeInfo -> Res (List TopLevel)
   HasAttributes nms p =
     let fun  := funName p "attributes"
         impl := implName p "HasAttributes"
-     in [ TL (attrClaim fun p) (attrDef nms fun p.info)
-        , TL (attrImplClaim impl p) (attrImplDef fun impl)
-        ]
-
-namespace Enum
-
-  ||| Generate declarations and implementations for `Show` for
-  ||| an enum type.
-  export
-  HasAttributes : List Name -> Enum -> List TopLevel
-  HasAttributes nms (Element t _) =
-    let ns := freshNames "par" t.arty
-        nm := implName t "HasAttributes"
-        cl := var nm .= `(MkHasAttributes $ const [])
-     in [ TL (implClaim nm (ifaceClaimType "HasAttributes" t ns)) (def nm [cl]) ]
+     in Right [ TL (attrClaim fun p) (attrDef nms fun p.info)
+              , TL (attrImplClaim impl p) (attrImplDef fun impl)
+              ]
 
 --------------------------------------------------------------------------------
 --          Tests and Proofs

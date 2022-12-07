@@ -2,9 +2,9 @@ module Text.WebIDL.Types.Type
 
 import Data.Bitraversable
 import Data.Traversable
+import Derive.Prelude
 import Text.WebIDL.Types.Attribute
 import Text.WebIDL.Types.Identifier
-import Generics.Derive
 
 %language ElabReflection
 
@@ -33,7 +33,7 @@ data BufferRelatedType = ArrayBuffer
                        | Float32Array
                        | Float64Array
 
-%runElab derive "BufferRelatedType" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "BufferRelatedType" [Eq,Show,HasAttributes]
 
 ||| StringType ::
 |||     ByteString
@@ -44,17 +44,17 @@ data StringType = ByteString
                 | DOMString
                 | USVString
 
-%runElab derive "Type.StringType" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Type.StringType" [Eq,Show,HasAttributes]
 
 public export
 data IntType = Short | Long | LongLong
 
-%runElab derive "Type.IntType" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Type.IntType" [Eq,Show,HasAttributes]
 
 public export
 data FloatType = Float | Dbl
 
-%runElab derive "Type.FloatType" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Type.FloatType" [Eq,Show,HasAttributes]
 
 ||| PrimitiveType ::
 |||     UnsignedIntegerType
@@ -94,12 +94,12 @@ data PrimitiveType = Unsigned     IntType
                    | Octet
                    | BigInt
 
-%runElab derive "PrimitiveType" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "PrimitiveType" [Eq,Show,HasAttributes]
 
 public export
 data ConstTypeF a = CP PrimitiveType | CI a
 
-%runElab derive "ConstTypeF" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "ConstTypeF" [Eq,Show,HasAttributes]
 
 ||| Null ::
 |||     ?
@@ -107,7 +107,7 @@ data ConstTypeF a = CP PrimitiveType | CI a
 public export
 data Nullable a = MaybeNull a | NotNull a
 
-%runElab derive "Nullable" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Nullable" [Eq,Show,HasAttributes]
 
 export
 nullVal : Nullable a -> a
@@ -195,11 +195,12 @@ mutual
     Object : DistinguishableF a b
     Symbol : DistinguishableF a b
 
-%runElab deriveMutual [ ("DistinguishableF", [Generic,Meta,Show,Eq])
-                      , ("UnionMemberTypeF", [Generic,Meta,Show,Eq])
-                      , ("UnionTypeF",       [Generic,Meta,Show,Eq])
-                      , ("IdlTypeF",         [Generic,Meta,Show,Eq])
-                      ]
+%runElab deriveMutual
+  [ "DistinguishableF"
+  , "UnionMemberTypeF"
+  , "UnionTypeF"
+  , "IdlTypeF"
+  ] [Show, Eq]
 
 public export
 IdlType : Type

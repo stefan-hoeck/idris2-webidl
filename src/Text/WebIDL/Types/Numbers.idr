@@ -1,6 +1,6 @@
 module Text.WebIDL.Types.Numbers
 
-import Generics.Derive
+import Derive.Prelude
 
 %default total
 
@@ -22,10 +22,7 @@ export
 public export
 data IntLit = Hex Nat | Oct Nat | I Integer
 
-%runElab derive "IntLit" [Generic,Meta,Show]
-
-export
-Eq IntLit using FastNatEq where (==) = genEq
+%runElab derive "IntLit" [Show, Eq]
 
 --------------------------------------------------------------------------------
 --          Parsing Integers
@@ -63,7 +60,7 @@ readInt s = case fastUnpack s of
 public export
 data Signum = Plus | Minus
 
-%runElab derive "Signum" [Generic,Meta,Eq,Show]
+%runElab derive "Signum" [Eq,Show]
 
 ||| A parsed floating point literal.
 |||
@@ -109,10 +106,7 @@ data FloatLit : Type where
   ||| Corresponds to the WebIDL keyword `NaN`
   NaN              : FloatLit
 
-%runElab derive "FloatLit" [Generic,Meta,Show]
-
-export
-Eq FloatLit using FastNatEq where (==) = genEq
+%runElab derive "FloatLit" [Show,Eq]
 
 --------------------------------------------------------------------------------
 --          Parsing Floats

@@ -1,6 +1,6 @@
 module Text.WebIDL.Types.Symbol
 
-import Generics.Derive
+import Derive.Prelude
 
 %default total
 
@@ -17,4 +17,4 @@ data Symbol : Type where
   ||| A single non-alphanumeric character like '=' or '{'.
   Symb     : (symb : Char) -> Symbol
 
-%runElab derive "Symbol" [Generic,Meta,Eq,Show]
+%runElab derive "Symbol" [Eq,Show]

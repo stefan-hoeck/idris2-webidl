@@ -1,6 +1,7 @@
 module Text.WebIDL.Types.Member
 
-import Generics.Derive
+import Data.SOP
+import Derive.Prelude
 import Text.WebIDL.Types.Argument
 import Text.WebIDL.Types.Attribute
 import Text.WebIDL.Types.Identifier
@@ -23,7 +24,7 @@ record Const where
   name  : Identifier
   value : ConstValue
 
-%runElab derive "Const" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Const" [Eq,Show,HasAttributes]
 
 --------------------------------------------------------------------------------
 --          Operation
@@ -40,7 +41,7 @@ record OperationName where
   constructor MkOpName
   value : String
 
-%runElab derive "OperationName" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "OperationName" [Eq,Show,HasAttributes]
 
 ||| Special ::
 |||     getter
@@ -49,7 +50,7 @@ record OperationName where
 public export
 data Special = Getter | Setter | Deleter
 
-%runElab derive "Special" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Special" [Eq,Show,HasAttributes]
 
 ||| RegularOperation ::
 |||     Type OperationRest
@@ -75,7 +76,7 @@ record Op a where
   name    : Maybe OperationName
   args    : ArgumentList
 
-%runElab derive "Op" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Op" [Eq,Show,HasAttributes]
 
 public export
 0 RegularOperation : Type
@@ -142,7 +143,7 @@ data DictionaryMemberRest : Type where
            -> (deflt : Default)
            -> DictionaryMemberRest
 
-%runElab derive "DictionaryMemberRest" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "DictionaryMemberRest" [Eq,Show,HasAttributes]
 
 ||| DictionaryMember ::
 |||     ExtendedAttributeList DictionaryMemberRest
@@ -166,14 +167,14 @@ record Readonly a where
   constructor MkRO
   value : a
 
-%runElab derive "Readonly" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Readonly" [Eq,Show,HasAttributes]
 
 public export
 record Inherit a where
   constructor MkI
   value : a
 
-%runElab derive "Inherit" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Inherit" [Eq,Show,HasAttributes]
 
 ||| AttributeName ::
 |||     AttributeNameKeyword
@@ -187,7 +188,7 @@ record AttributeName where
   constructor MkAttributeName
   value : String
 
-%runElab derive "AttributeName" [Generic,Meta,Eq,Ord,Show,HasAttributes]
+%runElab derive "AttributeName" [Eq,Ord,Show,HasAttributes]
 
 ||| AttributeRest ::
 |||     attribute TypeWithExtendedAttributes AttributeName ;
@@ -198,7 +199,7 @@ record Attribute where
   type  : IdlType
   name  : AttributeName
 
-%runElab derive "Attribute" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Attribute" [Eq,Show,HasAttributes]
 
 ||| ReadWriteMaplike ::
 |||     MaplikeRest
@@ -211,7 +212,7 @@ record Maplike where
   fstTpe : Attributed IdlType
   sndTpe : Attributed IdlType
 
-%runElab derive "Maplike" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Maplike" [Eq,Show,HasAttributes]
 
 export
 HasAttributes Maplike where
@@ -227,7 +228,7 @@ record Setlike where
   constructor MkSetlike
   type : Attributed IdlType
 
-%runElab derive "Setlike" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Setlike" [Eq,Show,HasAttributes]
 
 ||| StringifierRest ::
 |||     OptionalReadOnly AttributeRest
@@ -279,7 +280,7 @@ record Constructor where
   constructor MkConstructor
   args : ArgumentList
 
-%runElab derive "Constructor" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "Constructor" [Eq,Show,HasAttributes]
 
 ||| PartialInterfaceMember ::
 |||     Const
@@ -312,7 +313,7 @@ data PartialInterfaceMember =
   | IIterable (Attributed IdlType) OptionalType
   | IAsync   (Attributed IdlType) OptionalType ArgumentList
 
-%runElab derive "PartialInterfaceMember" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "PartialInterfaceMember" [Eq,Show,HasAttributes]
 
 
 ||| MixinMember ::
@@ -328,7 +329,7 @@ data MixinMember =
   | MAttr    Attribute
   | MAttrRO  (Readonly Attribute)
 
-%runElab derive "MixinMember" [Generic,Meta,Eq,Show,HasAttributes]
+%runElab derive "MixinMember" [Eq,Show,HasAttributes]
 
 
 ||| PartialInterfaceMembers ::

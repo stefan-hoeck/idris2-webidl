@@ -1,8 +1,8 @@
 module Text.WebIDL.Types.Err
 
+import Derive.Prelude
 import Text.WebIDL.Types.Token
 import Text.Lexer
-import Generics.Derive
 
 %default total
 
@@ -30,4 +30,4 @@ data Err : Type where
              -> (col : Int)
              -> Err
 
-%runElab derive "Err" [Generic,Meta,Eq,Show]
+%runElab derive "Err" [Eq,Show]

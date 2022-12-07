@@ -1,7 +1,7 @@
 module Text.WebIDL.Types.Identifier
 
+import Derive.Prelude
 import Data.List1
-import Generics.Derive
 import Language.Reflection.Refined
 import Text.PrettyPrint.Prettyprinter
 
@@ -152,7 +152,7 @@ record Identifier where
   constructor MkIdent
   value : String
 
-%runElab derive "Identifier" [Generic,Meta,Eq,Ord,Show]
+%runElab derive "Identifier" [Eq,Ord,Show]
 
 ||| IdentifierList :: identifier Identifiers
 ||| Identifiers :: "," identifier Identifiers | ε

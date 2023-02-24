@@ -2,6 +2,7 @@ module Text.WebIDL.Types.Attribute
 
 import Data.List1
 import Derive.Prelude
+import Language.Reflection.Util
 import Data.SOP
 import Text.WebIDL.Types.Numbers
 import Text.WebIDL.Types.StringLit
@@ -226,7 +227,7 @@ attrImplClaim impl p = implClaim impl (implType "HasAttributes" p)
 ||| Top-level definition of the `Show` implementation for the given data type.
 export
 attrImplDef : (fun, impl : Name) -> Decl
-attrImplDef f i = def i [var i .= var "MkHasAttributes" .$ var f]
+attrImplDef f i = def i [patClause (var i) (var "MkHasAttributes" `app` var f)]
 
 parameters (nms : List Name)
   ttimp : BoundArg 1 Regular -> TTImp
@@ -243,9 +244,9 @@ parameters (nms : List Name)
           clause c =
             let ns  := freshNames "x" c.arty
                 bc  := bindCon c ns
-                lhs := var fun .$ bc
+                lhs := var fun `app` bc
                 st  := ttimp <$> boundArgs regular c.args [ns]
-             in lhs .= rsh st
+             in patClause lhs (rsh st)
 
   export
   attrDef : Name -> TypeInfo -> Decl

@@ -31,4 +31,4 @@ jobs:
       - name: Build lib
         run: pack typecheck webidl
       - name: Run tests
-        run: pack run webidl-test
+        run: pack --log-level build test webidl

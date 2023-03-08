@@ -2,7 +2,6 @@ module Text.WebIDL.Codegen.Types
 
 import Derive.Prelude
 import public Data.SortedMap
-import public Data.Validated
 import Text.WebIDL.Types
 
 %language ElabReflection
@@ -68,67 +67,69 @@ may i      = i
 --------------------------------------------------------------------------------
 --          Types
 --------------------------------------------------------------------------------
+public export
+data SimpleType : Type where
 
-mutual
-  public export
-  data SimpleType : Type where
-    ||| The undefined type (or () if it is a return type)
-    Undef        : SimpleType
+public export
+data CGType : Type where
 
-    ||| `Boolean` at the FFI, `Bool` in the API.
-    Boolean      : SimpleType
+data SimpleType : Type where
+  ||| The undefined type (or () if it is a return type)
+  Undef        : SimpleType
 
-    ||| A Web IDL interface. This has an instance of `SafeCast`,
-    ||| and is being abstracted over when used in an argument
-    ||| list in the API, but only, when the `isParent` flag is set to true.
-    ||| If this flag is `False`, meaning that there are no subtypes of
-    ||| this type, we do not abstract over the type to improve
-    ||| type inference.
-    Interface   : (isParent : Bool) -> Identifier  -> SimpleType
+  ||| `Boolean` at the FFI, `Bool` in the API.
+  Boolean      : SimpleType
 
-    ||| A dictionary, specifying a Javascript object with a
-    ||| set of mandatory and optional attributes.
-    ||| This is always abstracted over, since theoretically
-    ||| every value with the same set of attributes is
-    ||| a dictionary of the given type.
-    |||
-    ||| The type of a dictionary cannot be verified at
-    ||| runtime, therefore they have no instance of `SafeCast`.
-    Dictionary  : Identifier  -> SimpleType
+  ||| A Web IDL interface. This has an instance of `SafeCast`,
+  ||| and is being abstracted over when used in an argument
+  ||| list in the API, but only, when the `isParent` flag is set to true.
+  ||| If this flag is `False`, meaning that there are no subtypes of
+  ||| this type, we do not abstract over the type to improve
+  ||| type inference.
+  Interface   : (isParent : Bool) -> Identifier  -> SimpleType
 
-    ||| A Web IDL `Mixin` is a set of attributes and operations (functions)
-    ||| shared by several types. A type includes a given mixin, if
-    ||| a corresponding `includes` statement is provided in the spec.
-    |||
-    ||| Mixins do not define new types, and whether a value implements
-    ||| a given mixin can typcally not be verified at runtime, therefore
-    ||| mixins come without an instance of `SafeCast`.
-    ||| runtime, therefore they have no instance of `SafeCast`.
-    Mixin  : Identifier  -> SimpleType
+  ||| A dictionary, specifying a Javascript object with a
+  ||| set of mandatory and optional attributes.
+  ||| This is always abstracted over, since theoretically
+  ||| every value with the same set of attributes is
+  ||| a dictionary of the given type.
+  |||
+  ||| The type of a dictionary cannot be verified at
+  ||| runtime, therefore they have no instance of `SafeCast`.
+  Dictionary  : Identifier  -> SimpleType
 
-    ||| Primitive type or a wrapper of a primitive.
-    ||| This is the same at the FFI and API and
-    ||| has an instance of `SafeCast`.
-    Primitive : String      -> SimpleType
+  ||| A Web IDL `Mixin` is a set of attributes and operations (functions)
+  ||| shared by several types. A type includes a given mixin, if
+  ||| a corresponding `includes` statement is provided in the spec.
+  |||
+  ||| Mixins do not define new types, and whether a value implements
+  ||| a given mixin can typcally not be verified at runtime, therefore
+  ||| mixins come without an instance of `SafeCast`.
+  ||| runtime, therefore they have no instance of `SafeCast`.
+  Mixin  : Identifier  -> SimpleType
 
-    ||| Types that do not change between FFI and API
-    Unchangeable : String      -> SimpleType
+  ||| Primitive type or a wrapper of a primitive.
+  ||| This is the same at the FFI and API and
+  ||| has an instance of `SafeCast`.
+  Primitive : String      -> SimpleType
 
-    ||| Enum type at the API, Strings at the FFI
-    Enum         : Identifier  -> SimpleType
+  ||| Types that do not change between FFI and API
+  Unchangeable : String      -> SimpleType
 
-    ||| Some kind of Array
-    Array        : CGType      -> SimpleType
+  ||| Enum type at the API, Strings at the FFI
+  Enum         : Identifier  -> SimpleType
 
-    ||| Some kind of Record
-    Record       : String      -> CGType -> SimpleType
+  ||| Some kind of Array
+  Array        : CGType      -> SimpleType
 
-  public export
-  data CGType : Type where
-    Any     : CGType
-    Promise : CGType                      -> CGType
-    Simple  : Nullable SimpleType         -> CGType
-    Union   : Nullable (List1 SimpleType) -> CGType
+  ||| Some kind of Record
+  Record       : String      -> CGType -> SimpleType
+
+data CGType : Type where
+  Any     : CGType
+  Promise : CGType                      -> CGType
+  Simple  : Nullable SimpleType         -> CGType
+  Union   : Nullable (List1 SimpleType) -> CGType
 
 ||| True, if the type can be used as an index in a
 ||| WebIDL `Getter` or `Setter`, that is, it corresponds
@@ -137,7 +138,7 @@ export
 isIndex : CGType -> Bool
 isIndex (Simple $ NotNull $ Primitive "String") = True
 isIndex (Simple $ NotNull $ Primitive "Bits32") = True
-isIndex _                                          = False
+isIndex _                                       = False
 
 namespace SimpleType
   ||| True, if the FFI representation of the given type
@@ -451,7 +452,7 @@ data CGFunction : Type where
                -> CGFunction
 
 ||| This is used for sorting lists of functions to
-||| the determine the order in which they appear
+||| determine the order in which they appear
 ||| in the generated code.
 |||
 ||| Attributes will come first, sorted by name,
@@ -589,7 +590,3 @@ data CodegenErr : Type where
 public export
 Codegen : Type -> Type
 Codegen = Either (List CodegenErr)
-
-public export
-CodegenV : Type -> Type
-CodegenV = Validated (List CodegenErr)

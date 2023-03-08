@@ -4,18 +4,13 @@ authors    = "stefan-hoeck"
 version    = 0.1.0
 sourcedir  = "src"
 depends    = base         >= 0.6.0
-           , contrib
-           , elab-util
-           , sop
+           , parser-webidl
+           , prettier
 
 main       = Main
 executable = generateDomBindings
 
-modules = Data.Bitraversable
-        , Data.Functor.Const
-        , Data.Traversable
-
-        , Text.WebIDL.Codegen
+modules = Text.WebIDL.Codegen
         , Text.WebIDL.Codegen.Args
         , Text.WebIDL.Codegen.Definitions
         , Text.WebIDL.Codegen.Enum
@@ -23,20 +18,3 @@ modules = Data.Bitraversable
         , Text.WebIDL.Codegen.Rules
         , Text.WebIDL.Codegen.Types
         , Text.WebIDL.Codegen.Util
-
-        , Text.WebIDL.Encoder
-        , Text.WebIDL.Lexer
-        , Text.WebIDL.Parser
-
-        , Text.WebIDL.Types
-        , Text.WebIDL.Types.Argument
-        , Text.WebIDL.Types.Attribute
-        , Text.WebIDL.Types.Definition
-        , Text.WebIDL.Types.Err
-        , Text.WebIDL.Types.Identifier
-        , Text.WebIDL.Types.Member
-        , Text.WebIDL.Types.Numbers
-        , Text.WebIDL.Types.StringLit
-        , Text.WebIDL.Types.Token
-        , Text.WebIDL.Types.Type
-        , Text.WebIDL.Types.Symbol

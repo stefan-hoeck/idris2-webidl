@@ -6,6 +6,7 @@ sourcedir  = "src"
 depends    = base         >= 0.6.0
            , parser-webidl
            , prettier
+           , getopts
 
 main       = Main
 executable = generateDomBindings

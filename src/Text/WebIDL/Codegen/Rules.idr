@@ -192,10 +192,10 @@ parameters (e : Env, dom : Domain)
     unalias t@(D $ MaybeNull d) =
       do res <- uaD d
          case res of
-              Any         => Left [NullableAny dom]
-              (Simple x)  => pure . Simple $ nullable x
-              (Union x)   => pure . Union $ nullable x
-              (Promise x) => Left [NullablePromise dom]
+           Any       => Left [NullableAny dom]
+           Simple x  => pure . Simple $ nullable x
+           Union x   => pure . Union $ nullable x
+           Promise x => Left [NullablePromise dom]
 
   -- calculate the aliased type from a type coming
   -- from the WebIDL parser
@@ -215,14 +215,14 @@ parameters (e : Env, dom : Domain)
   constTpe : ConstType -> Codegen CGConstType
   constTpe (CI i) =
     case uaD (I $ kind i) of
-         Left x                                 => Left x
-         Right (Simple $ NotNull $ Primitive s) => Right $ MkConstType s
-         Right _                                => Left [InvalidConstType dom]
+      Left x                                 => Left x
+      Right (Simple $ NotNull $ Primitive s) => Right $ MkConstType s
+      Right _                                => Left [InvalidConstType dom]
 
   constTpe (CP p) =
     case prim p of
-         Primitive s => Right $ MkConstType s
-         _           => Left [InvalidConstType dom]
+      Primitive s => Right $ MkConstType s
+      _           => Left [InvalidConstType dom]
 
   const : Const -> Codegen CGConst
   const (MkConst t n v) = map (\t2 => MkConst t2 n v) (constTpe t)

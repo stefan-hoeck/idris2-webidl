@@ -3,12 +3,6 @@ type = "local"
 path = "."
 ipkg = "webidl.ipkg"
 
-[custom.all.pretty-show]
-type   = "git"
-url    = "https://github.com/stefan-hoeck/idris2-pretty-show"
-commit = "latest:parser-show"
-ipkg   = "pretty-show.ipkg"
-
 [custom.all.parser]
 type   = "git"
 url    = "https://github.com/stefan-hoeck/idris2-parser"

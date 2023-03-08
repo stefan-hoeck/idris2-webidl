@@ -9,6 +9,8 @@ import public Text.PrettyPrint.Bernardy
 import public Text.WebIDL.Codegen.Types
 import public Text.WebIDL.Types
 
+%default total
+
 export
 mapFirstChar : (Char -> Char) -> String -> String
 mapFirstChar f x = case unpack x of
@@ -64,8 +66,8 @@ toDataConstructor s = case unquote s of
   where
     run : List Char -> List Char
     run []             = []
-    run (x :: c :: cs) =
-      if isAlphaNum x then x :: run (c :: cs) else toUpper c :: run cs
+    run (x :: xs@(c :: cs)) =
+      if isAlphaNum x then x :: run xs else toUpper c :: run cs
     run (c :: cs)      = c :: run cs
 
 --------------------------------------------------------------------------------
@@ -98,60 +100,41 @@ namespaced n ds = unlines $ "" :: "namespace \{n.value}" :: ds
 --          Generating Functions
 --------------------------------------------------------------------------------
 
--- export
--- functionTypeOnly : (res : Doc ()) -> (args : List $ Doc ()) -> Doc()
--- functionTypeOnly res []       = parens $ "() ->" <++> res
--- functionTypeOnly res (h :: t) =
---   let h' = "(" <++> flatAlt (" "  <+> h) h
---       args = h' :: map ("->" <++>) (t ++ [res]) ++ [")"]
---    in align (sep args)
---
--- export
--- functionTypeWithImplicits :  (name : IdrisIdent)
---                           -> (sep : Char)
---                           -> (res : Doc ())
---                           -> (iargs : List $ Doc ())
---                           -> (args : List $ Doc ())
---                           -> Doc ()
--- functionTypeWithImplicits n c res [] [] =
---   hsep [pretty n, pretty c, res]
---
--- functionTypeWithImplicits n c res [] (h :: t) =
---   let h' = pretty c <++> flatAlt (" "  <+> h) h
---       args = h' :: map ("->" <++>) (t ++ [res])
---    in pretty n <++> align (sep args)
---
--- functionTypeWithImplicits n c res (h :: t) [] =
---   let h' = pretty c <++> flatAlt (" "  <+> h) h
---       args = h' :: map ("=>" <++>) (t ++ [res])
---    in pretty n <++> align (sep args)
---
--- functionTypeWithImplicits n c res (x :: xs) (y :: ys) =
---   let x' = pretty c <++> flatAlt (" "  <+> x) x
---       args = x' :: map ("=>" <++>) (xs ++ [y])
---                 ++ map ("->" <++>) (ys ++ [res])
---
---    in pretty n <++> align (sep args)
---
--- export
--- functionType :  (name : IdrisIdent)
---              -> (sep : Char)
---              -> (res : Doc ())
---              -> (args : List $ Doc ())
---              -> Doc ()
--- functionType n c res = functionTypeWithImplicits n c res []
---
--- export
--- typeDeclWithImplicits :  (name : IdrisIdent)
---                       -> (res : Doc ())
---                       -> (iargs : List $ Doc ())
---                       -> (args : List $ Doc ())
---                       -> Doc ()
--- typeDeclWithImplicits n = functionTypeWithImplicits n ':'
---
--- export
--- typeDecl : (name : IdrisIdent) -> (res : Doc ()) -> (args : List $ Doc ()) -> Doc ()
--- typeDecl n = functionType n ':'
+parameters {opts : LayoutOpts}
+
+  export
+  functionTypeOnly : (res : Doc opts) -> (args : List $ Doc opts) -> Doc opts
+  functionTypeOnly res []     = parens $ "() ->" <++> res
+  functionTypeOnly res (h::t) =
+    let withArrows := map (line "->" <++>) (t ++ [res])
+        sl         := parens (hsep $ h :: withArrows)
+        ml         := vsep $ (line "(  " <+> h) :: withArrows ++ [line ")"]
+     in ifMultiline sl ml
+
+  export
+  functionType :
+       (name : IdrisIdent)
+    -> (sep  : String)
+    -> (res  : Doc opts)
+    -> (args : List $ Doc opts)
+    -> Doc opts
+  functionType nm sep res [] =
+    let head := line "\{nm} \{sep}"
+     in ifMultiline (head <++> res) (vappend head $ indent 2 res)
+  functionType nm sep res (h::t) =
+    let head       := line "\{nm} \{sep}"
+        withArrows := map (line "->" <++>) (t ++ [res])
+        sl         := hsep $ head :: h :: withArrows
+        ml         := vsep $ indent 3 h :: withArrows
+     in ifMultiline sl (vappend head $ indent 2 ml)
+
+  export
+  typeDecl :
+       (name : IdrisIdent)
+    -> (res : Doc opts)
+    -> (args : List $ Doc opts)
+    -> Doc opts
+  typeDecl n = functionType n ":"
 --
 --------------------------------------------------------------------------------
 --          Function Names
@@ -233,7 +216,7 @@ argNames =
 
 export
 unShadowingArgNames : IdrisIdent -> Stream String
-unShadowingArgNames i = go (show i) argNames
+unShadowingArgNames i = go "\{i}" argNames
   where
     go : String -> Stream String -> Stream String
     go s (h :: t) = if s == h then t else h :: go s t
@@ -265,7 +248,7 @@ funFFI n Z = foreignBrowser "x=>x.\{n.value}()"
 funFFI n k =
   let vs = take k argNames
       vals = fastConcat $ intersperse "," vs
-   in foreignBrowser "(x,\{vals})=>x.\{n.value}(\#{vals})"
+   in foreignBrowser "(x,\{vals})=>x.\{n.value}(\{vals})"
 
 export
 funFFIVarArg : OperationName -> Nat -> String
@@ -277,7 +260,7 @@ funFFIVarArg n k =
 
 export
 staticFunFFI : Kind -> OperationName -> Nat -> String
-staticFunFFI o n Z = foreignBrowser #"x=>x.\#{n.value}()"#
+staticFunFFI o n Z = foreignBrowser "x=>x.\{n.value}()"
 staticFunFFI o n k =
   let vs = take k argNames
       vals = fastConcat $ intersperse "," vs
@@ -330,3 +313,11 @@ callbackFFI : Nat -> String
 callbackFFI n =
   let vs = fastConcat $ intersperse "," $ take n argNames
    in foreignBrowser "x=>(\{vs})=>x(\{vs})()"
+
+--------------------------------------------------------------------------------
+--          Pretty Printing
+--------------------------------------------------------------------------------
+
+export %inline
+render80 : Doc (Opts 80) -> String
+render80 = render _

@@ -4,6 +4,7 @@ import Derive.Prelude
 import public Data.SortedMap
 import Text.WebIDL.Types
 
+%default total
 %language ElabReflection
 
 --------------------------------------------------------------------------------

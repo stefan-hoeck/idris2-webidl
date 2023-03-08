@@ -6,11 +6,11 @@ ipkg = "webidl.ipkg"
 [custom.all.parser]
 type   = "git"
 url    = "https://github.com/stefan-hoeck/idris2-parser"
-commit = "latest:errors"
+commit = "latest:main"
 ipkg   = "parser.ipkg"
 
 [custom.all.parser-webidl]
 type   = "git"
 url    = "https://github.com/stefan-hoeck/idris2-parser"
-commit = "latest:errors"
+commit = "latest:main"
 ipkg   = "webidl/parser-webidl.ipkg"

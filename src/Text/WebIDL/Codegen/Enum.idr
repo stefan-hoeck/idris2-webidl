@@ -1,62 +1,66 @@
 module Text.WebIDL.Codegen.Enum
 
+import Data.Refined
 import Data.List
 import Text.WebIDL.Codegen.Util
 
-enum : Enum -> Doc ()
-enum (MkEnum _ name vs) =
-  let (s ::: ss) = map value vs
-      (c ::: cs) = map toDataConstructor (s ::: ss)
-      pn         = pretty name.value
+%default total
 
-      vals = ("=" <++> pretty c) :: map (\sl => ("|" <++> pretty sl)) cs
-
-      code =  vsep [ ""
-                   , "public export"
-                   , "data" <++> pn <++> align (sep vals)
-                   , ""
-                   , "public export"
-                   , "Show" <++> pn <++> "where"
+enum : {opts : _} -> Enum -> Doc opts
+enum (MkEnum _ pn vs) =
+  let (s ::: ss) := map value vs
+      (c ::: cs) := map toDataConstructor (s ::: ss)
+      vals       := the (List $ Doc opts) $ map (\sl => line "| \{sl}") cs
+      sl         := line "data \{pn} =" <++> sep (line "\{c}" :: vals)
+      ml         := vappend (line "data \{pn} =")
+                      (indent 2 $ vsep (indent 2 (line "\{c}") :: vals))
+      code =  vsep [ empty
+                   , line "public export"
+                   , ifMultiline sl ml
+                   , empty
+                   , line "public export"
+                   , line "Show \{pn} where"
                    , indent 2 $ vsep $ zipWith showImpl (c :: cs) (s :: ss)
-                   , ""
-                   , "public export"
-                   , "Eq" <++> pn <++> "where"
-                   , indent 2 $ "(==) = (==) `on` show"
-                   , ""
-                   , "public export"
-                   , "Ord" <++> pn <++> "where"
-                   , indent 2 $ "compare = compare `on` show"
-                   , ""
-                   , "public export"
-                   , typeDecl "read" ("Maybe" <++> pn) [ pretty "String" ]
+                   , empty
+                   , line "public export"
+                   , line "Eq \{pn} where"
+                   , indent 2 $ line "(==) = (==) `on` show"
+                   , empty
+                   , line "public export"
+                   , line "Ord \{pn} where"
+                   , indent 2 $ line "compare = compare `on` show"
+                   , empty
+                   , line "public export"
+                   , typeDecl "read" (line "Maybe \{pn}") [ line "String" ]
 
                    , vsep $ zipWith readImpl (s :: ss) (c :: cs)
-                   , "read _ = Nothing"
-                   , ""
-                   , "public export"
-                   , typeDecl "fromString" pn
-                       [ "(s : String)"
-                       , "{auto 0 _ : IsJust (" <+> pn  <+> ".read s)}"
+                   , line "read _ = Nothing"
+                   , empty
+                   , line "public export"
+                   , typeDecl "fromString" (line "\{pn}")
+                       [ line "(s : String)"
+                       , line "{auto 0 _ : IsJust (\{pn}.read s)}"
                        ]
-                   , "fromString s = fromJust $ read s"
-                   , ""
-                   , "export"
-                   , "ToFFI" <++> pn <++> "String where"
-                   , indent 2 "toFFI = show"
-                   , ""
-                   , "export"
-                   , "FromFFI" <++> pn <++> "String where"
-                   , indent 2 "fromFFI = read"
+                   , line "fromString s = fromJust $ read s"
+                   , empty
+                   , line "export"
+                   , line "ToFFI \{pn} String where"
+                   , indent 2 $ line "toFFI = show"
+                   , empty
+                   , line "export"
+                   , line "FromFFI \{pn} String where"
+                   , indent 2 $ line "fromFFI = read"
                    ]
 
-   in vsep ["", "namespace" <++> pn, indent 2 code]
+   in vsep ["", line "namespace \{pn}", indent 2 code]
 
-  where showImpl : String -> String -> Doc ()
-        showImpl x y = hsep ["show",pretty x,"=",pretty y]
+  where
+    showImpl : String -> String -> Doc opts
+    showImpl x y = line #"show \#{x} = "\#{y}""#
 
-        readImpl : String -> String -> Doc ()
-        readImpl x y = hsep ["read",pretty x,"=","Just", pretty y]
+    readImpl : String -> String -> Doc opts
+    readImpl x y = line #"read "\#{x}" = Just \#{y}"#
 
 export
 enums : List Enum -> String
-enums = section "Enums" . map (show . enum)
+enums = section "Enums" . map (render80 . enum)

@@ -11,16 +11,18 @@ import Text.WebIDL.Codegen.Rules
 import Text.WebIDL.Codegen.Types
 import public Text.WebIDL.Codegen.Util
 
+%default total
+
 --------------------------------------------------------------------------------
 --          Imports
 --------------------------------------------------------------------------------
 
 defImports : CGDomain -> String
-defImports d = #"""
-               import JS
-               import Web.Internal.\#{d.name}Prim
-               import Web.Internal.Types
-               """#
+defImports d = """
+  import JS
+  import Web.Internal.\{d.name}Prim
+  import Web.Internal.Types
+  """
 
 typeImports : String
 typeImports = "import JS"
@@ -30,35 +32,36 @@ typeImports = "import JS"
 --------------------------------------------------------------------------------
 
 extern : CGDomain -> String
-extern d = fastUnlines [ section "Interfaces" $ exts ext name d.ifaces
-                       , section "Dictionaries" $ exts extNoCast name d.dicts
-                       , section "Mixins" $ exts extNoCast name d.mixins
-                       , section "Callbacks" $ exts extNoCast name d.callbacks
-                       ]
-  where extNoCast : String -> String
-        extNoCast s = #"""
-                      export data \#{s} : Type where [external]
+extern d = fastUnlines
+  [ section "Interfaces" $ exts ext name d.ifaces
+  , section "Dictionaries" $ exts extNoCast name d.dicts
+  , section "Mixins" $ exts extNoCast name d.mixins
+  , section "Callbacks" $ exts extNoCast name d.callbacks
+  ]
+  where
+    extNoCast : String -> String
+    extNoCast s = """
+      export data \{s} : Type where [external]
 
-                      export
-                      ToFFI \#{s} \#{s} where toFFI = id
+      export
+      ToFFI \{s} \{s} where toFFI = id
 
-                      export
-                      FromFFI \#{s} \#{s} where fromFFI = Just
-                      """#
+      export
+      FromFFI \{s} \{s} where fromFFI = Just
+      """
 
-        ext : String -> String
-        ext s = extNoCast s ++ "\n\n" ++
-                #"""
-                export
-                SafeCast \#{s} where
-                  safeCast = unsafeCastOnPrototypeName "\#{s}"
-                """#
+    ext : String -> String
+    ext s = extNoCast s ++ "\n\n" ++ """
+      export
+      SafeCast \{s} where
+        safeCast = unsafeCastOnPrototypeName "\{s}"
+      """
 
-        exts :  (f : String -> String)
-             -> (a -> Identifier)
-             -> List a
-             -> List String
-        exts f g = map (("\n" ++) . f) . sort . map (value . g)
+    exts :  (f : String -> String)
+         -> (a -> Identifier)
+         -> List a
+         -> List String
+    exts f g = map (("\n" ++) . f) . sort . map (value . g)
 
 --------------------------------------------------------------------------------
 --          CallbackInterfaces
@@ -140,35 +143,34 @@ primMixins = mixins' (primFunctions . functions)
 
 export
 typedefs : List CGDomain -> String
-typedefs ds =
-      #"""
-      module Web.Internal.Types
+typedefs ds = """
+  module Web.Internal.Types
 
-      import JS
-      import public Web.Internal.AnimationTypes as Types
-      import public Web.Internal.ClipboardTypes as Types
-      import public Web.Internal.CssTypes as Types
-      import public Web.Internal.DomTypes as Types
-      import public Web.Internal.FetchTypes as Types
-      import public Web.Internal.FileTypes as Types
-      import public Web.Internal.GeometryTypes as Types
-      import public Web.Internal.HtmlTypes as Types
-      import public Web.Internal.IndexedDBTypes as Types
-      import public Web.Internal.MediasourceTypes as Types
-      import public Web.Internal.MediastreamTypes as Types
-      import public Web.Internal.PermissionsTypes as Types
-      import public Web.Internal.ServiceworkerTypes as Types
-      import public Web.Internal.StreamsTypes as Types
-      import public Web.Internal.SvgTypes as Types
-      import public Web.Internal.UIEventsTypes as Types
-      import public Web.Internal.UrlTypes as Types
-      import public Web.Internal.VisibilityTypes as Types
-      import public Web.Internal.WebglTypes as Types
-      import public Web.Internal.WebidlTypes as Types
-      import public Web.Internal.XhrTypes as Types
+  import JS
+  import public Web.Internal.AnimationTypes as Types
+  import public Web.Internal.ClipboardTypes as Types
+  import public Web.Internal.CssTypes as Types
+  import public Web.Internal.DomTypes as Types
+  import public Web.Internal.FetchTypes as Types
+  import public Web.Internal.FileTypes as Types
+  import public Web.Internal.GeometryTypes as Types
+  import public Web.Internal.HtmlTypes as Types
+  import public Web.Internal.IndexedDBTypes as Types
+  import public Web.Internal.MediasourceTypes as Types
+  import public Web.Internal.MediastreamTypes as Types
+  import public Web.Internal.PermissionsTypes as Types
+  import public Web.Internal.ServiceworkerTypes as Types
+  import public Web.Internal.StreamsTypes as Types
+  import public Web.Internal.SvgTypes as Types
+  import public Web.Internal.UIEventsTypes as Types
+  import public Web.Internal.UrlTypes as Types
+  import public Web.Internal.VisibilityTypes as Types
+  import public Web.Internal.WebglTypes as Types
+  import public Web.Internal.WebidlTypes as Types
+  import public Web.Internal.XhrTypes as Types
 
-      %default total
-      """# ++ "\n\n" ++ jsTypes ds
+  %default total
+  """ ++ "\n\n" ++ jsTypes ds
 
 --------------------------------------------------------------------------------
 --          Codegen
@@ -176,47 +178,44 @@ typedefs ds =
 --
 export
 types : CGDomain -> String
-types d =
-  #"""
-  module Web.Internal.\#{d.name}Types
+types d = """
+  module Web.Internal.\{d.name}Types
 
-  \#{typeImports}
+  \{typeImports}
 
   %default total
 
-  \#{enums d.enums}
-  \#{extern d}
-  """#
+  \{enums d.enums}
+  \{extern d}
+  """
 
 export
 primitives : CGDomain -> String
-primitives d =
-  #"""
-  module Web.Internal.\#{d.name}Prim
+primitives d = """
+  module Web.Internal.\{d.name}Prim
 
   import JS
   import Web.Internal.Types
 
   %default total
 
-  \#{primIfaces d}
-  \#{primMixins d}
-  \#{primDicts d}
-  \#{primCallbacks d}
-  """#
+  \{primIfaces d}
+  \{primMixins d}
+  \{primDicts d}
+  \{primCallbacks d}
+  """
 
 export
 definitions : CGDomain -> String
-definitions d =
-  #"""
-  module Web.Raw.\#{d.name}
+definitions d = """
+  module Web.Raw.\{d.name}
 
-  \#{defImports d}
+  \{defImports d}
 
   %default total
 
-  \#{Definitions.ifaces d}
-  \#{Definitions.mixins d}
-  \#{Definitions.dicts d}
-  \#{Definitions.callbacks d}
-  """#
+  \{Definitions.ifaces d}
+  \{Definitions.mixins d}
+  \{Definitions.dicts d}
+  \{Definitions.callbacks d}
+  """

@@ -4,15 +4,16 @@ import Control.Monad.Either
 import Data.List.Elem
 import Data.SOP
 import Data.String
-import Data.Validated
 import System
-import System.Console.GetOpt
+import System.GetOpts
 import System.File
 import Text.WebIDL.Codegen as Codegen
 import Text.WebIDL.Encoder
 import Text.WebIDL.Types
 import Text.WebIDL.Parser
-import Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Bernardy
+
+%default total
 
 --------------------------------------------------------------------------------
 --          Command line options
@@ -58,33 +59,33 @@ toProg : Show a => IO (Either a b) -> Prog b
 toProg = toProgWith show
 
 runProg : Prog () -> IO ()
-runProg (MkEitherT p) = do Right _ <- p
-                             | Left e => putStrLn ("Error: " ++ e)
-                           pure ()
+runProg (MkEitherT p) = do
+  Right _ <- p | Left e => putStrLn ("Error: " ++ e)
+  pure ()
 
-fromCodegen : CodegenV a -> Prog a
-fromCodegen = toProgWith (fastUnlines . map err) . pure . toEither
+fromCodegen : Codegen a -> Prog a
+fromCodegen = toProgWith (fastUnlines . map err) . pure
   where err : CodegenErr -> String
         err (CBInterfaceInvalidOps x y k) =
-          #"Invalid number of callback operations in \#{x.domain}: \#{y.value} (\#{show k} operations)"#
+          "Invalid number of callback operations in \{x.domain}: \{y.value} (\{show k} operations)"
         err (RegularOpWithoutName x y) =
-          #"Unnamed regular operation in \#{x.domain}: \#{y.value}"#
+          "Unnamed regular operation in \{x.domain}: \{y.value}"
         err (InvalidGetter x y) =
-          #"Invalid getter in \#{x.domain}: \#{y.value}"#
+          "Invalid getter in \{x.domain}: \{y.value}"
         err (InvalidSetter x y) =
-          #"Invalid setter in \#{x.domain}: \#{y.value}"#
+          "Invalid setter in \{x.domain}: \{y.value}"
         err (UnresolvedAlias x y) =
-          #"Unresolved alias in \#{x.domain}: \#{y.value}"#
-        err (AnyInUnion x) = #"\"Any\" type in a union type in \#{x.domain}"#
-        err (PromiseInUnion x) = #"\"Promise\" type in a union type in \#{x.domain}"#
-        err (NullableAny x) = #"Nullable \"Any\" type in \#{x.domain}"#
-        err (NullablePromise x) = #"Nullable \"Promise\" type in \#{x.domain}"#
-        err (InvalidConstType x) = #"Invalid constant type in \#{x.domain}"#
-
+          "Unresolved alias in \{x.domain}: \{y.value}"
+        err (AnyInUnion x) = "\"Any\" type in a union type in \{x.domain}"
+        err (PromiseInUnion x) = "\"Promise\" type in a union type in \{x.domain}"
+        err (NullableAny x) = "Nullable \"Any\" type in \{x.domain}"
+        err (NullablePromise x) = "Nullable \"Promise\" type in \{x.domain}"
+        err (InvalidConstType x) = "Invalid constant type in \{x.domain}"
 
 writeDoc : String -> String -> Prog ()
 writeDoc f doc = toProg $ writeFile f doc
 
+covering
 loadDef : String -> Prog (String,PartsAndDefs)
 loadDef f = let mn = moduleName
                    . head
@@ -118,20 +119,22 @@ logAttributes = traverse_ (putStrLn . extAttribute) . attributes
 --          Main Function
 --------------------------------------------------------------------------------
 
+covering
 run : List String -> Prog ()
-run args = do config <- toProg (pure $ applyArgs args)
-              ds     <- toDomains <$> traverse loadDef config.files
+run args = do
+  config <- toProg (pure $ applyArgs args)
+  ds     <- toDomains <$> traverse loadDef config.files
 
-              let e = env config.maxInheritance ds
+  let e = env config.maxInheritance ds
 
-              doms   <- fromCodegen (traverse (domain e) ds)
+  doms   <- fromCodegen (traverse (domain e) ds)
 
 --              logAttributes ds
-              traverse_ (codegen config) doms
-              typesGen config doms
+  traverse_ (codegen config) doms
+  typesGen config doms
 
+covering
 main : IO ()
-main = do (pn :: args) <- getArgs
-                       |  Nil => putStrLn "Missing executable name. Aborting..."
-
-          runProg (run args)
+main = do
+  (pn :: args) <- getArgs | Nil => die "Missing executable name. Aborting..."
+  runProg (run args)

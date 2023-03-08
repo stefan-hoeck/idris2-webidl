@@ -7,6 +7,8 @@ import Text.WebIDL.Codegen.Types
 import Text.WebIDL.Codegen.Util
 import Text.WebIDL.Types
 
+%default total
+
 --------------------------------------------------------------------------------
 --          Subtyping
 --------------------------------------------------------------------------------
@@ -16,15 +18,14 @@ jsType : Identifier -> Supertypes -> String
 jsType n (MkSupertypes parents ms) =
   let mixins = sortedNubOn id ms
 
-   in show $ vsep [ ""
-                  , "public export"
-                  , "JSType" <++> pretty' n.value <++> "where"
-                  , "  parents = " <++>
-                      prettyList (map (pretty . value) parents)
-                  , ""
-                  , "  mixins = " <++>
-                      prettyList (map (pretty . value) mixins)
-                  ]
+   in render80 $ vsep
+        [ empty
+        , line "public export"
+        , line "JSType \{n} where"
+        , indent 2 $ prettyCon Open "parents =" [list (map (line . value) parents)]
+        , empty
+        , indent 2 $ prettyCon Open "mixins =" [list (map (line . value) mixins)]
+        ]
 
 --------------------------------------------------------------------------------
 --          Constants
@@ -32,14 +33,16 @@ jsType n (MkSupertypes parents ms) =
 
 export
 constants : List CGConst -> List String
-constants = map (show . const) . sortBy (comparing name)
-  where const : CGConst -> Doc ()
-        const (MkConst t n v) =
-          indent 2 $ vsep [ ""
-                          , "public export"
-                          , pretty n.value <++> ":" <++> constTpe t
-                          , pretty n.value <++> "=" <++> pretty v
-                          ]
+constants = map (render80 . const) . sortBy (comparing name)
+  where
+    const : {opts : _} -> CGConst -> Doc opts
+    const (MkConst t n v) =
+      indent 2 $ vsep
+        [ empty
+        , line "public export"
+        , line "\{n} :" <++> constTpe t
+        , line "\{n} =" <++> prettyConst v
+        ]
 
 --------------------------------------------------------------------------------
 --          Callback Conversion
@@ -59,73 +62,77 @@ callback (MkCallback n _ t as) =
 --          Attribute
 --------------------------------------------------------------------------------
 
-attrImpl:  (msg : Doc())
-        -> (set : Doc())
-        -> (get : Doc())
-        -> (app : Doc())
-        -> (arg : CGArg)
-        -> (Doc (), Doc())
+attrImpl:
+     {opts : _}
+  -> (msg : Doc opts)
+  -> (set : Doc opts)
+  -> (get : Doc opts)
+  -> (app : Doc opts)
+  -> (arg : CGArg)
+  -> (Doc opts, Doc opts)
 attrImpl msg s g a (Mandatory _ (Simple $ MaybeNull x)) =
-  ( "Attribute False Maybe" <++> ret App (Simple $ NotNull x)
-  , "fromNullablePrim" <++> align (sep [msg,s,g,a])
+  ( line "Attribute False Maybe" <++> ret App (Simple $ NotNull x)
+  , prettyCon Open "fromNullablePrim" [msg,s,g,a]
   )
 
 attrImpl msg s g a (Mandatory _ (Union $ MaybeNull x)) =
-  ( "Attribute False Maybe" <++> ret App (Union $ NotNull x)
-  , "fromNullablePrim" <++> align (sep [msg,s,g,a])
+  ( line "Attribute False Maybe" <++> ret App (Union $ NotNull x)
+  , prettyCon Open "fromNullablePrim" [msg,s,g,a]
   )
 
 attrImpl msg s g a (Mandatory _ t) =
-  ( "Attribute True I" <++> ret App t
-  , "fromPrim" <++> align (sep [msg,s,g,a])
+  ( line "Attribute True I" <++> ret App t
+  , prettyCon Open "fromPrim" [msg,s,g,a]
   )
 
 attrImpl msg s g a (VarArg _ t) =
-  ( "Attribute True I" <++> prettyCon App "VarArg" [ffi App t]
-  , "fromPrim" <++> align (sep [msg,s,g,a])
+  ( line "Attribute True I" <++> prettyCon App "VarArg" [ffi App t]
+  , prettyCon Open "fromPrim" [msg,s,g,a]
   )
 
 attrImpl msg s g a (Optional _ t d) =
    case deflt (safeCast t) App t d of
       Nothing  =>
-        ( "Attribute False Optional" <++> ret App t
-        , "fromUndefOrPrimNoDefault" <++> align (sep [msg,s,g,a])
+        ( line "Attribute False Optional" <++> ret App t
+        , prettyCon Open "fromUndefOrPrimNoDefault" [msg,s,g,a]
         )
       Just x =>
-        ( "Attribute True Optional" <++> ret App t
-        , "fromUndefOrPrim" <++> align (sep [msg,s,g,x,a])
+        ( line "Attribute True Optional" <++> ret App t
+        , prettyCon Open "fromUndefOrPrim" [msg,s,g,x,a]
         )
 
-attrRW :  Nat
-       -> AttributeName
-       -> Kind
-       -> CGArg
-       -> ReturnType
-       -> String
+attrRW :
+     Nat
+  -> AttributeName
+  -> Kind
+  -> CGArg
+  -> ReturnType
+  -> String
 attrRW k n o t rt =
-  let implName   = attrGetter k n
-      primGet    = pretty' $ primAttrGetter k n
-      primSet    = pretty' $ primAttrSetter k n
-      msg        = pretty' $ namespacedIdent o (fromString $ "get" ++ n.value)
-      po         = pretty' $ kindToString o
-      up         = if isParent o
-                      then "(v :> " <+> po <+> ")"
-                      else "v"
+  let implName := attrGetter k n
+      primGet  := line "\{primAttrGetter k n}"
+      primSet  := line "\{primAttrSetter k n}"
+      msg      := namespacedIdent o (fromString $ "get" ++ n.value)
+      po       := kindToString o
+      up       := if isParent o then "(v :> \{po})" else "v"
 
-      (tpe,impl) = attrImpl msg primGet primSet up t
-      funTpe     = if isParent o
-                      then typeDeclWithImplicits
-                           implName
-                           tpe
-                           ["(0 _ : JSType t)"]
-                           ["{auto 0 _ : Elem" <++> po <++> "(Types t)}","t"]
-                      else typeDecl implName tpe [po]
-
-   in show . indent 2 $ vsep [ ""
-                             , "export"
-                             , funTpe
-                             , hsep [pretty' implName,"v =",impl]
+      (tpe,impl) := attrImpl (line msg) primGet primSet (line up) t
+      funTpe     := if isParent o
+                      then typeDecl
+                             implName
+                             tpe
+                             [ line "{auto 0 _ : JSType t}"
+                             , line "{auto 0 _ : Elem \{po} (Types t)}"
+                             , line "t"
                              ]
+                      else typeDecl implName tpe [line "\{po}"]
+
+   in render80 . indent 2 $ vsep
+        [ empty
+        , line "export"
+        , funTpe
+        , line "\{implName} v =" <++> impl
+        ]
 
 --------------------------------------------------------------------------------
 --          Functions

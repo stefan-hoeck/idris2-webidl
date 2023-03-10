@@ -1,4 +1,6 @@
 // Extracted from https://www.w3.org/TR/uievents/#idl-index
+// Some stuff for MouseEvent was removed because it is handled
+// in cssomview.webidl
 
 [Constructor(DOMString type, optional UIEventInit eventInitDict), Exposed=Window]
 interface UIEvent : Event {
@@ -22,11 +24,6 @@ dictionary FocusEventInit : UIEventInit {
 
 [Constructor(DOMString type, optional MouseEventInit eventInitDict), Exposed=Window]
 interface MouseEvent : UIEvent {
-  readonly attribute long screenX;
-  readonly attribute long screenY;
-  readonly attribute long clientX;
-  readonly attribute long clientY;
-
   readonly attribute boolean ctrlKey;
   readonly attribute boolean shiftKey;
   readonly attribute boolean altKey;
@@ -41,11 +38,6 @@ interface MouseEvent : UIEvent {
 };
 
 dictionary MouseEventInit : EventModifierInit {
-  long screenX = 0;
-  long screenY = 0;
-  long clientX = 0;
-  long clientY = 0;
-
   short button = 0;
   unsigned short buttons = 0;
   EventTarget? relatedTarget = null;

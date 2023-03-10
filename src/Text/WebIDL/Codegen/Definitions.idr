@@ -150,6 +150,7 @@ typedefs ds = """
   import public Web.Internal.AnimationTypes as Types
   import public Web.Internal.ClipboardTypes as Types
   import public Web.Internal.CssTypes as Types
+  import public Web.Internal.CssomviewTypes as Types
   import public Web.Internal.DomTypes as Types
   import public Web.Internal.FetchTypes as Types
   import public Web.Internal.FileTypes as Types

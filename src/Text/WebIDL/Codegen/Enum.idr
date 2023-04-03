@@ -36,13 +36,6 @@ enum (MkEnum _ pn vs) =
                    , vsep $ zipWith readImpl (s :: ss) (c :: cs)
                    , line "read _ = Nothing"
                    , empty
-                   , line "public export"
-                   , typeDecl "fromString" (line "\{pn}")
-                       [ line "(s : String)"
-                       , line "{auto 0 _ : IsJust (\{pn}.read s)}"
-                       ]
-                   , line "fromString s = fromJust $ read s"
-                   , empty
                    , line "export"
                    , line "ToFFI \{pn} String where"
                    , indent 2 $ line "toFFI = show"

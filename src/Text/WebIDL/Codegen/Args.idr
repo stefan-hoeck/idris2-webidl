@@ -20,6 +20,7 @@ public export
 record PrettyArg (opts : LayoutOpts) where
   constructor MkPrettyArg
   name  : ArgumentName
+  opt   : Bool
   doc   : Doc opts
 
 export
@@ -208,7 +209,9 @@ parameters {opts : LayoutOpts}
   argTypeAPI k p (Optional _ t _) = prettyCon p "Optional" [api (Just k) App t]
 
   arg : PrettyArg opts -> Doc opts
-  arg a = parens $ hsep [line "\{argIdent a}", ":", a.doc]
+  arg a =
+    if a.opt then braces $ hsep [line "default Undef \{argIdent a}", ":", a.doc]
+    else parens $ hsep [line "\{argIdent a}", ":", a.doc]
 
   prettyArgFFI : CGArg -> Doc opts
   prettyArgFFI = argTypeFFI Open
@@ -216,7 +219,7 @@ parameters {opts : LayoutOpts}
   prettyArgAPI : Nat -> CGArg -> PrettyArg opts
   prettyArgAPI k a =
     let doc := argTypeAPI k Open a
-     in MkPrettyArg (argName a) doc
+     in MkPrettyArg (argName a) (isOptional a) doc
 
 --------------------------------------------------------------------------------
 --          Functions
@@ -303,13 +306,14 @@ fun' :
   -> (name       : IdrisIdent)
   -> (prim       : IdrisIdent)
   -> (args       : Args)
-  -> (undefs     : List String)
   -> (returnType : ReturnType)
   -> List (Doc opts)
-fun' ns name prim as us rt =
-  let vs      := take (length as) (unShadowingArgNames name)
+fun' ns name prim as rt =
+  let (os,ms) := partition isOptional as
 
-      appVs   := zipWith adjVal vs as ++ map line us
+      vs      := take (length ms) (unShadowingArgNames name)
+
+      appVs   := zipWith adjVal vs ms ++ map adjOpt os
 
       primNS  := "\{kindToString ns}.\{prim}"
 
@@ -347,6 +351,11 @@ fun' ns name prim as us rt =
         (False,Just Opt)    => parens ("optUp" <++> line v)
         (False,Just OptMay) => parens ("omyUp" <++> line v)
 
+    adjOpt : CGArg -> Doc opts
+    adjOpt a =
+      let ii := the IdrisIdent (fromString . value $ argName a)
+       in adjVal "\{ii}" a
+
 export
 fun :
      (ns   : Kind)
@@ -356,19 +365,5 @@ fun :
   -> ReturnType
   -> String
 fun ns name prim as t =
-  let funImpl       = fun' ns name prim as [] t
-
-      -- function without optional args
-      as2      = filter (not . isOptional) as
-      undefs   = List.replicate (length as `minus` length as2) "undef"
-      funImpl2 = if null undefs then []
-                 else fun' ns name2 prim as2 undefs t
-
-   in render80 . indent 2 $ vsep (funImpl ++ funImpl2)
-
-  where
-    name2 : IdrisIdent
-    name2 = case name of
-      II v         => fromString $ v ++ "'"
-      Prim v       => Prim (v ++ "'")
-      Underscore v => fromString $ v ++ "'"
+  let funImpl       = fun' ns name prim as t
+   in render80 . indent 2 $ vsep funImpl

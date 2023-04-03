@@ -356,13 +356,17 @@ fun :
   -> ReturnType
   -> String
 fun ns name prim as t =
-  let funImpl       = fun' ns name prim as [] t
+  let -- mandatory arguments
+      as2      := filter (not . isOptional) as
+      undefs   := List.replicate (length as `minus` length as2) "undef"
+
+      mainName := if null undefs then name else name2
+
+      funImpl  := fun' ns mainName prim as [] t
 
       -- function without optional args
-      as2      = filter (not . isOptional) as
-      undefs   = List.replicate (length as `minus` length as2) "undef"
       funImpl2 = if null undefs then []
-                 else fun' ns name2 prim as2 undefs t
+                 else fun' ns name prim as2 undefs t
 
    in render80 . indent 2 $ vsep (funImpl ++ funImpl2)
 

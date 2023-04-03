@@ -81,12 +81,12 @@ attrImpl msg s g a (Mandatory _ (Union $ MaybeNull x)) =
   )
 
 attrImpl msg s g a (Mandatory _ t) =
-  ( line "Attribute True I" <++> ret App t
+  ( line "Attribute True Prelude.id" <++> ret App t
   , prettyCon Open "fromPrim" [msg,s,g,a]
   )
 
 attrImpl msg s g a (VarArg _ t) =
-  ( line "Attribute True I" <++> prettyCon App "VarArg" [ffi App t]
+  ( line "Attribute True Prelude.id" <++> prettyCon App "VarArg" [ffi App t]
   , prettyCon Open "fromPrim" [msg,s,g,a]
   )
 

@@ -101,7 +101,7 @@ parameters {opts : LayoutOpts}
 
   unionAPI : Prec -> List1 SimpleType -> Doc opts
   unionAPI p (h ::: t) =
-    prettyCon p "NS I" [list $ map (simpleAPI Nothing Open) (h::t)]
+    prettyCon p "HSum" [list $ map (simpleAPI Nothing Open) (h::t)]
 
   nullableAPI :  (Prec -> a -> Doc opts) -> Prec -> Nullable a -> Doc opts
   nullableAPI f p (MaybeNull x) = prettyCon p "Maybe" [f App x]

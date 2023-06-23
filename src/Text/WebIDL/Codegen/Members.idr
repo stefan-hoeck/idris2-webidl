@@ -13,19 +13,19 @@ import Text.WebIDL.Types
 --          Subtyping
 --------------------------------------------------------------------------------
 
-export
-jsType : Identifier -> Supertypes -> String
-jsType n (MkSupertypes parents ms) =
-  let mixins = sortedNubOn id ms
+singleCast : Identifier -> Identifier -> String
+singleCast x y =
+  render80 $ vsep
+    [ empty
+    , line "export %inline"
+    , line "Cast \{x} \{y} where cast = believe_me"
+    ]
 
-   in render80 $ vsep
-        [ empty
-        , line "public export"
-        , line "JSType \{n} where"
-        , indent 2 $ prettyCon Open "parents =" [list (map (line . value) parents)]
-        , empty
-        , indent 2 $ prettyCon Open "mixins =" [list (map (line . value) mixins)]
-        ]
+export
+casts : Identifier -> Supertypes -> List String
+casts n (MkSupertypes parents ms) =
+  let mixins = sortedNubOn id ms
+   in map (singleCast n) (parents ++ mixins)
 
 --------------------------------------------------------------------------------
 --          Constants
@@ -39,7 +39,7 @@ constants = map (render80 . const) . sortBy (comparing name)
     const (MkConst t n v) =
       indent 2 $ vsep
         [ empty
-        , line "public export"
+        , line "export"
         , line "\{n} :" <++> constTpe t
         , line "\{n} =" <++> prettyConst v
         ]
@@ -114,15 +114,14 @@ attrRW k n o t rt =
       primSet  := line "\{primAttrSetter k n}"
       msg      := namespacedIdent o (fromString $ "get" ++ n.value)
       po       := kindToString o
-      up       := if isParent o then "(v :> \{po})" else "v"
+      up       := if isParent o then "(cast {to = \{po}} v)" else "v"
 
       (tpe,impl) := attrImpl (line msg) primGet primSet (line up) t
       funTpe     := if isParent o
                       then typeDecl
                              implName
                              tpe
-                             [ line "{auto 0 _ : JSType t}"
-                             , line "{auto 0 _ : Elem \{po} (Types t)}"
+                             [ line "{auto _ : Cast t \{po}}"
                              , line "t"
                              ]
                       else typeDecl implName tpe [line "\{po}"]

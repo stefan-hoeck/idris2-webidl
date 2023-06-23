@@ -18,19 +18,19 @@ enum (MkEnum _ pn vs) =
                    , line "public export"
                    , ifMultiline sl ml
                    , empty
-                   , line "public export"
+                   , line "export"
                    , line "Show \{pn} where"
                    , indent 2 $ vsep $ zipWith showImpl (c :: cs) (s :: ss)
                    , empty
-                   , line "public export"
+                   , line "export"
                    , line "Eq \{pn} where"
                    , indent 2 $ line "(==) = (==) `on` show"
                    , empty
-                   , line "public export"
+                   , line "export"
                    , line "Ord \{pn} where"
                    , indent 2 $ line "compare = compare `on` show"
                    , empty
-                   , line "public export"
+                   , line "export"
                    , typeDecl "read" (line "Maybe \{pn}") [ line "String" ]
 
                    , vsep $ zipWith readImpl (s :: ss) (c :: cs)

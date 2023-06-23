@@ -30,14 +30,14 @@ data Kind : Type where
 
 %runElab derive "Kind" [Eq,Show]
 
-public export
+export
 isParent : Kind -> Bool
 isParent (KDictionary _)  = True
 isParent (KInterface b _) = b
 isParent (KMixin _)       = True
 isParent _                = False
 
-public export
+export
 ident : Kind -> Identifier
 ident (KAlias x)        = x
 ident (KCallback x)     = x
@@ -47,20 +47,20 @@ ident (KInterface _ x)  = x
 ident (KMixin x)        = x
 ident (KOther x)        = x
 
-public export
+export
 kindToString : Kind -> String
 kindToString = value . ident
 
 public export
 data Wrapper = Direct | Opt | May | OptMay
 
-public export
+export
 opt : Wrapper -> Wrapper
 opt Direct = Opt
 opt May    = OptMay
 opt i      = i
 
-public export
+export
 may : Wrapper -> Wrapper
 may Direct = May
 may i      = i
@@ -196,23 +196,23 @@ namespace SimpleType
 
 namespace CGType
 
-  public export
+  export
   simple : SimpleType -> CGType
   simple = Simple . NotNull
 
-  public export
+  export
   unchangeable : String -> CGType
   unchangeable = simple . Unchangeable
 
-  public export
+  export
   iface : Bool -> Identifier -> CGType
   iface b = simple . Interface b
 
-  public export
+  export
   mixin : Identifier -> CGType
   mixin = simple . Mixin
 
-  public export
+  export
   dict : Identifier -> CGType
   dict = simple . Dictionary
 
@@ -282,18 +282,18 @@ data ReturnType : Type where
   Def      : CGType -> ReturnType
 
 ||| Checks if the return type is `Undefined`.
-public export
+export
 isUndefined : ReturnType -> Bool
 isUndefined Undefined = True
 isUndefined _         = False
 
 namespace ReturnType
 
-  public export
+  export
   simple : SimpleType -> ReturnType
   simple = Def . simple
 
-  public export
+  export
   unchangeable : String -> ReturnType
   unchangeable = Def . unchangeable
 

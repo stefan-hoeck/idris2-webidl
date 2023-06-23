@@ -227,21 +227,20 @@ parameters {opts : LayoutOpts}
 
   funType : (name : IdrisIdent) -> ReturnType -> Args -> Doc opts
   funType n t as =
-     typeDecl n (returnTypeAPI t) (run 0 as [<] [<] [<])
+     typeDecl n (returnTypeAPI t) (run 0 as [<] [<])
     where
-      run : Nat -> Args -> (imp,aut,expl : SnocList $ Doc opts) -> List (Doc opts)
-      run _ []      is aus es = is <>> aus <>> es <>> []
-      run k (a::as) is aus es = case CGArg.inheritance a of
+      run : Nat -> Args -> (aut,expl : SnocList $ Doc opts) -> List (Doc opts)
+      run _ []      aus es = aus <>> es <>> []
+      run k (a::as) aus es = case CGArg.inheritance a of
         Just (n,_) =>
           let k2  := S k
               pk2 := "t\{show k2}"
-              impl := line "{auto 0 _ : JSType \{pk2}}"
-              aut  := line "{auto 0 _ : Elem \{n} (Types \{pk2})}"
+              aut  := line "{auto _ : Cast \{pk2} \{n}}"
               expl = arg (prettyArgAPI k2 a)
-           in run k2 as (is :< impl) (aus :< aut) (es :< expl)
+           in run k2 as (aus :< aut) (es :< expl)
         Nothing =>
           let expl := arg (prettyArgAPI k a)
-           in run (S k) as is aus (es :< expl)
+           in run (S k) as aus (es :< expl)
 
 export
 callbackFFI :
@@ -342,7 +341,7 @@ fun' ns name prim as us rt =
       case (sameType a, snd <$> inheritance a) of
         (True,_)            => line v
         (False,Nothing)     => parens ("toFFI" <++> line v)
-        (False,Just Direct) => parens ("up" <++> line v)
+        (False,Just Direct) => parens ("cast"  <++> line v)
         (False,Just May)    => parens ("mayUp" <++> line v)
         (False,Just Opt)    => parens ("optUp" <++> line v)
         (False,Just OptMay) => parens ("omyUp" <++> line v)

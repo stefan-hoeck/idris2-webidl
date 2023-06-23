@@ -89,8 +89,8 @@ jsTypes ds =
   let ifs  = sortBy (comparing name) (ds >>= ifaces)
       dics = sortBy (comparing name) (ds >>= dicts)
    in section "Inheritance" $
-        map (\i => jsType i.name i.super) ifs ++
-        map (\d => jsType d.name d.super) dics
+        (ifs >>= \i => casts i.name i.super) ++
+        (dics >>= \d => casts d.name d.super)
 
 --------------------------------------------------------------------------------
 --          Interfaces

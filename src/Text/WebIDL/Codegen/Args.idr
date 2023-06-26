@@ -253,7 +253,7 @@ callbackFFI :
 callbackFFI o n impl as t =
   let cbTpe  := functionTypeOnly (returnTypeFFI' "IO" t) (map prettyArgFFI as)
       retTpe := line "PrimIO \{o}"
-   in render80 . indent 2 $ vsep
+   in render80 $ vsep
         [ line ""
         , line "export"
         , line "\{impl}"
@@ -275,7 +275,7 @@ callbackAPI o n prim as t =
       retTpe = line "JSIO \{o}"
       impl   = line "\{n} cb = primJS $ \{prim} cb"
 
-   in render80 . indent 2 $ vsep
+   in render80 $ vsep
         [ line ""
         , line "export"
         , typeDecl n retTpe [cbTpe]
@@ -289,7 +289,7 @@ funFFI :
   -> (args : Args)
   -> (tpe  : ReturnType)
   -> String
-funFFI n impl as t = render80 . indent 2 $
+funFFI n impl as t = render80 $
   vsep [line "", line "export", line impl, funTypeFFI n t as ]
 
 export
@@ -367,7 +367,7 @@ fun ns name prim as t =
       funImpl2 = if null undefs then []
                  else fun' ns name prim as2 undefs t
 
-   in render80 . indent 2 $ vsep (funImpl ++ funImpl2)
+   in render80 $ vsep (funImpl ++ funImpl2)
 
   where
     name2 : IdrisIdent

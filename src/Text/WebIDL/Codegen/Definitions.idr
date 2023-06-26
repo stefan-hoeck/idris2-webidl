@@ -17,206 +17,101 @@ import public Text.WebIDL.Codegen.Util
 --          Imports
 --------------------------------------------------------------------------------
 
-defImports : CGDomain -> String
-defImports d = """
-  import JS
-  import Web.Internal.\{d.name}Prim
-  import Web.Internal.Types
+export
+imports : SortedSet Identifier -> String
+imports is =
+  let ds := toList {t = SortedSet} is
+   in fastUnlines $ "import JS" :: map (("import Web.Types." ++) . value) ds
+
+--------------------------------------------------------------------------------
+--          Type Declarations
+--------------------------------------------------------------------------------
+
+extNoCast : Identifier -> String
+extNoCast s = """
+  export data \{s} : Type where [external]
+
+  export
+  ToFFI \{s} \{s} where toFFI = id
+
+  export
+  FromFFI \{s} \{s} where fromFFI = Just
   """
 
-typeImports : String
-typeImports = "import JS"
+extWithCast : Identifier -> String
+extWithCast s = extNoCast s ++ "\n\n" ++ """
+  export
+  SafeCast \{s} where
+    safeCast = unsafeCastOnPrototypeName "\{s}"
+  """
 
---------------------------------------------------------------------------------
---          Data Declarations
---------------------------------------------------------------------------------
+ext : (withCast : Bool) -> Identifier -> String
+ext False = extNoCast
+ext True  = extWithCast
 
-extern : CGDomain -> String
-extern d = fastUnlines
-  [ section "Interfaces" $ exts ext name d.ifaces
-  , section "Dictionaries" $ exts extNoCast name d.dicts
-  , section "Mixins" $ exts extNoCast name d.mixins
-  , section "Callbacks" $ exts extNoCast name d.callbacks
-  ]
-  where
-    extNoCast : String -> String
-    extNoCast s = """
-      export data \{s} : Type where [external]
+typeFile : Identifier -> Maybe Supertypes -> (withCast : Bool) -> String
+typeFile n super b =
+  """
+  module Web.Types.\{n}
 
-      export
-      ToFFI \{s} \{s} where toFFI = id
-
-      export
-      FromFFI \{s} \{s} where fromFFI = Just
-      """
-
-    ext : String -> String
-    ext s = extNoCast s ++ "\n\n" ++ """
-      export
-      SafeCast \{s} where
-        safeCast = unsafeCastOnPrototypeName "\{s}"
-      """
-
-    exts :  (f : String -> String)
-         -> (a -> Identifier)
-         -> List a
-         -> List String
-    exts f g = map (("\n" ++) . f) . sort . map (value . g)
-
---------------------------------------------------------------------------------
---          CallbackInterfaces
---------------------------------------------------------------------------------
-
-cbacks : (CGCallback -> List String) -> CGDomain -> String
-cbacks f = section "Callbacks" . map ns . sortBy (comparing name) . callbacks
-  where ns : CGCallback -> String
-        ns i = namespaced i.name (f i)
-
-callbacks : CGDomain -> String
-callbacks = cbacks go
-  where go : CGCallback -> List String
-        go cb = callback cb :: constants cb.constants
-
-primCallbacks : CGDomain -> String
-primCallbacks = cbacks (pure . primCallback)
-
---------------------------------------------------------------------------------
---          JSType
---------------------------------------------------------------------------------
-
-jsTypes : List CGDomain -> String
-jsTypes ds =
-  let ifs  = sortBy (comparing name) (ds >>= ifaces)
-      dics = sortBy (comparing name) (ds >>= dicts)
-   in section "Inheritance" $
-        (ifs >>= \i => casts i.name i.super) ++
-        (dics >>= \d => casts d.name d.super)
-
---------------------------------------------------------------------------------
---          Interfaces
---------------------------------------------------------------------------------
-
-ifaces' : (CGIface -> List String) -> CGDomain -> String
-ifaces' f = section "Interfaces" . map ns . sortBy (comparing name) . ifaces
-  where ns : CGIface -> String
-        ns i = namespaced i.name (f i)
-
-ifaces : CGDomain -> String
-ifaces = ifaces' $ \(MkIface n s cs fs) => constants cs ++ functions fs
-
-primIfaces : CGDomain -> String
-primIfaces = ifaces' (primFunctions . functions)
-
---------------------------------------------------------------------------------
---          Dictionaries
---------------------------------------------------------------------------------
-
-dicts' : (CGDict -> List String) -> CGDomain -> String
-dicts' f = section "Dictionaries" . map ns . sortBy (comparing name) . dicts
-  where ns : CGDict -> String
-        ns d = namespaced d.name (f d)
-
-dicts : CGDomain -> String
-dicts = dicts' $ \(MkDict n s fs) => functions fs
-
-primDicts : CGDomain -> String
-primDicts = dicts' (primFunctions . functions)
-
---------------------------------------------------------------------------------
---          Mixins
---------------------------------------------------------------------------------
-
-mixins' : (CGMixin -> List String) -> CGDomain -> String
-mixins' f = section "Mixins" . map ns . sortBy (comparing name) . mixins
-  where ns : CGMixin -> String
-        ns m = namespaced m.name (f m)
-
-mixins : CGDomain -> String
-mixins = mixins' $ \(MkMixin n cs fs) => constants cs ++ functions fs
-
-primMixins : CGDomain -> String
-primMixins = mixins' (primFunctions . functions)
-
---------------------------------------------------------------------------------
---          Typedefs
---------------------------------------------------------------------------------
-
-export
-typedefs : List CGDomain -> String
-typedefs ds = """
-  module Web.Internal.Types
-
-  import JS
-  import public Web.Internal.AnimationTypes as Types
-  import public Web.Internal.ClipboardTypes as Types
-  import public Web.Internal.CssTypes as Types
-  import public Web.Internal.CssomviewTypes as Types
-  import public Web.Internal.DomTypes as Types
-  import public Web.Internal.FetchTypes as Types
-  import public Web.Internal.FileTypes as Types
-  import public Web.Internal.GeometryTypes as Types
-  import public Web.Internal.HtmlTypes as Types
-  import public Web.Internal.IndexedDBTypes as Types
-  import public Web.Internal.MediasourceTypes as Types
-  import public Web.Internal.MediastreamTypes as Types
-  import public Web.Internal.PermissionsTypes as Types
-  import public Web.Internal.ServiceworkerTypes as Types
-  import public Web.Internal.StreamsTypes as Types
-  import public Web.Internal.SvgTypes as Types
-  import public Web.Internal.UIEventsTypes as Types
-  import public Web.Internal.UrlTypes as Types
-  import public Web.Internal.VisibilityTypes as Types
-  import public Web.Internal.WebglTypes as Types
-  import public Web.Internal.WebidlTypes as Types
-  import public Web.Internal.XhrTypes as Types
-
-  %default total
-  """ ++ "\n\n" ++ jsTypes ds
-
---------------------------------------------------------------------------------
---          Codegen
---------------------------------------------------------------------------------
---
-export
-types : CGDomain -> String
-types d = """
-  module Web.Internal.\{d.name}Types
-
-  \{typeImports}
+  \{imports (delete n $ depends super)}
 
   %default total
 
-  \{enums d.enums}
-  \{extern d}
+  \{ext b n}
+
+  \{maybe neutral (fastUnlines . casts n) super}
   """
 
 export
-primitives : CGDomain -> String
-primitives d = """
-  module Web.Internal.\{d.name}Prim
+dictType : CGDict -> String
+dictType d = typeFile d.name (Just d.super) False
 
-  import JS
-  import Web.Internal.Types
+export
+ifaceType : CGIface -> String
+ifaceType d = typeFile d.name (Just d.super) True
+
+export
+mixinType : CGMixin -> String
+mixinType d = typeFile d.name Nothing False
+
+export
+callbackType : CGCallback -> String
+callbackType d = typeFile d.name Nothing False
+
+
+--------------------------------------------------------------------------------
+--          Prim Declarations
+--------------------------------------------------------------------------------
+
+funFile : Identifier -> SortedSet Identifier -> List String -> String
+funFile n ds ss =
+  """
+  module Web.Raw.\{n}
+
+  \{imports ds}
 
   %default total
 
-  \{primIfaces d}
-  \{primMixins d}
-  \{primDicts d}
-  \{primCallbacks d}
+  \{fastUnlines ss}
   """
 
 export
-definitions : CGDomain -> String
-definitions d = """
-  module Web.Raw.\{d.name}
+dict : CGDict -> String
+dict d@(MkDict n _ fs) =
+  funFile n (depends d) (primFunctions fs ++ functions fs)
 
-  \{defImports d}
+export
+iface : CGIface -> String
+iface d@(MkIface n _ cs fs) =
+  funFile n (depends d) (constants cs ++ primFunctions fs ++ functions fs)
 
-  %default total
+export
+mixin : CGMixin -> String
+mixin d@(MkMixin n cs fs) =
+  funFile n (depends d) (constants cs ++ primFunctions fs ++ functions fs)
 
-  \{Definitions.ifaces d}
-  \{Definitions.mixins d}
-  \{Definitions.dicts d}
-  \{Definitions.callbacks d}
-  """
+export
+callback : CGCallback -> String
+callback d@(MkCallback n cs _ _) =
+  funFile n (depends d) (primCallback d :: Members.callback d :: constants cs)

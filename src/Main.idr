@@ -1,12 +1,12 @@
 module Main
 
-import Control.Monad.Either
+import Control.RIO.App
+import Control.RIO.File
 import Data.List.Elem
 import Data.SOP
 import Data.String
 import System
 import System.GetOpts
-import System.File
 import Text.WebIDL.Codegen as Codegen
 import Text.WebIDL.Encoder
 import Text.WebIDL.Types
@@ -20,121 +20,131 @@ import Text.PrettyPrint.Bernardy
 --------------------------------------------------------------------------------
 
 record Config where
+  [noHints]
   constructor MkConfig
-  outDir         : String
+  outDir         : Path Abs
   maxInheritance : Nat
-  files          : List String
+  files          : List (File Abs)
 
-init : List String -> Config
-init = MkConfig "../dom/src" 100
+init : Path Abs -> List (File Abs) -> Config
+init cd = MkConfig (cd </> "../dom/modular/src/Web") 100
 
-setOutDir : String -> Config -> Either (List String) Config
-setOutDir s = Right . { outDir := s }
+setOutDir : (cd : Path Abs) -> String -> Config -> Either (List String) Config
+setOutDir cd s = case fromString {ty = FilePath} s of
+  FP (PAbs sx) => Right . {outDir := PAbs sx}
+  FP (PRel sx) => Right . {outDir := cd </> PRel sx}
 
-descs : List $ OptDescr (Config -> Either (List String) Config)
-descs = [ MkOpt ['o'] ["outDir"] (ReqArg setOutDir "<dir>")
+descs : (cd : Path Abs) -> List $ OptDescr (Config -> Either (List String) Config)
+descs cd = [ MkOpt ['o'] ["outDir"] (ReqArg (setOutDir cd) "<dir>")
             "output directory"
         ]
 
-applyArgs : List String -> Either (List String) Config
-applyArgs args =
-  case getOpt RequireOrder descs args of
-       MkResult opts n  [] [] => foldl (>>=) (Right $ init n) opts
+applyArgs : (cd : Path Abs) -> List String -> Either (List String) Config
+applyArgs cd args =
+  case getOpt RequireOrder (descs cd) args of
+       MkResult opts n  [] [] => foldl (>>=) (Right $ init cd (mapMaybe fil n)) opts
        MkResult _ _ u e       => Left $ map unknown u ++ e
 
   where unknown : String -> String
         unknown = ("Unknown option: " ++)
+
+        fil : String -> Maybe (File Abs)
+        fil s = AbsFile.parse s <|> map (cd </>) (RelFile.parse s)
 
 --------------------------------------------------------------------------------
 --          Codegen
 --------------------------------------------------------------------------------
 
 0 Prog : Type -> Type
-Prog = EitherT String IO
+Prog =
+  App
+    [ List CodegenErr
+    , FileErr
+    , List String
+    , String
+    ]
 
-toProgWith : (a -> String) ->  IO (Either a b) -> Prog b
-toProgWith f io = MkEitherT $ map (mapFst f) io
+printErr : CodegenErr -> String
+printErr (CBInterfaceInvalidOps x y k) =
+  "Invalid number of callback operations in \{x.domain}: \{y.value} (\{show k} operations)"
+printErr (RegularOpWithoutName x y) =
+  "Unnamed regular operation in \{x.domain}: \{y.value}"
+printErr (InvalidGetter x y) =
+  "Invalid getter in \{x.domain}: \{y.value}"
+printErr (InvalidSetter x y) =
+  "Invalid setter in \{x.domain}: \{y.value}"
+printErr (UnresolvedAlias x y) =
+  "Unresolved alias in \{x.domain}: \{y.value}"
+printErr (AnyInUnion x) = "\"Any\" type in a union type in \{x.domain}"
+printErr (PromiseInUnion x) = "\"Promise\" type in a union type in \{x.domain}"
+printErr (NullableAny x) = "Nullable \"Any\" type in \{x.domain}"
+printErr (NullablePromise x) = "Nullable \"Promise\" type in \{x.domain}"
+printErr (InvalidConstType x) = "Invalid constant type in \{x.domain}"
 
-toProg : Show a => IO (Either a b) -> Prog b
-toProg = toProgWith show
+parseErr : Interpolation a => File Abs -> String -> Bounded a -> String
+parseErr x str (B v bs) = printParseError str (FC (FileSrc "\{x}") bs) v
 
-runProg : Prog () -> IO ()
-runProg (MkEitherT p) = do
-  Right _ <- p | Left e => putStrLn ("Error: " ++ e)
-  pure ()
+parameters {auto conf : Config}
+           {auto fs   : FS}
 
-fromCodegen : Codegen a -> Prog a
-fromCodegen = toProgWith (fastUnlines . map err) . pure
-  where err : CodegenErr -> String
-        err (CBInterfaceInvalidOps x y k) =
-          "Invalid number of callback operations in \{x.domain}: \{y.value} (\{show k} operations)"
-        err (RegularOpWithoutName x y) =
-          "Unnamed regular operation in \{x.domain}: \{y.value}"
-        err (InvalidGetter x y) =
-          "Invalid getter in \{x.domain}: \{y.value}"
-        err (InvalidSetter x y) =
-          "Invalid setter in \{x.domain}: \{y.value}"
-        err (UnresolvedAlias x y) =
-          "Unresolved alias in \{x.domain}: \{y.value}"
-        err (AnyInUnion x) = "\"Any\" type in a union type in \{x.domain}"
-        err (PromiseInUnion x) = "\"Promise\" type in a union type in \{x.domain}"
-        err (NullableAny x) = "Nullable \"Any\" type in \{x.domain}"
-        err (NullablePromise x) = "Nullable \"Promise\" type in \{x.domain}"
-        err (InvalidConstType x) = "Invalid constant type in \{x.domain}"
+  loadDef : File Abs -> Prog (String,PartsAndDefs)
+  loadDef f = do
+    s <- read f 1_000_000_000
+    p <- injectEither (mapFst (parseErr f s) $ parseIdl partsAndDefs s)
+    pure $ (maybe "" interpolate $ fileStem f, p)
 
-writeDoc : String -> String -> Prog ()
-writeDoc f doc = toProg $ writeFile f doc
+  writeTo : Body -> (a -> Identifier) -> (a -> String) -> a -> Prog ()
+  writeTo b f g v = case Body.parse (value $ f v) of
+    Nothing => throw "Can't create file body for \{f v}"
+    Just x  =>
+      let parent := conf.outDir /> b
+       in Prelude.do
+         b <- exists parent
+         when (not b) (mkDirP parent)
+         write (parent /> x <.> "idr") (g v)
 
-covering
-loadDef : String -> Prog (String,PartsAndDefs)
-loadDef f = let mn = moduleName
-                   . head
-                   . split ('.' ==)
-                   . last
-                   $ split ('/' ==) f
+  types : CGDomain -> Prog ()
+  types (MkDomain name callbacks dicts enums ifaces mixins) = Prelude.do
+    traverse_ (writeTo "Types" Enum.name enum) enums
+    traverse_ (writeTo "Types" CGIface.name ifaceType) ifaces
+    traverse_ (writeTo "Types" CGDict.name dictType) dicts
+    traverse_ (writeTo "Types" CGCallback.name callbackType) callbacks
+    traverse_ (writeTo "Types" CGMixin.name mixinType) mixins
 
-             in do s <- toProg (readFile f)
-                   d <- toProg (pure $ parseIdl partsAndDefs s)
-                   pure (mn,d)
+  raw : CGDomain -> Prog ()
+  raw (MkDomain name callbacks dicts _ ifaces mixins) = Prelude.do
+    traverse_ (writeTo "Raw" CGIface.name iface) ifaces
+    traverse_ (writeTo "Raw" CGDict.name dict) dicts
+    traverse_ (writeTo "Raw" CGCallback.name Definitions.callback) callbacks
+    traverse_ (writeTo "Raw" CGMixin.name mixin) mixins
 
-typesGen : Config -> List CGDomain -> Prog ()
-typesGen c ds =
-  let typesFile = c.outDir ++ "/Web/Internal/Types.idr"
-   in writeDoc typesFile (typedefs ds)
-
-codegen : Config -> CGDomain -> Prog ()
-codegen c d =
-  let typesFile = c.outDir ++ "/Web/Internal/" ++ d.name ++ "Types.idr"
-      primFile  = c.outDir ++ "/Web/Internal/" ++ d.name ++ "Prim.idr"
-      apiFile   = c.outDir ++ "/Web/Raw/" ++ d.name ++ ".idr"
-
-   in do writeDoc typesFile (types d)
-         writeDoc primFile (primitives d)
-         writeDoc apiFile  (definitions d)
-
-logAttributes : HasAttributes a => a -> Prog ()
-logAttributes = traverse_ (putStrLn . extAttribute) . attributes
 
 --------------------------------------------------------------------------------
 --          Main Function
 --------------------------------------------------------------------------------
 
 covering
-run : List String -> Prog ()
-run args = do
-  config <- toProg (pure $ applyArgs args)
+run : FS => List String -> Prog ()
+run args = Prelude.do
+  cd     <- curDir
+  config <- injectEither $ applyArgs cd args
   ds     <- toDomains <$> traverse loadDef config.files
 
   let e = env config.maxInheritance ds
 
-  doms   <- fromCodegen (traverse (domain e) ds)
-
---              logAttributes ds
-  traverse_ (codegen config) doms
-  typesGen config doms
+  doms   <- injectEither (traverse (domain e) ds)
+  traverse_ types doms
+  traverse_ raw doms
+  pure ()
 
 covering
 main : IO ()
 main = do
   (pn :: args) <- getArgs | Nil => die "Missing executable name. Aborting..."
-  runProg (run args)
+  runApp
+    [ traverse_ (putStrLn . printErr)
+    , putStrLn . printErr
+    , traverse_ putStrLn
+    , putStrLn
+    ]
+    (run @{local} args)

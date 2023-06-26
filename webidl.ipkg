@@ -7,6 +7,7 @@ depends    = base         >= 0.6.0
            , parser-webidl
            , prettier
            , getopts
+           , rio
 
 main       = Main
 executable = generateDomBindings

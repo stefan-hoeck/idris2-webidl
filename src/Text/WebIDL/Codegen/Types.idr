@@ -2,10 +2,53 @@ module Text.WebIDL.Codegen.Types
 
 import Derive.Prelude
 import public Data.SortedMap
+import public Data.SortedSet
 import Text.WebIDL.Types
 
 %default total
 %language ElabReflection
+
+public export
+interface Dependencies t where
+  depends : t -> SortedSet Identifier
+
+export
+Dependencies Identifier where
+  depends "Object"            = empty
+  depends "ArrayBuffer"       = empty
+  depends "ArrayBuffer"       = empty
+  depends "DataView"          = empty
+  depends "Int8Array"         = empty
+  depends "Int16Array"        = empty
+  depends "Int32Array"        = empty
+  depends "UInt8Array"        = empty
+  depends "UInt16Array"       = empty
+  depends "UInt32Array"       = empty
+  depends "UInt8ClampedArray" = empty
+  depends "Float32Array"      = empty
+  depends "Float64Array"      = empty
+  depends "ByteString"        = empty
+  depends "DOMString"         = empty
+  depends "USVString"         = empty
+  depends "WindowProxy"       = empty
+  depends x                   = singleton x
+
+export
+Dependencies t => Dependencies (Nullable t) where
+  depends (MaybeNull x) = depends x
+  depends (NotNull x)   = depends x
+
+export
+Dependencies t => Dependencies (List t) where
+  depends = foldl (\ds,x => depends x <+> ds) empty
+
+export
+Dependencies t => Dependencies (List1 t) where
+  depends = foldl (\ds,x => depends x <+> ds) empty
+
+export
+Dependencies t => Dependencies (Maybe t) where
+  depends = maybe empty depends
 
 --------------------------------------------------------------------------------
 --          Kinds
@@ -27,6 +70,16 @@ data Kind : Type where
   KInterface  : (isParent : Bool) -> Identifier -> Kind
   KMixin      : Identifier -> Kind
   KOther      : Identifier -> Kind
+
+export
+Dependencies Kind where
+  depends (KAlias x)              = depends x
+  depends (KCallback x)           = depends x
+  depends (KDictionary x)         = depends x
+  depends (KEnum x)               = depends x
+  depends (KInterface isParent x) = depends x
+  depends (KMixin x)              = depends x
+  depends (KOther x)              = depends x
 
 %runElab derive "Kind" [Eq,Show]
 
@@ -131,6 +184,27 @@ data CGType : Type where
   Promise : CGType                      -> CGType
   Simple  : Nullable SimpleType         -> CGType
   Union   : Nullable (List1 SimpleType) -> CGType
+
+mutual
+  export
+  Dependencies CGType where
+    depends Any         = empty
+    depends (Promise x) = assert_total $ depends x
+    depends (Simple x)  = assert_total $ depends x
+    depends (Union x)   = assert_total $ depends x
+
+  export
+  Dependencies SimpleType where
+    depends Undef                  = empty
+    depends Boolean                = empty
+    depends (Interface isParent x) = depends x
+    depends (Dictionary x)         = depends x
+    depends (Mixin x)              = depends x
+    depends (Primitive str)        = empty
+    depends (Unchangeable str)     = depends (MkIdent str)
+    depends (Enum x)               = depends x
+    depends (Array x)              = depends x
+    depends (Record str x)         = depends x
 
 ||| True, if the type can be used as an index in a
 ||| WebIDL `Getter` or `Setter`, that is, it corresponds
@@ -281,6 +355,12 @@ data ReturnType : Type where
   ||| Nothing special about the wrapped return type.
   Def      : CGType -> ReturnType
 
+export
+Dependencies ReturnType where
+  depends Undefined     = empty
+  depends (UndefOr x y) = depends x
+  depends (Def x)       = depends x
+
 ||| Checks if the return type is `Undefined`.
 export
 isUndefined : ReturnType -> Bool
@@ -349,6 +429,12 @@ data CGArg : Type where
 
   ||| A variadic function argument
   VarArg    : ArgumentName -> CGType -> CGArg
+
+export
+Dependencies CGArg where
+  depends (Mandatory x y)  = depends y
+  depends (Optional x y z) = depends y
+  depends (VarArg x y)     = depends y
 
 export
 argName : CGArg -> ArgumentName
@@ -452,6 +538,18 @@ data CGFunction : Type where
                -> ReturnType
                -> CGFunction
 
+Dependencies CGFunction where
+  depends (Attribute name obj tpe ret) = depends obj <+> depends ret <+> depends tpe
+  depends (AttributeGet name obj tpe) = depends obj <+> depends tpe
+  depends (StaticAttributeSet name obj tpe) = depends obj <+> depends tpe
+  depends (StaticAttributeGet name obj tpe) = depends obj <+> depends tpe
+  depends (Getter obj index tpe) = depends obj <+> depends index <+> depends tpe
+  depends (Setter obj index value) = depends obj <+> depends index <+> depends value
+  depends (Constructor obj args) = depends obj <+> depends args
+  depends (DictConstructor obj args) = depends obj <+> depends args
+  depends (Regular x obj xs y) = depends obj <+> depends xs <+> depends y
+  depends (Static x obj xs y) = depends obj <+> depends xs <+> depends y
+
 ||| This is used for sorting lists of functions to
 ||| determine the order in which they appear
 ||| in the generated code.
@@ -491,14 +589,22 @@ record JSType where
   parent : Maybe Identifier
   mixins : List Identifier
 
+export
+Dependencies JSType where
+  depends (MkJSType x y) = depends x <+> depends y
+
 ||| The parent types and mixins of a type. This is
 ||| used by the code generator to implement the
-||| `JS.Inheritance.JSType` instances.
+||| `Env` instances.
 public export
 record Supertypes where
   constructor MkSupertypes
   parents : List Identifier
   mixins  : List Identifier
+
+export
+Dependencies Supertypes where
+  depends (MkSupertypes x y) = depends x <+> depends y
 
 --------------------------------------------------------------------------------
 --          Domain
@@ -511,6 +617,10 @@ record CGDict where
   super     : Supertypes
   functions : List CGFunction
 
+export
+Dependencies CGDict where
+  depends (MkDict x y z) = depends x <+> depends y <+> depends z
+
 public export
 record CGIface where
   constructor MkIface
@@ -519,12 +629,20 @@ record CGIface where
   constants : List CGConst
   functions : List CGFunction
 
+export
+Dependencies CGIface where
+  depends (MkIface v x y z) = depends v <+> depends x <+> depends z
+
 public export
 record CGMixin where
   constructor MkMixin
   name      : Identifier
   constants : List CGConst
   functions : List CGFunction
+
+export
+Dependencies CGMixin where
+  depends (MkMixin x y z) = depends x <+> depends z
 
 public export
 record CGCallback where
@@ -533,6 +651,10 @@ record CGCallback where
   constants : List CGConst
   type      : ReturnType
   args      : Args
+
+export
+Dependencies CGCallback where
+  depends (MkCallback v x y z) = depends v <+> depends y <+> depends z
 
 public export
 record CGDomain where

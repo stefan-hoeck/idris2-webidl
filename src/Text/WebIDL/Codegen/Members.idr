@@ -37,7 +37,7 @@ constants = map (render80 . const) . sortBy (comparing name)
   where
     const : {opts : _} -> CGConst -> Doc opts
     const (MkConst t n v) =
-      indent 2 $ vsep
+      vsep
         [ empty
         , line "export"
         , line "\{n} :" <++> constTpe t
@@ -126,7 +126,7 @@ attrRW k n o t rt =
                              ]
                       else typeDecl implName tpe [line "\{po}"]
 
-   in render80 . indent 2 $ vsep
+   in render80 $ vsep
         [ empty
         , line "export"
         , funTpe

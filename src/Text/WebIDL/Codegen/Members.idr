@@ -18,14 +18,15 @@ jsType : Identifier -> Supertypes -> String
 jsType n (MkSupertypes parents ms) =
   let mixins = sortedNubOn id ms
 
-   in render80 $ vsep
-        [ empty
-        , line "public export"
-        , line "JSType \{n} where"
-        , indent 2 $ prettyCon Open "parents =" [list (map (line . value) parents)]
-        , empty
-        , indent 2 $ prettyCon Open "mixins =" [list (map (line . value) mixins)]
-        ]
+   in render80 $
+        vsep
+          [ empty
+          , line "public export"
+          , line "JSType \{n} where"
+          , indent 2 $ prettyCon Open "parents =" [list (map (line . value) parents)]
+          , empty
+          , indent 2 $ prettyCon Open "mixins =" [list (map (line . value) mixins)]
+          ]
 
 --------------------------------------------------------------------------------
 --          Constants
@@ -34,15 +35,17 @@ jsType n (MkSupertypes parents ms) =
 export
 constants : List CGConst -> List String
 constants = map (render80 . const) . sortBy (comparing name)
+
   where
     const : {opts : _} -> CGConst -> Doc opts
     const (MkConst t n v) =
-      indent 2 $ vsep
-        [ empty
-        , line "public export"
-        , line "\{n} :" <++> constTpe t
-        , line "\{n} =" <++> prettyConst v
-        ]
+      indent 2 $
+        vsep
+          [ empty
+          , line "public export"
+          , line "\{n} :" <++> constTpe t
+          , line "\{n} =" <++> prettyConst v
+          ]
 
 --------------------------------------------------------------------------------
 --          Callback Conversion
@@ -92,14 +95,14 @@ attrImpl msg s g a (VarArg _ t) =
 
 attrImpl msg s g a (Optional _ t d) =
    case deflt (safeCast t) App t d of
-      Nothing  =>
-        ( line "Attribute False Optional" <++> ret App t
-        , prettyCon Open "fromUndefOrPrimNoDefault" [msg,s,g,a]
-        )
-      Just x =>
-        ( line "Attribute True Optional" <++> ret App t
-        , prettyCon Open "fromUndefOrPrim" [msg,s,g,x,a]
-        )
+     Nothing  =>
+       ( line "Attribute False Optional" <++> ret App t
+       , prettyCon Open "fromUndefOrPrimNoDefault" [msg,s,g,a]
+       )
+     Just x =>
+       ( line "Attribute True Optional" <++> ret App t
+       , prettyCon Open "fromUndefOrPrim" [msg,s,g,x,a]
+       )
 
 attrRW :
      Nat
@@ -117,22 +120,25 @@ attrRW k n o t rt =
       up       := if isParent o then "(v :> \{po})" else "v"
 
       (tpe,impl) := attrImpl (line msg) primGet primSet (line up) t
-      funTpe     := if isParent o
-                      then typeDecl
-                             implName
-                             tpe
-                             [ line "{auto 0 _ : JSType t}"
-                             , line "{auto 0 _ : Elem \{po} (Types t)}"
-                             , line "t"
-                             ]
-                      else typeDecl implName tpe [line "\{po}"]
+      funTpe :=
+        if isParent o
+           then
+             typeDecl
+               implName
+               tpe
+               [ line "{auto 0 _ : JSType t}"
+               , line "{auto 0 _ : Elem \{po} (Types t)}"
+               , line "t"
+               ]
+           else typeDecl implName tpe [line "\{po}"]
 
-   in render80 . indent 2 $ vsep
-        [ empty
-        , line "export"
-        , funTpe
-        , line "\{implName} v =" <++> impl
-        ]
+   in render80 . indent 2 $
+        vsep
+          [ empty
+          , line "export"
+          , funTpe
+          , line "\{implName} v =" <++> impl
+          ]
 
 --------------------------------------------------------------------------------
 --          Functions
@@ -216,13 +222,15 @@ prim (k,Constructor o as)  =
 -- as these would lead to overloading issues.
 tagFunctions : List CGFunction -> List (Nat,CGFunction)
 tagFunctions = go 0
-  where go : Nat -> List CGFunction -> List (Nat,CGFunction)
-        go _ []        = []
-        go k (x :: []) = [(k,x)]
-        go k (x :: t@(y :: ys)) =
-          if priority x == priority y
-             then (k,x) :: go (S k) t
-             else (k,x) :: go 0 t
+
+  where
+    go : Nat -> List CGFunction -> List (Nat,CGFunction)
+    go _ []        = []
+    go k (x :: []) = [(k,x)]
+    go k (x :: t@(y :: ys)) =
+      if priority x == priority y
+         then (k,x) :: go (S k) t
+         else (k,x) :: go 0 t
 
 export
 functions : List CGFunction -> List String

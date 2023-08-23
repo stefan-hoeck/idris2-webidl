@@ -402,29 +402,33 @@ Args = List CGArg
 public export
 data CGFunction : Type where
   ||| A read-write attribute
-  Attribute :  (name : AttributeName)
-            -> (obj  : Kind)
-            -> (tpe  : CGArg)
-            -> (ret  : ReturnType)
-            -> CGFunction
+  Attribute :
+       (name : AttributeName)
+    -> (obj  : Kind)
+    -> (tpe  : CGArg)
+    -> (ret  : ReturnType)
+    -> CGFunction
 
   ||| An attribute getter.
-  AttributeGet :  (name : AttributeName)
-               -> (obj  : Kind)
-               -> (tpe  : ReturnType)
-               -> CGFunction
+  AttributeGet :
+       (name : AttributeName)
+    -> (obj  : Kind)
+    -> (tpe  : ReturnType)
+    -> CGFunction
 
   ||| A static attribute setter.
-  StaticAttributeSet :  (name : AttributeName)
-                     -> (obj  : Kind)
-                     -> (tpe  : CGArg)
-                     -> CGFunction
+  StaticAttributeSet :
+       (name : AttributeName)
+    -> (obj  : Kind)
+    -> (tpe  : CGArg)
+    -> CGFunction
 
   ||| A static attribute getter.
-  StaticAttributeGet :  (name : AttributeName)
-                     -> (obj  : Kind)
-                     -> (tpe  : ReturnType)
-                     -> CGFunction
+  StaticAttributeGet :
+       (name : AttributeName)
+    -> (obj  : Kind)
+    -> (tpe  : ReturnType)
+    -> CGFunction
 
   ||| An indexed getter.
   Getter : (obj : Kind) -> (index : CGArg) -> (tpe : ReturnType) -> CGFunction
@@ -439,18 +443,20 @@ data CGFunction : Type where
   DictConstructor : (obj : Kind) -> (args : Args) -> CGFunction
 
   ||| A regular function with (possibly) optional arguments.
-  Regular      :  OperationName
-               -> (obj : Kind)
-               -> Args
-               -> ReturnType
-               -> CGFunction
+  Regular :
+       OperationName
+    -> (obj : Kind)
+    -> Args
+    -> ReturnType
+    -> CGFunction
 
   ||| A static function with (possibly) optional arguments.
-  Static       :  OperationName
-               -> (obj : Kind)
-               -> Args
-               -> ReturnType
-               -> CGFunction
+  Static :
+       OperationName
+    -> (obj : Kind)
+    -> Args
+    -> ReturnType
+    -> CGFunction
 
 ||| This is used for sorting lists of functions to
 ||| determine the order in which they appear
@@ -546,9 +552,10 @@ record CGDomain where
 
 export
 domainFunctions : CGDomain -> List CGFunction
-domainFunctions d =  (d.dicts  >>= functions)
-                  ++ (d.ifaces >>= functions)
-                  ++ (d.mixins >>= functions)
+domainFunctions d =
+     (d.dicts  >>= functions)
+  ++ (d.ifaces >>= functions)
+  ++ (d.mixins >>= functions)
 
 --------------------------------------------------------------------------------
 --          Environment

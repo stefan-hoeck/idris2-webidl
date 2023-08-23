@@ -24,6 +24,7 @@ mapFirstChar f x = case unpack x of
 export
 sortedNubOn : Ord b => (a -> b) -> List a -> List a
 sortedNubOn f = nub . sortBy (comparing f)
+
   where
     nub : List a -> List a
     nub (x :: t@(y :: ys)) = if f x == f y then nub t else x :: nub t
@@ -45,6 +46,7 @@ moduleName s          = mapFirstChar toUpper s
 export
 unquote : String -> List Char
 unquote = run . unpack
+
   where
     run : List Char -> List Char
     run []                   = []
@@ -246,59 +248,60 @@ export
 funFFI : OperationName -> Nat -> String
 funFFI n Z = foreignBrowser "x=>x.\{n.value}()"
 funFFI n k =
-  let vs = take k argNames
-      vals = fastConcat $ intersperse "," vs
+  let vs   := take k argNames
+      vals := fastConcat $ intersperse "," vs
    in foreignBrowser "(x,\{vals})=>x.\{n.value}(\{vals})"
 
 export
 funFFIVarArg : OperationName -> Nat -> String
 funFFIVarArg n k =
-  let vs = take (pred k) argNames
-      vals = fastConcat $ intersperse "," (vs ++ ["va"])
-      args = fastConcat $ intersperse "," (vs ++ ["...va()"])
+  let vs   := take (pred k) argNames
+      vals := fastConcat $ intersperse "," (vs ++ ["va"])
+      args := fastConcat $ intersperse "," (vs ++ ["...va()"])
    in foreignBrowser "(x,\{vals})=>x.\{n.value}(\{args})"
 
 export
 staticFunFFI : Kind -> OperationName -> Nat -> String
 staticFunFFI o n Z = foreignBrowser "x=>x.\{n.value}()"
 staticFunFFI o n k =
-  let vs = take k argNames
-      vals = fastConcat $ intersperse "," vs
+  let vs   := take k argNames
+      vals := fastConcat $ intersperse "," vs
    in foreignBrowser "(\{vals})=>\{kindToString o}.\{n.value}(\{vals})"
 
 export
 staticFunFFIVarArg : Kind -> OperationName -> Nat -> String
 staticFunFFIVarArg o n k =
-  let vs = take (pred k) argNames
-      vals = fastConcat $ intersperse "," (vs ++ ["va"])
-      args = fastConcat $ intersperse "," (vs ++ ["...va()"])
+  let vs   := take (pred k) argNames
+      vals := fastConcat $ intersperse "," (vs ++ ["va"])
+      args := fastConcat $ intersperse "," (vs ++ ["...va()"])
    in foreignBrowser "(\{vals})=>\{kindToString o}.\{n.value}(\{args})"
 
 export
 conFFI : Kind -> Nat -> String
 conFFI n k =
-  let vs = take k argNames
-      vals = fastConcat $ intersperse "," vs
+  let vs   := take k argNames
+      vals := fastConcat $ intersperse "," vs
    in foreignBrowser "(\{vals})=> new \{kindToString n}(\{vals})"
 
 export
 conFFIVarArg : Kind -> Nat -> String
 conFFIVarArg n k =
-  let vs = take (pred k) argNames
-      vals = fastConcat $ intersperse "," (vs ++ ["va"])
-      args = fastConcat $ intersperse "," (vs ++ ["...va()"])
+  let vs   := take (pred k) argNames
+      vals := fastConcat $ intersperse "," (vs ++ ["va"])
+      args := fastConcat $ intersperse "," (vs ++ ["...va()"])
    in foreignBrowser "(\{vals})=> new \{kindToString n}(\{args})"
 
 export
 dictConFFI : List ArgumentName -> String
 dictConFFI ns =
-  let vs     = take (length ns) argNames
-      vals   = fastConcat $ intersperse "," vs
-      fields = fastConcat $ intersperse "," (zipWith app vs ns)
+  let vs     := take (length ns) argNames
+      vals   := fastConcat $ intersperse "," vs
+      fields := fastConcat $ intersperse "," (zipWith app vs ns)
    in foreignBrowser "(\{vals})=> ({\{fields}})"
 
-  where app : String -> ArgumentName -> String
-        app v a = a.value ++ ": " ++ v
+  where
+    app : String -> ArgumentName -> String
+    app v a = a.value ++ ": " ++ v
 
 export
 getterFFI : String
@@ -311,7 +314,7 @@ setterFFI = foreignBrowser "(o,x,v)=>o[x] = v"
 export
 callbackFFI : Nat -> String
 callbackFFI n =
-  let vs = fastConcat $ intersperse "," $ take n argNames
+  let vs := fastConcat $ intersperse "," $ take n argNames
    in foreignBrowser "x=>(\{vs})=>x(\{vs})()"
 
 --------------------------------------------------------------------------------

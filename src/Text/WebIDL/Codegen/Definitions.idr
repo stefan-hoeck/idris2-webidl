@@ -32,12 +32,14 @@ typeImports = "import JS"
 --------------------------------------------------------------------------------
 
 extern : CGDomain -> String
-extern d = fastUnlines
-  [ section "Interfaces" $ exts ext name d.ifaces
-  , section "Dictionaries" $ exts extNoCast name d.dicts
-  , section "Mixins" $ exts extNoCast name d.mixins
-  , section "Callbacks" $ exts extNoCast name d.callbacks
-  ]
+extern d =
+  fastUnlines
+    [ section "Interfaces" $ exts ext name d.ifaces
+    , section "Dictionaries" $ exts extNoCast name d.dicts
+    , section "Mixins" $ exts extNoCast name d.mixins
+    , section "Callbacks" $ exts extNoCast name d.callbacks
+    ]
+
   where
     extNoCast : String -> String
     extNoCast s = """
@@ -57,10 +59,11 @@ extern d = fastUnlines
         safeCast = unsafeCastOnPrototypeName "\{s}"
       """
 
-    exts :  (f : String -> String)
-         -> (a -> Identifier)
-         -> List a
-         -> List String
+    exts :
+         (f : String -> String)
+      -> (a -> Identifier)
+      -> List a
+      -> List String
     exts f g = map (("\n" ++) . f) . sort . map (value . g)
 
 --------------------------------------------------------------------------------
@@ -86,8 +89,8 @@ primCallbacks = cbacks (pure . primCallback)
 
 jsTypes : List CGDomain -> String
 jsTypes ds =
-  let ifs  = sortBy (comparing name) (ds >>= ifaces)
-      dics = sortBy (comparing name) (ds >>= dicts)
+  let ifs  := sortBy (comparing name) (ds >>= ifaces)
+      dics := sortBy (comparing name) (ds >>= dicts)
    in section "Inheritance" $
         map (\i => jsType i.name i.super) ifs ++
         map (\d => jsType d.name d.super) dics
@@ -98,8 +101,10 @@ jsTypes ds =
 
 ifaces' : (CGIface -> List String) -> CGDomain -> String
 ifaces' f = section "Interfaces" . map ns . sortBy (comparing name) . ifaces
-  where ns : CGIface -> String
-        ns i = namespaced i.name (f i)
+
+  where
+    ns : CGIface -> String
+    ns i = namespaced i.name (f i)
 
 ifaces : CGDomain -> String
 ifaces = ifaces' $ \(MkIface n s cs fs) => constants cs ++ functions fs
@@ -113,8 +118,10 @@ primIfaces = ifaces' (primFunctions . functions)
 
 dicts' : (CGDict -> List String) -> CGDomain -> String
 dicts' f = section "Dictionaries" . map ns . sortBy (comparing name) . dicts
-  where ns : CGDict -> String
-        ns d = namespaced d.name (f d)
+
+  where
+    ns : CGDict -> String
+    ns d = namespaced d.name (f d)
 
 dicts : CGDomain -> String
 dicts = dicts' $ \(MkDict n s fs) => functions fs
@@ -128,8 +135,10 @@ primDicts = dicts' (primFunctions . functions)
 
 mixins' : (CGMixin -> List String) -> CGDomain -> String
 mixins' f = section "Mixins" . map ns . sortBy (comparing name) . mixins
-  where ns : CGMixin -> String
-        ns m = namespaced m.name (f m)
+
+  where
+    ns : CGMixin -> String
+    ns m = namespaced m.name (f m)
 
 mixins : CGDomain -> String
 mixins = mixins' $ \(MkMixin n cs fs) => constants cs ++ functions fs
@@ -143,7 +152,8 @@ primMixins = mixins' (primFunctions . functions)
 
 export
 typedefs : List CGDomain -> String
-typedefs ds = """
+typedefs ds =
+  """
   module Web.Internal.Types
 
   import JS
@@ -179,7 +189,8 @@ typedefs ds = """
 --
 export
 types : CGDomain -> String
-types d = """
+types d =
+  """
   module Web.Internal.\{d.name}Types
 
   \{typeImports}
@@ -192,7 +203,8 @@ types d = """
 
 export
 primitives : CGDomain -> String
-primitives d = """
+primitives d =
+  """
   module Web.Internal.\{d.name}Prim
 
   import JS
@@ -208,7 +220,8 @@ primitives d = """
 
 export
 definitions : CGDomain -> String
-definitions d = """
+definitions d =
+  """
   module Web.Raw.\{d.name}
 
   \{defImports d}

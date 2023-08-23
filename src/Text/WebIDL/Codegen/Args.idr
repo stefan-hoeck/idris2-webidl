@@ -228,13 +228,14 @@ parameters {opts : LayoutOpts}
   funType : (name : IdrisIdent) -> ReturnType -> Args -> Doc opts
   funType n t as =
      typeDecl n (returnTypeAPI t) (run 0 as [<] [<] [<])
+
     where
       run : Nat -> Args -> (imp,aut,expl : SnocList $ Doc opts) -> List (Doc opts)
       run _ []      is aus es = is <>> aus <>> es <>> []
       run k (a::as) is aus es = case CGArg.inheritance a of
         Just (n,_) =>
-          let k2  := S k
-              pk2 := "t\{show k2}"
+          let k2   := S k
+              pk2  := "t\{show k2}"
               impl := line "{auto 0 _ : JSType \{pk2}}"
               aut  := line "{auto 0 _ : Elem \{n} (Types \{pk2})}"
               expl = arg (prettyArgAPI k2 a)
@@ -254,12 +255,13 @@ callbackFFI :
 callbackFFI o n impl as t =
   let cbTpe  := functionTypeOnly (returnTypeFFI' "IO" t) (map prettyArgFFI as)
       retTpe := line "PrimIO \{o}"
-   in render80 . indent 2 $ vsep
-        [ line ""
-        , line "export"
-        , line "\{impl}"
-        , typeDecl n retTpe [cbTpe]
-        ]
+   in render80 . indent 2 $
+        vsep
+          [ line ""
+          , line "export"
+          , line "\{impl}"
+          , typeDecl n retTpe [cbTpe]
+          ]
 
 export
 callbackAPI :
@@ -270,18 +272,21 @@ callbackAPI :
   -> (tpe  : ReturnType)
   -> String
 callbackAPI o n prim as t =
-  let cbTpe  = functionTypeOnly (returnTypeFFI' "IO" t)
-                                (map prettyArgFFI as)
+  let cbTpe  :=
+        functionTypeOnly
+          (returnTypeFFI' "IO" t)
+          (map prettyArgFFI as)
 
-      retTpe = line "JSIO \{o}"
-      impl   = line "\{n} cb = primJS $ \{prim} cb"
+      retTpe := line "JSIO \{o}"
+      impl   := line "\{n} cb = primJS $ \{prim} cb"
 
-   in render80 . indent 2 $ vsep
-        [ line ""
-        , line "export"
-        , typeDecl n retTpe [cbTpe]
-        , impl
-        ]
+   in render80 . indent 2 $
+        vsep
+          [ line ""
+          , line "export"
+          , typeDecl n retTpe [cbTpe]
+          , impl
+          ]
 
 export
 funFFI :
@@ -313,9 +318,10 @@ fun' ns name prim as us rt =
 
       primNS  := "\{kindToString ns}.\{prim}"
 
-      primCall := if sameType rt
-                    then "primJS"
-                    else "tryJS " ++ namespacedIdent ns name
+      primCall :=
+        if sameType rt
+           then "primJS"
+           else "tryJS " ++ namespacedIdent ns name
 
       lhs     := unwords $ "\{name}" :: vs
 
@@ -365,8 +371,10 @@ fun ns name prim as t =
       funImpl  := fun' ns mainName prim as [] t
 
       -- function without optional args
-      funImpl2 = if null undefs then []
-                 else fun' ns name prim as2 undefs t
+      funImpl2 :=
+        if null undefs
+           then []
+           else fun' ns name prim as2 undefs t
 
    in render80 . indent 2 $ vsep (funImpl ++ funImpl2)
 

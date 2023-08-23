@@ -32,18 +32,23 @@ setOutDir : String -> Config -> Either (List String) Config
 setOutDir s = Right . { outDir := s }
 
 descs : List $ OptDescr (Config -> Either (List String) Config)
-descs = [ MkOpt ['o'] ["outDir"] (ReqArg setOutDir "<dir>")
-            "output directory"
-        ]
+descs =
+  [ MkOpt
+      ['o']
+      ["outDir"]
+      (ReqArg setOutDir "<dir>")
+      "output directory"
+  ]
 
 applyArgs : List String -> Either (List String) Config
 applyArgs args =
   case getOpt RequireOrder descs args of
-       MkResult opts n  [] [] => foldl (>>=) (Right $ init n) opts
-       MkResult _ _ u e       => Left $ map unknown u ++ e
+    MkResult opts n  [] [] => foldl (>>=) (Right $ init n) opts
+    MkResult _ _ u e       => Left $ map unknown u ++ e
 
-  where unknown : String -> String
-        unknown = ("Unknown option: " ++)
+  where
+    unknown : String -> String
+    unknown = ("Unknown option: " ++)
 
 --------------------------------------------------------------------------------
 --          Codegen
@@ -65,52 +70,57 @@ runProg (MkEitherT p) = do
 
 fromCodegen : Codegen a -> Prog a
 fromCodegen = toProgWith (fastUnlines . map err) . pure
-  where err : CodegenErr -> String
-        err (CBInterfaceInvalidOps x y k) =
-          "Invalid number of callback operations in \{x.domain}: \{y.value} (\{show k} operations)"
-        err (RegularOpWithoutName x y) =
-          "Unnamed regular operation in \{x.domain}: \{y.value}"
-        err (InvalidGetter x y) =
-          "Invalid getter in \{x.domain}: \{y.value}"
-        err (InvalidSetter x y) =
-          "Invalid setter in \{x.domain}: \{y.value}"
-        err (UnresolvedAlias x y) =
-          "Unresolved alias in \{x.domain}: \{y.value}"
-        err (AnyInUnion x) = "\"Any\" type in a union type in \{x.domain}"
-        err (PromiseInUnion x) = "\"Promise\" type in a union type in \{x.domain}"
-        err (NullableAny x) = "Nullable \"Any\" type in \{x.domain}"
-        err (NullablePromise x) = "Nullable \"Promise\" type in \{x.domain}"
-        err (InvalidConstType x) = "Invalid constant type in \{x.domain}"
+  where
+    err : CodegenErr -> String
+    err (CBInterfaceInvalidOps x y k) =
+      "Invalid number of callback operations in \{x.domain}: \{y.value} (\{show k} operations)"
+    err (RegularOpWithoutName x y) =
+      "Unnamed regular operation in \{x.domain}: \{y.value}"
+    err (InvalidGetter x y) =
+      "Invalid getter in \{x.domain}: \{y.value}"
+    err (InvalidSetter x y) =
+      "Invalid setter in \{x.domain}: \{y.value}"
+    err (UnresolvedAlias x y) =
+      "Unresolved alias in \{x.domain}: \{y.value}"
+    err (AnyInUnion x) = "\"Any\" type in a union type in \{x.domain}"
+    err (PromiseInUnion x) = "\"Promise\" type in a union type in \{x.domain}"
+    err (NullableAny x) = "Nullable \"Any\" type in \{x.domain}"
+    err (NullablePromise x) = "Nullable \"Promise\" type in \{x.domain}"
+    err (InvalidConstType x) = "Invalid constant type in \{x.domain}"
 
 writeDoc : String -> String -> Prog ()
 writeDoc f doc = toProg $ writeFile f doc
 
 covering
 loadDef : String -> Prog (String,PartsAndDefs)
-loadDef f = let mn = moduleName
-                   . head
-                   . split ('.' ==)
-                   . last
-                   $ split ('/' ==) f
+loadDef f =
+  let mn :=
+          moduleName
+        . head
+        . split ('.' ==)
+        . last
+        $ split ('/' ==) f
 
-             in do s <- toProg (readFile f)
-                   d <- toProg (pure $ parseIdl partsAndDefs s)
-                   pure (mn,d)
+   in do
+     s <- toProg (readFile f)
+     d <- toProg (pure $ parseIdl partsAndDefs s)
+     pure (mn,d)
 
 typesGen : Config -> List CGDomain -> Prog ()
 typesGen c ds =
-  let typesFile = c.outDir ++ "/Web/Internal/Types.idr"
+  let typesFile := c.outDir ++ "/Web/Internal/Types.idr"
    in writeDoc typesFile (typedefs ds)
 
 codegen : Config -> CGDomain -> Prog ()
 codegen c d =
-  let typesFile = c.outDir ++ "/Web/Internal/" ++ d.name ++ "Types.idr"
-      primFile  = c.outDir ++ "/Web/Internal/" ++ d.name ++ "Prim.idr"
-      apiFile   = c.outDir ++ "/Web/Raw/" ++ d.name ++ ".idr"
+  let typesFile := c.outDir ++ "/Web/Internal/" ++ d.name ++ "Types.idr"
+      primFile  := c.outDir ++ "/Web/Internal/" ++ d.name ++ "Prim.idr"
+      apiFile   := c.outDir ++ "/Web/Raw/" ++ d.name ++ ".idr"
 
-   in do writeDoc typesFile (types d)
-         writeDoc primFile (primitives d)
-         writeDoc apiFile  (definitions d)
+   in do
+     writeDoc typesFile (types d)
+     writeDoc primFile (primitives d)
+     writeDoc apiFile  (definitions d)
 
 logAttributes : HasAttributes a => a -> Prog ()
 logAttributes = traverse_ (putStrLn . extAttribute) . attributes
@@ -125,7 +135,7 @@ run args = do
   config <- toProg (pure $ applyArgs args)
   ds     <- toDomains <$> traverse loadDef config.files
 
-  let e = env config.maxInheritance ds
+  let e := env config.maxInheritance ds
 
   doms   <- fromCodegen (traverse (domain e) ds)
 

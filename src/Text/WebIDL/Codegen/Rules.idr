@@ -43,12 +43,14 @@ env : Nat -> List Domain -> Env
 env k ds =
   let ks := kinds ds
    in MkEnv k ks jsTypes (aliases ks $ ds >>= typedefs)
+
   where
     -- calculates the mapping from type aliases to the
     -- types they represent
-    aliases :  SortedMap Identifier Kind
-            -> List Typedef
-            -> SortedMap Identifier (IdlTypeF ExtAttributeList Kind)
+    aliases :
+         SortedMap Identifier Kind
+      -> List Typedef
+      -> SortedMap Identifier (IdlTypeF ExtAttributeList Kind)
     aliases ks = SortedMap.fromList . map mkPair
       where
         kind : Identifier -> Kind
@@ -139,8 +141,8 @@ parameters (e : Env, dom : Domain)
     uaD : DistinguishableF ExtAttributeList Kind -> Codegen CGType
     uaD i@(I $ KAlias x) =
       case lookup x e.aliases of
-           Nothing            => Left [UnresolvedAlias dom x]
-           Just x             => unalias x
+        Nothing            => Left [UnresolvedAlias dom x]
+        Just x             => unalias x
     uaD (I k)                 = Right $ fromKind k
     uaD (Sequence x y)        = simple . Array <$> unalias y
     uaD (FrozenArray x y)     = simple . Array <$> unalias y
@@ -153,8 +155,9 @@ parameters (e : Env, dom : Domain)
                                 MkIdent "Object"
     uaD Symbol                = Right $ unchangeable "Symbol"
 
-    uaU :  UnionTypeF ExtAttributeList Kind
-        -> Codegen (Nullable $ List1 SimpleType)
+    uaU :
+         UnionTypeF ExtAttributeList Kind
+      -> Codegen (Nullable $ List1 SimpleType)
     uaU (UT f s r) =
       do (hf ::: tf) <- uaM f
          rest        <- map join (traverse uaM (s ::: r))
@@ -177,11 +180,11 @@ parameters (e : Env, dom : Domain)
     uaM (MkUnionMember a t) =
       do t2 <- uaD t
          case t2 of
-              Any       => Left [AnyInUnion dom]
-              Promise x => Left [PromiseInUnion dom]
-              Simple x  => Right $ singleton x
-              (Union $ MaybeNull xs) => Right $ map MaybeNull xs
-              (Union $ NotNull xs)   => Right $ map NotNull xs
+           Any       => Left [AnyInUnion dom]
+           Promise x => Left [PromiseInUnion dom]
+           Simple x  => Right $ singleton x
+           (Union $ MaybeNull xs) => Right $ map MaybeNull xs
+           (Union $ NotNull xs)   => Right $ map NotNull xs
 
     unalias : IdlTypeF ExtAttributeList Kind -> Codegen CGType
     unalias Any               = Right Any
@@ -278,18 +281,20 @@ parameters (e : Env, dom : Domain)
   |||                   to the maximal length of the inheritance chain.
   supertypes : Identifier -> Supertypes
   supertypes = run e.maxInheritance
-    where run : Nat -> Identifier -> Supertypes
-          run 0     i = objectOnly
-          run (S k) i =
-            case lookup i e.jsTypes of
-                 Nothing                              => objectOnly
 
-                 (Just $ MkJSType Nothing mixins)       =>
-                   { mixins := mixins } objectOnly
+    where
+      run : Nat -> Identifier -> Supertypes
+      run 0     i = objectOnly
+      run (S k) i =
+        case lookup i e.jsTypes of
+          Nothing => objectOnly
 
-                 (Just $ MkJSType (Just parent) mixins) =>
-                   let MkSupertypes parents mixins2 = run k parent
-                    in MkSupertypes (parent :: parents) (mixins ++ mixins2)
+          (Just $ MkJSType Nothing mixins) =>
+            { mixins := mixins } objectOnly
+
+          (Just $ MkJSType (Just parent) mixins) =>
+            let MkSupertypes parents mixins2 = run k parent
+             in MkSupertypes (parent :: parents) (mixins ++ mixins2)
 
 --------------------------------------------------------------------------------
 --          Functions
@@ -337,146 +342,176 @@ parameters (e : Env, dom : Domain)
 
   dictCon : Kind -> List DictionaryMemberRest -> Codegen CGFunction
   dictCon o = go Nil Nil
-    where go : Args -> Args -> List DictionaryMemberRest -> Codegen CGFunction
-          go xs ys [] = pure $ DictConstructor o (reverse xs ++ reverse ys)
-          go xs ys (Required _ t n :: zs) =
-            do t2 <- tpe t
-               go (Mandatory (MkArgName n.value) t2 :: xs) ys zs
-          go xs ys (Optional t n d :: zs) =
-            do t2 <- tpe t
-               go xs (Optional (MkArgName n.value) t2 d :: ys) zs
+
+    where
+      go : Args -> Args -> List DictionaryMemberRest -> Codegen CGFunction
+      go xs ys [] = pure $ DictConstructor o (reverse xs ++ reverse ys)
+      go xs ys (Required _ t n :: zs) =
+        do t2 <- tpe t
+           go (Mandatory (MkArgName n.value) t2 :: xs) ys zs
+      go xs ys (Optional t n d :: zs) =
+        do t2 <- tpe t
+           go xs (Optional (MkArgName n.value) t2 d :: ys) zs
 
   dictFuns : Dictionary -> Codegen (List CGFunction)
-  dictFuns d = [| dictCon (kind d.name) (map snd d.members) ::
-                  (map join (traverse (fromMember . snd) d.members)) |]
-    where fromMember : DictionaryMemberRest -> Codegen (List CGFunction)
-          fromMember (Required _ t n) =
-            let an = Right $ MkAttributeName n.value
-             in map pure [| Attribute an (pure $ kind d.name)
-                                      (valArg t) (rtpe t) |]
+  dictFuns d =
+    [| dictCon (kind d.name) (map snd d.members) ::
+       (map join (traverse (fromMember . snd) d.members))
+    |]
 
-          fromMember (Optional t n def) =
-            let an = Right $ MkAttributeName n.value
-                cgt = map (`UndefOr` Just def) (tpe t)
-                ak  = Right $ kind d.name
-             in map pure [| Attribute an ak (optArg t def) cgt |]
+    where
+      fromMember : DictionaryMemberRest -> Codegen (List CGFunction)
+      fromMember (Required _ t n) =
+        let an := Right $ MkAttributeName n.value
+         in map pure [| Attribute an (pure $ kind d.name)
+                                  (valArg t) (rtpe t) |]
+
+      fromMember (Optional t n def) =
+        let an  := Right $ MkAttributeName n.value
+            cgt := map (`UndefOr` Just def) (tpe t)
+            ak  := Right $ kind d.name
+         in map pure [| Attribute an ak (optArg t def) cgt |]
 
   mixinFuns : Mixin -> Codegen (List CGFunction)
   mixinFuns m = concat <$> traverse (fromMember . snd) m.members
-    where fromMember : MixinMember -> Codegen (List CGFunction)
-          fromMember (MConst _)   = Right Nil
-          fromMember (MOp o)      = op m.name o
-          fromMember (MStr s)     = str m.name s
-          fromMember (MAttrRO ro) = attrRO m.name ro
-          fromMember (MAttr at)   = attr m.name at
+
+    where
+      fromMember : MixinMember -> Codegen (List CGFunction)
+      fromMember (MConst _)   = Right Nil
+      fromMember (MOp o)      = op m.name o
+      fromMember (MStr s)     = str m.name s
+      fromMember (MAttrRO ro) = attrRO m.name ro
+      fromMember (MAttr at)   = attr m.name at
 
   ifaceFuns : Interface -> Codegen (List CGFunction)
   ifaceFuns i = concat <$> traverse (fromMember . snd) i.members
-    where getter : IdlType -> ArgumentList -> Codegen (List CGFunction)
-          getter t (NoVarArg [a] Nil) = do
-            ag <- arg a
-            rt <- rtpe t
-            if isIndex (argType ag)
-               then Right [Getter (kind i.name) ag rt]
-               else Left [InvalidGetter dom i.name]
 
-          getter _ _ = Left [InvalidGetter dom i.name]
+    where
+      getter : IdlType -> ArgumentList -> Codegen (List CGFunction)
+      getter t (NoVarArg [a] Nil) = do
+        ag <- arg a
+        rt <- rtpe t
+        if isIndex (argType ag)
+           then Right [Getter (kind i.name) ag rt]
+           else Left [InvalidGetter dom i.name]
 
-          setter : IdlType -> ArgumentList -> Codegen (List CGFunction)
-          setter t (NoVarArg [a,r] Nil) = do
-            ag <- arg a
-            rt <- rtpe t
-            rg <- arg r
-            if isIndex (argType ag) && isUndefined rt
-               then Right [Setter (kind i.name) ag rg]
-               else Left [InvalidSetter dom i.name]
+      getter _ _ = Left [InvalidGetter dom i.name]
 
-          setter _ _ = Left [InvalidSetter dom i.name]
+      setter : IdlType -> ArgumentList -> Codegen (List CGFunction)
+      setter t (NoVarArg [a,r] Nil) = do
+        ag <- arg a
+        rt <- rtpe t
+        rg <- arg r
+        if isIndex (argType ag) && isUndefined rt
+           then Right [Setter (kind i.name) ag rg]
+           else Left [InvalidSetter dom i.name]
 
-          -- getters and setters without a name are treated as indexed
-          -- versions (special syntax in the FFI), all others are treated
-          -- as regular operations
-          fromOp : Operation -> Codegen (List CGFunction)
-          fromOp (MkOp (Just Getter)  t Nothing as) = getter t as
-          fromOp (MkOp (Just Setter)  t Nothing as) = setter t as
-          fromOp (MkOp (Just Deleter) _ _       _ ) = Right Nil
-          fromOp x                                  = op i.name x
+      setter _ _ = Left [InvalidSetter dom i.name]
 
-          fromPart : PartialInterfaceMember -> Codegen (List CGFunction)
-          fromPart (IOp x)                 = fromOp x
-          fromPart (IStr x)                = str i.name x
-          fromPart (IStatic $ Z x)         = staticAttr i.name x
-          fromPart (IStatic $ S $ Z x)     = staticAttrRO i.name x
-          fromPart (IStatic $ S $ S $ Z x) = static i.name x
-          fromPart (IAttr x)               = attr i.name x
-          fromPart (IAttrRO x)             = attrRO i.name x
-          fromPart (IConst _)              = Right Nil
-          fromPart (IMap x)                = Right Nil
-          fromPart (ISet x)                = Right Nil
-          fromPart (IMapRO x)              = Right Nil
-          fromPart (ISetRO x)              = Right Nil
-          fromPart (IAttrInh x)            = Right Nil
-          fromPart (IIterable x y)         = Right Nil
-          fromPart (IAsync x y xs)         = Right Nil
+      -- getters and setters without a name are treated as indexed
+      -- versions (special syntax in the FFI), all others are treated
+      -- as regular operations
+      fromOp : Operation -> Codegen (List CGFunction)
+      fromOp (MkOp (Just Getter)  t Nothing as) = getter t as
+      fromOp (MkOp (Just Setter)  t Nothing as) = setter t as
+      fromOp (MkOp (Just Deleter) _ _       _ ) = Right Nil
+      fromOp x                                  = op i.name x
 
-          fromMember : InterfaceMember -> Codegen (List CGFunction)
-          fromMember (Z $ MkConstructor as) = constr i.name as
-          fromMember (S $ Z p)              = fromPart p
-          fromMember (S $ S x) impossible
+      fromPart : PartialInterfaceMember -> Codegen (List CGFunction)
+      fromPart (IOp x)                 = fromOp x
+      fromPart (IStr x)                = str i.name x
+      fromPart (IStatic $ Z x)         = staticAttr i.name x
+      fromPart (IStatic $ S $ Z x)     = staticAttrRO i.name x
+      fromPart (IStatic $ S $ S $ Z x) = static i.name x
+      fromPart (IAttr x)               = attr i.name x
+      fromPart (IAttrRO x)             = attrRO i.name x
+      fromPart (IConst _)              = Right Nil
+      fromPart (IMap x)                = Right Nil
+      fromPart (ISet x)                = Right Nil
+      fromPart (IMapRO x)              = Right Nil
+      fromPart (ISetRO x)              = Right Nil
+      fromPart (IAttrInh x)            = Right Nil
+      fromPart (IIterable x y)         = Right Nil
+      fromPart (IAsync x y xs)         = Right Nil
+
+      fromMember : InterfaceMember -> Codegen (List CGFunction)
+      fromMember (Z $ MkConstructor as) = constr i.name as
+      fromMember (S $ Z p)              = fromPart p
+      fromMember (S $ S x) impossible
 
   ifaceConsts : Interface -> Codegen (List CGConst)
   ifaceConsts (MkInterface _ _ _ ms) = join <$> traverse (fromMember . snd) ms
-    where fromMember : InterfaceMember -> Codegen (List CGConst)
-          fromMember (S $ Z $ IConst x) = map pure $ const x
-          fromMember _                  = Right []
+
+    where
+      fromMember : InterfaceMember -> Codegen (List CGConst)
+      fromMember (S $ Z $ IConst x) = map pure $ const x
+      fromMember _                  = Right []
 
   mixinConsts : Mixin -> Codegen (List CGConst)
   mixinConsts (MkMixin _ _ ms) = join <$> traverse (fromMember . snd) ms
-    where fromMember : MixinMember -> Codegen (List CGConst)
-          fromMember (MConst x) = map pure $ const x
-          fromMember _          = Right []
+    where
+      fromMember : MixinMember -> Codegen (List CGConst)
+      fromMember (MConst x) = map pure $ const x
+      fromMember _          = Right []
 
   callbackConsts : CallbackInterface -> Codegen (List CGConst)
   callbackConsts (MkCallbackInterface _ _ ms) =
     join <$> traverse (fromMember . snd) ms
-    where fromMember : CallbackInterfaceMember -> Codegen (List CGConst)
-          fromMember v = case extract Const v of
-                              Nothing => Right []
-                              Just x  => map pure $ const x
+
+    where
+      fromMember : CallbackInterfaceMember -> Codegen (List CGConst)
+      fromMember v =
+        case extract Const v of
+          Nothing => Right []
+          Just x  => map pure $ const x
 
   export
   domain : Codegen CGDomain
-  domain = [| MkDomain (pure dom.domain)
-                       callbacks
-                       (traverse dict dom.dictionaries)
-                       (pure dom.enums)
-                       (traverse iface dom.interfaces)
-                       (traverse mixin dom.mixins)
-           |]
+  domain =
+    [| MkDomain
+         (pure dom.domain)
+         callbacks
+         (traverse dict dom.dictionaries)
+         (pure dom.enums)
+         (traverse iface dom.interfaces)
+         (traverse mixin dom.mixins)
+    |]
 
-    where dict : Dictionary -> Codegen CGDict
-          dict v@(MkDictionary _ n i _) =
-            MkDict n  (supertypes n) <$> dictFuns v
+    where
+      dict : Dictionary -> Codegen CGDict
+      dict v@(MkDictionary _ n i _) =
+        MkDict n  (supertypes n) <$> dictFuns v
 
-          iface : Interface -> Codegen CGIface
-          iface v@(MkInterface _ n i _) =
-            [| MkIface (pure n) (pure $ supertypes n)
-                       (ifaceConsts v) (ifaceFuns v) |]
+      iface : Interface -> Codegen CGIface
+      iface v@(MkInterface _ n i _) =
+        [| MkIface
+             (pure n)
+             (pure $ supertypes n)
+             (ifaceConsts v)
+             (ifaceFuns v)
+        |]
 
-          mixin : Mixin -> Codegen CGMixin
-          mixin m = [| MkMixin (pure m.name) (mixinConsts m) (mixinFuns m) |]
+      mixin : Mixin -> Codegen CGMixin
+      mixin m = [| MkMixin (pure m.name) (mixinConsts m) (mixinFuns m) |]
 
-          callback : Callback -> Codegen CGCallback
-          callback c = [| MkCallback (pure c.name) (pure Nil)
-                                     (rtpe c.type) (toArgs c.args) |]
+      callback : Callback -> Codegen CGCallback
+      callback c =
+        [| MkCallback
+             (pure c.name)
+             (pure Nil)
+             (rtpe c.type)
+             (toArgs c.args)
+        |]
 
-          callbackIface : CallbackInterface -> Codegen CGCallback
-          callbackIface v@(MkCallbackInterface _ n ms) =
-            case mapMaybe (\(_,m)   => extract RegularOperation m) ms of
-                 [MkOp () t _ a] =>
-                   [| MkCallback (pure n) (callbackConsts v) (rtpe t) (toArgs a) |]
-                 xs => Left [CBInterfaceInvalidOps dom n (length xs)]
+      callbackIface : CallbackInterface -> Codegen CGCallback
+      callbackIface v@(MkCallbackInterface _ n ms) =
+        case mapMaybe (\(_,m)   => extract RegularOperation m) ms of
+          [MkOp () t _ a] =>
+            [| MkCallback (pure n) (callbackConsts v) (rtpe t) (toArgs a) |]
+          xs => Left [CBInterfaceInvalidOps dom n (length xs)]
 
-          callbacks : Codegen (List CGCallback)
-          callbacks = [| traverse callback dom.callbacks ++
-                         traverse callbackIface dom.callbackInterfaces |]
+      callbacks : Codegen (List CGCallback)
+      callbacks =
+        [| traverse callback dom.callbacks ++
+           traverse callbackIface dom.callbackInterfaces
+        |]

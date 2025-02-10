@@ -69,10 +69,10 @@ may i      = i
 --          Types
 --------------------------------------------------------------------------------
 public export
-data SimpleType : Type where
+data SimpleType : Type
 
 public export
-data CGType : Type where
+data CGType : Type
 
 data SimpleType : Type where
   ||| The undefined type (or () if it is a return type)

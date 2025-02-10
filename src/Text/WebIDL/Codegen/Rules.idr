@@ -124,7 +124,8 @@ strTpe ByteString = "ByteString"
 strTpe DOMString = "String"
 strTpe USVString = "String"
 
-parameters (e : Env, dom : Domain)
+parameters (e : Env)
+           (dom : Domain)
 
   -- Lookup the kind of an identifier from the environment
   kind : Identifier -> Kind
